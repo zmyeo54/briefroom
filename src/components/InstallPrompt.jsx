@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import {
   DeviceMobile,
   DownloadSimple,
+  Export,
   PlusSquare,
-  ShareNetwork,
   X,
 } from "@phosphor-icons/react";
 import { useI18n } from "../lib/I18nContext";
@@ -181,7 +181,7 @@ export default function InstallPrompt() {
         <ol className="install-steps">
           <li className="install-step">
             <span className="install-step-icon" aria-hidden>
-              <ShareNetwork size={15} weight="bold" />
+              <Export size={15} weight="bold" />
             </span>
             <span className="install-step-text">
               <strong>{t("install.step1Label")}</strong>
