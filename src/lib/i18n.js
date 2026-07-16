@@ -44,6 +44,9 @@ const en = {
   "home.focusThemesHint":
     "Start with a solid set. Add your resume or job posting and we’ll refine the themes for this role.",
   "home.focusSelected": "{n} selected",
+  "home.focusSelectedLabel": "selected",
+  "home.focusSelectedPrefix": "",
+  "home.focusSelectedSuffix": "selected",
   "home.standardThemes": "Solid defaults",
   "home.suggested": "Strong for this role",
   "home.optionalExtras": "Optional extras",
@@ -78,6 +81,7 @@ const en = {
   "home.questionsHint":
     "Foundations stay on top. Tap to open an answer, pick what you’ll rehearse, then say it out loud.",
   "home.items": "{n} ready",
+  "home.itemsLabel": "ready",
   "home.speak": "Practice ({n})",
   "home.stop": "Stop",
   "home.saveAudio": "Save practice ({n})",
@@ -131,6 +135,7 @@ const en = {
   "qa.selectAll": "Select all",
   "qa.deselectAll": "Clear selection",
   "qa.selected": "{n}/{total} selected",
+  "qa.selectedSuffix": "selected",
   "qa.pickHint": " · choose what to practice",
   "qa.mustAsk": "Foundation",
   "qa.addon": "Yours",
@@ -248,6 +253,9 @@ const zh = {
   "home.focusThemesHint":
     "先从稳妥的方向开始。加上简历或招聘信息后，我们会按这个岗位再帮你收一收重点。",
   "home.focusSelected": "已选 {n} 项",
+  "home.focusSelectedLabel": "项",
+  "home.focusSelectedPrefix": "已选",
+  "home.focusSelectedSuffix": "项",
   "home.standardThemes": "稳妥默认",
   "home.suggested": "这份岗位更吃香",
   "home.optionalExtras": "可选补充",
@@ -281,6 +289,7 @@ const zh = {
   "home.questionsHint":
     "基础题固定在最上。点开看回答，勾选要练的，然后大声说出来。",
   "home.items": "{n} 题就绪",
+  "home.itemsLabel": "就绪",
   "home.speak": "开口练（{n}）",
   "home.stop": "停止",
   "home.saveAudio": "保存练习音（{n}）",
@@ -333,6 +342,7 @@ const zh = {
   "qa.selectAll": "全选",
   "qa.deselectAll": "取消全选",
   "qa.selected": "已选 {n}/{total}",
+  "qa.selectedSuffix": "已选",
   "qa.pickHint": " · 选好要练的题",
   "qa.mustAsk": "基础",
   "qa.addon": "你的题",

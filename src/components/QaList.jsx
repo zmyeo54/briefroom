@@ -70,9 +70,15 @@ export default function QaList({
           )}
           {allSelected ? t("qa.deselectAll") : t("qa.selectAll")}
         </button>
-        <span className="faint font-mono text-[11px] font-medium tabular-nums md:text-xs">
-          {t("qa.selected", { n: selected.size, total: items.length })}
-          {!someSelected ? t("qa.pickHint") : ""}
+        <span className="focus-count inline-flex">
+          <span className="focus-count-n">
+            {selected.size}
+            <span className="focus-count-den">/{items.length}</span>
+          </span>
+          <span className="focus-count-label">{t("qa.selectedSuffix")}</span>
+          {!someSelected ? (
+            <span className="focus-count-hint">{t("qa.pickHint")}</span>
+          ) : null}
         </span>
       </div>
 

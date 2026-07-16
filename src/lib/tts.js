@@ -70,7 +70,7 @@ export function voiceGender(id) {
 export function pickVoiceFor(lang, gender) {
   const want = gender === "female" ? "female" : "male";
   const family =
-    lang === "zh" || lang === "both"
+    lang === "zh"
       ? TTS_VOICES.filter((v) => v.lang === "zh")
       : TTS_VOICES.filter((v) => v.lang === "en");
   return (
@@ -78,6 +78,125 @@ export function pickVoiceFor(lang, gender) {
     family[0]?.id ||
     (want === "female" ? DEFAULT_VOICE_Q : DEFAULT_VOICE_A)
   );
+}
+
+/** Same role (interviewer/candidate gender), opposite language family. */
+export function voiceForLangFamily(voiceId, targetLang) {
+  const gender = voiceGender(voiceId);
+  const want = targetLang === "zh" ? "zh" : "en";
+  const current = TTS_VOICES.find((x) => x.id === normalizeVoiceId(voiceId));
+  if (current?.lang === want) return normalizeVoiceId(voiceId);
+  return pickVoiceFor(want, gender);
+}
+
+/**
+ * Split Mix-mode text into English + Chinese halves.
+ * Supports "EN / 中文" questions and blank-line / script-run answers.
+ */
+export function splitBilingualText(text) {
+  const raw = String(text || "").trim();
+  if (!raw) return { en: "", zh: "" };
+
+  const slash = raw.match(/^([\s\S]+?)\s+\/\s+([\s\S]+)$/);
+  if (slash) {
+    const left = slash[1].trim();
+    const right = slash[2].trim();
+    const leftZh = /[\u4e00-\u9fff]/.test(left);
+    const rightZh = /[\u4e00-\u9fff]/.test(right);
+    if (!leftZh && rightZh) return { en: left, zh: right };
+    if (leftZh && !rightZh) return { en: right, zh: left };
+    return { en: left, zh: right };
+  }
+
+  const parts = raw.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+  if (parts.length >= 2) {
+    const enParts = [];
+    const zhParts = [];
+    for (const p of parts) {
+      const zhChars = (p.match(/[\u4e00-\u9fff]/g) || []).length;
+      const latin = (p.match(/[A-Za-z]/g) || []).length;
+      if (zhChars > latin) zhParts.push(p);
+      else enParts.push(p);
+    }
+    if (enParts.length && zhParts.length) {
+      return { en: enParts.join("\n\n"), zh: zhParts.join("\n\n") };
+    }
+  }
+
+  const zhStart = raw.search(/[\u4e00-\u9fff]/);
+  if (zhStart > 24) {
+    return {
+      en: raw.slice(0, zhStart).trim(),
+      zh: raw.slice(zhStart).trim(),
+    };
+  }
+
+  if (/[\u4e00-\u9fff]/.test(raw) && !/[A-Za-z]{3,}/.test(raw)) {
+    return { en: "", zh: raw };
+  }
+  return { en: raw, zh: "" };
+}
+
+/** Build speak/export parts: Mix plays English then Mandarin with matching voices. */
+export function buildSpeakParts(
+  question,
+  answer,
+  {
+    voiceQ = DEFAULT_VOICE_Q,
+    voiceA = DEFAULT_VOICE_A,
+    preface = "",
+    lang = "en",
+  } = {}
+) {
+  const parts = [];
+  const qVoice = normalizeVoiceId(voiceQ);
+  const aVoice = normalizeVoiceId(voiceA);
+
+  if (lang === "both") {
+    const qSplit = splitBilingualText(question);
+    const aSplit = splitBilingualText(answer);
+    const qEn = voiceForLangFamily(qVoice, "en");
+    const qZh = voiceForLangFamily(qVoice, "zh");
+    const aEn = voiceForLangFamily(aVoice, "en");
+    const aZh = voiceForLangFamily(aVoice, "zh");
+
+    const prefSplit = splitBilingualText(preface);
+    const prefEn = sanitizeSpeakText(prefSplit.en);
+    const prefZh = sanitizeSpeakText(prefSplit.zh);
+    if (prefEn) parts.push({ text: prefEn, voice: qEn });
+    if (prefZh) parts.push({ text: prefZh, voice: qZh });
+    if (!prefEn && !prefZh) {
+      const pref = sanitizeSpeakText(preface);
+      if (pref) parts.push({ text: pref, voice: qEn });
+    }
+
+    const qEnText = sanitizeSpeakText(qSplit.en);
+    const qZhText = sanitizeSpeakText(qSplit.zh);
+    const aEnText = sanitizeSpeakText(aSplit.en);
+    const aZhText = sanitizeSpeakText(aSplit.zh);
+
+    if (qEnText) parts.push({ text: qEnText, voice: qEn });
+    if (qZhText) parts.push({ text: qZhText, voice: qZh });
+    if (aEnText) parts.push({ text: aEnText, voice: aEn });
+    if (aZhText) parts.push({ text: aZhText, voice: aZh });
+
+    // Fallback if model returned monolingual Mix content
+    if (!parts.length) {
+      const q = sanitizeSpeakText(question);
+      const a = sanitizeSpeakText(answer);
+      if (q) parts.push({ text: q, voice: qEn });
+      if (a) parts.push({ text: a, voice: aEn });
+    }
+    return parts;
+  }
+
+  const pref = sanitizeSpeakText(preface);
+  const q = sanitizeSpeakText(question);
+  const a = sanitizeSpeakText(answer);
+  if (pref) parts.push({ text: pref, voice: qVoice });
+  if (q) parts.push({ text: q, voice: qVoice });
+  if (a) parts.push({ text: a, voice: aVoice });
+  return parts;
 }
 
 const LEGACY_VOICE_MAP = {
@@ -169,15 +288,15 @@ export async function synthesizeQaAudio(
     voiceQ = DEFAULT_VOICE_Q,
     voiceA = DEFAULT_VOICE_A,
     preface = "",
+    lang = "en",
   } = {}
 ) {
-  const parts = [];
-  const pref = sanitizeSpeakText(preface);
-  const q = sanitizeSpeakText(question);
-  const a = sanitizeSpeakText(answer);
-  if (pref) parts.push({ text: pref, voice: voiceQ });
-  if (q) parts.push({ text: q, voice: voiceQ });
-  if (a) parts.push({ text: a, voice: voiceA });
+  const parts = buildSpeakParts(question, answer, {
+    voiceQ,
+    voiceA,
+    preface,
+    lang,
+  });
   if (!parts.length) throw new Error("Nothing to export");
 
   const blobs = [];
@@ -278,6 +397,7 @@ export async function speakText(
 
 /**
  * Speak question with interviewer voice, then answer with candidate voice.
+ * Mix mode: English half → Mandarin half, each with a matching voice.
  */
 export async function speakQa(
   question,
@@ -287,18 +407,17 @@ export async function speakQa(
     voiceQ = DEFAULT_VOICE_Q,
     voiceA = DEFAULT_VOICE_A,
     preface = "",
+    lang = "en",
   } = {}
 ) {
   stopSpeech();
   const token = playToken;
-  const parts = [];
-  const pref = sanitizeSpeakText(preface);
-  const q = sanitizeSpeakText(question);
-  const a = sanitizeSpeakText(answer);
-
-  if (pref) parts.push({ text: pref, voice: voiceQ });
-  if (q) parts.push({ text: q, voice: voiceQ });
-  if (a) parts.push({ text: a, voice: voiceA });
+  const parts = buildSpeakParts(question, answer, {
+    voiceQ,
+    voiceA,
+    preface,
+    lang,
+  });
   if (!parts.length) return;
 
   for (const part of parts) {

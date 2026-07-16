@@ -142,9 +142,9 @@ export default function DocumentField({
             className="btn-ghost btn px-2 py-1 text-xs"
             onClick={clearAll}
             aria-label={t("doc.clear")}
+            title={t("doc.clear")}
           >
             <Trash size={15} weight="bold" />
-            {t("doc.clear")}
           </button>
         ) : null}
       </div>

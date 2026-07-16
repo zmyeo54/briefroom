@@ -1,4 +1,4 @@
-import { cors } from "../lib/edgeTts.js";
+import { cors } from "./_ttsShared.js";
 
 export const config = {
   maxDuration: 30,

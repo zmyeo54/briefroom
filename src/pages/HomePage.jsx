@@ -343,6 +343,7 @@ export default function HomePage() {
           rate: latest.rate,
           voiceQ: latest.voiceQ,
           voiceA: latest.voiceA,
+          lang: latest.lang,
         });
       } catch (e) {
         flash(e.message || "TTS failed.", "error");
@@ -369,14 +370,17 @@ export default function HomePage() {
       for (const i of indices) {
         setPlayingIndex(i);
         const preface =
-          latest.lang === "en"
-            ? `Question ${i + 1}.`
-            : `第${i + 1}题。`;
+          latest.lang === "zh"
+            ? `第${i + 1}题。`
+            : latest.lang === "both"
+              ? `Question ${i + 1}. / 第${i + 1}题。`
+              : `Question ${i + 1}.`;
         await speakQa(qa[i].q, qa[i].a, {
           rate: latest.rate,
           voiceQ: latest.voiceQ,
           voiceA: latest.voiceA,
           preface,
+          lang: latest.lang,
         });
       }
     } catch (e) {
@@ -541,10 +545,20 @@ export default function HomePage() {
             <p className="mt-1 text-xs leading-relaxed mute md:text-sm">
               {t("home.focusThemesHint")}
             </p>
+            <span className="focus-count mt-2.5 inline-flex">
+              {t("home.focusSelectedPrefix") ? (
+                <span className="focus-count-label !pl-2">
+                  {t("home.focusSelectedPrefix")}
+                </span>
+              ) : null}
+              <span className="focus-count-n">
+                {(settings.focuses || []).length}
+              </span>
+              <span className="focus-count-label">
+                {t("home.focusSelectedSuffix")}
+              </span>
+            </span>
           </div>
-          <span className="font-mono text-[11px] faint tabular-nums">
-            {t("home.focusSelected", { n: (settings.focuses || []).length })}
-          </span>
         </div>
 
         <div className="space-y-4">
@@ -661,8 +675,9 @@ export default function HomePage() {
               {t("home.questionsHint")}
             </p>
           </div>
-          <span className="font-mono text-xs tabular-nums faint">
-            {t("home.items", { n: qa.length })}
+          <span className="focus-count focus-count--stack inline-flex shrink-0">
+            <span className="focus-count-n">{qa.length}</span>
+            <span className="focus-count-label">{t("home.itemsLabel")}</span>
           </span>
         </div>
         <QaList

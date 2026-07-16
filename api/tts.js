@@ -4,7 +4,7 @@ import {
   rateToEdge,
   resolveVoice,
   sanitizeSpeakText,
-} from "../lib/edgeTts.js";
+} from "./_ttsShared.js";
 
 export const config = {
   maxDuration: 60,
@@ -14,20 +14,14 @@ export const config = {
 function collectStream(stream) {
   return new Promise((resolve, reject) => {
     const chunks = [];
-    let settled = false;
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      resolve(Buffer.concat(chunks));
-    };
     stream.on("data", (d) => chunks.push(Buffer.isBuffer(d) ? d : Buffer.from(d)));
-    stream.on("end", finish);
-    stream.on("close", finish);
-    stream.on("error", (err) => {
-      if (settled) return;
-      settled = true;
-      reject(err);
-    });
+    stream.on("end", () => resolve(Buffer.concat(chunks)));
+    stream.on("close", () => resolve(Buffer.concat(chunks)));
+    stream.on("error", reject);
+    // Safety: some streams emit end without close
+    setTimeout(() => {
+      if (chunks.length) resolve(Buffer.concat(chunks));
+    }, 25000);
   });
 }
 

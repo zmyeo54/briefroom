@@ -3,7 +3,7 @@ import {
   VOICES,
   DEFAULT_VOICE_Q,
   DEFAULT_VOICE_A,
-} from "../lib/edgeTts.js";
+} from "./_ttsShared.js";
 
 export default async function handler(req, res) {
   cors(res);

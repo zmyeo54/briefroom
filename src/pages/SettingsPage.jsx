@@ -275,17 +275,23 @@ export default function SettingsPage() {
               setStatus(t("settings.playingSample"));
               try {
                 const isEn = settings.lang === "en";
+                const isZh = settings.lang === "zh";
                 await speakQa(
                   isEn
                     ? "Tell me about yourself."
-                    : "请介绍一下你自己。",
+                    : isZh
+                      ? "请介绍一下你自己。"
+                      : "Tell me about yourself. / 请介绍一下你自己。",
                   isEn
                     ? "I lead delivery teams across markets with clear ownership."
-                    : "我负责跨区域交付，强调结果与客户信任。",
+                    : isZh
+                      ? "我负责跨区域交付，强调结果与客户信任。"
+                      : "I lead delivery teams across markets with clear ownership.\n\n我负责跨区域交付，强调结果与客户信任。",
                   {
                     rate: settings.rate,
                     voiceQ: settings.voiceQ,
                     voiceA: settings.voiceA,
+                    lang: settings.lang,
                   }
                 );
                 setStatus(t("settings.testDone"));

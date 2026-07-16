@@ -732,13 +732,95 @@ body {
   }
 }
 
+.focus-count {
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 199, 87, 0.35) 0%,
+      rgba(255, 118, 72, 0.22) 42%,
+      rgba(74, 127, 248, 0.28) 100%
+    );
+  box-shadow:
+    0 8px 20px -14px rgba(74, 127, 248, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 0.3rem 0.8rem 0.3rem 0.35rem;
+}
+.focus-count-n {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.55rem;
+  height: 1.55rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #2f5fd4;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  box-shadow: 0 2px 8px -4px rgba(32, 32, 32, 0.25);
+  white-space: nowrap;
+}
+.focus-count-label {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #23355f;
+}
+
+/* Stacked variant — e.g. “9 / ready” */
+.focus-count--stack {
+  flex-direction: column;
+  align-items: center;
+  gap: 0.12rem;
+  border-radius: 1.25rem;
+  padding: 0.45rem 0.7rem 0.5rem;
+  min-width: 3.5rem;
+}
+.focus-count--stack .focus-count-n {
+  min-width: 1.75rem;
+  height: 1.75rem;
+  font-size: 0.9375rem;
+}
+.focus-count--stack .focus-count-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #3a6ae0;
+}
+.focus-count-den {
+  font-size: 0.7em;
+  font-weight: 650;
+  color: #6b8fd4;
+  margin-left: 1px;
+}
+.focus-count-hint {
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: #6b6b6b;
+  margin-left: 0.15rem;
+}
+
 .focus-bubbles {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-start;
-  gap: 0.55rem 0.65rem;
-  padding: 0.35rem 0.15rem 0.55rem;
+  justify-content: center;
+  gap: 0.85rem 1.1rem;
+  padding: 1.1rem 0.35rem 1.4rem;
+  min-height: 11rem;
+  overflow: visible;
 }
 
 .focus-bubble {
@@ -762,7 +844,7 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(14px) saturate(1.2);
   -webkit-backdrop-filter: blur(14px) saturate(1.2);
-  overflow: hidden;
+  overflow: visible;
   transition: box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s ease;
   will-change: transform;
 }
@@ -812,16 +894,16 @@ body {
   max-width: 100%;
 }
 .focus-bubble-label {
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   font-weight: 650;
   letter-spacing: -0.02em;
   line-height: 1.15;
   color: #202020;
 }
 .focus-bubble-hint {
-  font-size: 0.62rem;
+  font-size: 0.72rem;
   font-weight: 500;
-  line-height: 1.25;
+  line-height: 1.3;
   color: #6b6b6b;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -857,12 +939,14 @@ body {
 
 @media (max-width: 767px) {
   .focus-bubbles {
-    gap: 0.4rem 0.45rem;
+    gap: 0.65rem 0.75rem;
     justify-content: center;
+    padding: 0.85rem 0.2rem 1.1rem;
+    min-height: 9.5rem;
   }
   .focus-bubble {
-    width: min(var(--bubble-size), 6.4rem) !important;
-    height: min(var(--bubble-size), 6.4rem) !important;
+    width: min(var(--bubble-size), 7.25rem) !important;
+    height: min(var(--bubble-size), 7.25rem) !important;
     transform-origin: center;
   }
 }
