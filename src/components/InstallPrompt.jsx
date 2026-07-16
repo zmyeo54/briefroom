@@ -7,7 +7,6 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { useI18n } from "../lib/I18nContext";
-import BrandLogo from "./BrandLogo";
 
 const DISMISS_KEY = "briefroom_install_dismissed";
 const SHOW_DELAY_MS = 1800;
@@ -51,20 +50,26 @@ export default function InstallPrompt() {
   useEffect(() => {
     if (hidden || isStandalone()) return;
 
-    const onBip = (e) => {
-      e.preventDefault();
-      setDeferred(e);
-    };
-    window.addEventListener("beforeinstallprompt", onBip);
-
-    if (isIos() && !window.navigator.standalone) {
+    const ios = isIos();
+    // iOS never gets a real install prompt — always show Share steps,
+    // even if a desktop/dev browser fires beforeinstallprompt under an iPhone UA.
+    if (ios && !window.navigator.standalone) {
       setShowIos(true);
+    }
+
+    let onBip;
+    if (!ios) {
+      onBip = (e) => {
+        e.preventDefault();
+        setDeferred(e);
+      };
+      window.addEventListener("beforeinstallprompt", onBip);
     }
 
     const timer = setTimeout(() => setReady(true), SHOW_DELAY_MS);
 
     return () => {
-      window.removeEventListener("beforeinstallprompt", onBip);
+      if (onBip) window.removeEventListener("beforeinstallprompt", onBip);
       clearTimeout(timer);
     };
   }, [hidden]);
@@ -93,9 +98,12 @@ export default function InstallPrompt() {
   };
 
   if (hidden || isStandalone() || !ready) return null;
-  if (!deferred && !showIos) return null;
 
-  const isAndroidFlow = Boolean(deferred);
+  const ios = isIos();
+  // Prefer iOS steps whenever we're on an iPhone/iPad — never show Android copy there.
+  const isAndroidFlow = Boolean(deferred) && !ios;
+  if (!isAndroidFlow && !showIos) return null;
+
   const brand = t("brand.name");
 
   return (
@@ -112,7 +120,7 @@ export default function InstallPrompt() {
         onClick={dismiss}
         aria-label={t("install.dismiss")}
       >
-        <X size={16} weight="bold" />
+        <X size={14} weight="bold" />
       </button>
 
       <div className="install-sheet-visual" aria-hidden>
@@ -123,7 +131,14 @@ export default function InstallPrompt() {
             <span className="install-phone-dot" />
             <span className="install-phone-dot" />
             <span className="install-phone-app is-live">
-              <BrandLogo size={36} title={brand} />
+              <img
+                src="/favicon.svg"
+                alt=""
+                width={28}
+                height={28}
+                className="install-phone-logo"
+                draggable={false}
+              />
             </span>
             <span className="install-phone-dot" />
             <span className="install-phone-dot" />
@@ -136,13 +151,15 @@ export default function InstallPrompt() {
           </div>
         </div>
         <div className="install-sheet-badge">
-          <DeviceMobile size={14} weight="bold" />
+          <DeviceMobile size={12} weight="bold" />
           {isAndroidFlow ? t("install.badgeAndroid") : t("install.badgeIos")}
         </div>
       </div>
 
       <div className="install-sheet-copy">
-        <p className="install-sheet-kicker">{t("install.kicker")}</p>
+        <p className="install-sheet-kicker">
+          {isAndroidFlow ? t("install.kickerAndroid") : t("install.kickerIos")}
+        </p>
         <h2 id="install-sheet-title" className="install-sheet-title">
           {isAndroidFlow
             ? t("install.titleAndroid", { brand })
@@ -157,14 +174,14 @@ export default function InstallPrompt() {
 
       {isAndroidFlow ? (
         <button type="button" className="install-sheet-cta" onClick={install}>
-          <DownloadSimple size={18} weight="bold" />
+          <DownloadSimple size={16} weight="bold" />
           {t("install.cta")}
         </button>
       ) : (
         <ol className="install-steps">
           <li className="install-step">
             <span className="install-step-icon" aria-hidden>
-              <ShareNetwork size={18} weight="bold" />
+              <ShareNetwork size={15} weight="bold" />
             </span>
             <span className="install-step-text">
               <strong>{t("install.step1Label")}</strong>
@@ -176,7 +193,7 @@ export default function InstallPrompt() {
           </li>
           <li className="install-step">
             <span className="install-step-icon" aria-hidden>
-              <PlusSquare size={18} weight="bold" />
+              <PlusSquare size={15} weight="bold" />
             </span>
             <span className="install-step-text">
               <strong>{t("install.step2Label")}</strong>

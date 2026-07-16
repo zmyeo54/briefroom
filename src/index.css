@@ -123,14 +123,14 @@ html[lang="zh-CN"] .focus-bubble-label {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.85rem;
-  max-width: 24rem;
-  max-height: min(78dvh, 36rem);
+  gap: 0.55rem;
+  max-width: 18.5rem;
+  max-height: min(70dvh, 28rem);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   margin-inline: auto;
-  padding: 1.1rem 1.1rem max(0.95rem, env(safe-area-inset-bottom, 0px));
-  border-radius: 28px;
+  padding: 0.85rem 0.85rem max(0.7rem, env(safe-area-inset-bottom, 0px));
+  border-radius: 22px;
   border: 1px solid rgba(255, 255, 255, 0.85);
   background:
     linear-gradient(165deg, rgba(255, 255, 255, 0.97) 0%, rgba(247, 246, 242, 0.96) 100%);
@@ -146,7 +146,7 @@ html[lang="zh-CN"] .focus-bubble-label {
   .install-sheet {
     left: 50%;
     right: auto;
-    width: min(24rem, calc(100vw - 2rem));
+    width: min(18.5rem, calc(100vw - 2rem));
     transform: translateX(-50%);
     bottom: max(1.5rem, calc(env(safe-area-inset-bottom, 0px) + 1.25rem));
   }
@@ -181,13 +181,13 @@ html[lang="zh-CN"] .focus-bubble-label {
 
 .install-sheet-close {
   position: absolute;
-  top: 0.55rem;
-  right: 0.55rem;
+  top: 0.35rem;
+  right: 0.35rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 2.25rem;
+  height: 2.25rem;
   border: 0;
   border-radius: 999px;
   background: rgba(32, 32, 32, 0.05);
@@ -209,15 +209,15 @@ html[lang="zh-CN"] .focus-bubble-label {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.55rem;
-  padding-top: 0.15rem;
+  gap: 0.4rem;
+  padding-top: 0.1rem;
 }
 
 .install-phone {
   position: relative;
-  width: 7.25rem;
-  padding: 0.55rem 0.5rem 0.45rem;
-  border-radius: 1.35rem;
+  width: 5.5rem;
+  padding: 0.4rem 0.35rem 0.35rem;
+  border-radius: 1.05rem;
   border: 1px solid rgba(32, 32, 32, 0.08);
   background:
     linear-gradient(180deg, #f4f5f8 0%, #e8eaf0 100%);
@@ -226,35 +226,35 @@ html[lang="zh-CN"] .focus-bubble-label {
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 .install-phone-notch {
-  width: 2.1rem;
-  height: 0.28rem;
-  margin: 0 auto 0.55rem;
+  width: 1.55rem;
+  height: 0.22rem;
+  margin: 0 auto 0.4rem;
   border-radius: 999px;
   background: rgba(32, 32, 32, 0.12);
 }
 .install-phone-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.4rem;
-  padding: 0 0.15rem;
+  gap: 0.28rem;
+  padding: 0 0.1rem;
 }
 .install-phone-dock {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 0.35rem;
-  margin-top: 0.55rem;
-  padding: 0.4rem 0.25rem;
-  border-radius: 0.85rem;
+  gap: 0.25rem;
+  margin-top: 0.4rem;
+  padding: 0.28rem 0.18rem;
+  border-radius: 0.65rem;
   background: rgba(255, 255, 255, 0.55);
 }
 .install-phone-dot {
   display: block;
   aspect-ratio: 1;
-  border-radius: 0.55rem;
+  border-radius: 0.42rem;
   background: rgba(32, 32, 32, 0.08);
 }
 .install-phone-dot.is-dock {
-  border-radius: 0.65rem;
+  border-radius: 0.5rem;
   background: rgba(74, 127, 248, 0.12);
 }
 .install-phone-app {
@@ -262,8 +262,15 @@ html[lang="zh-CN"] .focus-bubble-label {
   align-items: center;
   justify-content: center;
   aspect-ratio: 1;
-  border-radius: 0.7rem;
+  border-radius: 0.55rem;
   background: transparent;
+}
+.install-phone-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 0.55rem;
+  object-fit: cover;
 }
 .install-phone-app.is-live {
   animation: install-app-pulse 1.8s ease-in-out infinite;
@@ -289,13 +296,13 @@ html[lang="zh-CN"] .focus-bubble-label {
 .install-sheet-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.28rem 0.65rem;
+  gap: 0.25rem;
+  padding: 0.2rem 0.5rem;
   border-radius: 999px;
   border: 1px solid rgba(74, 127, 248, 0.2);
   background: rgba(74, 127, 248, 0.08);
   color: #3a6ae0;
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -303,11 +310,11 @@ html[lang="zh-CN"] .focus-bubble-label {
 
 .install-sheet-copy {
   text-align: center;
-  padding: 0 0.35rem;
+  padding: 0 0.2rem;
 }
 .install-sheet-kicker {
-  margin: 0 0 0.3rem;
-  font-size: 0.68rem;
+  margin: 0 0 0.2rem;
+  font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -316,16 +323,16 @@ html[lang="zh-CN"] .focus-bubble-label {
 .install-sheet-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 1.2rem;
+  font-size: 1.02rem;
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1.2;
   color: #202020;
 }
 .install-sheet-hint {
-  margin: 0.4rem 0 0;
-  font-size: 0.8125rem;
-  line-height: 1.45;
+  margin: 0.3rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
   color: #6b6b6b;
 }
 
@@ -333,14 +340,14 @@ html[lang="zh-CN"] .focus-bubble-label {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.45rem;
+  gap: 0.4rem;
   width: 100%;
-  min-height: 2.85rem;
+  min-height: 2.5rem;
   border: 0;
   border-radius: 999px;
   background: #4a7ff8;
   color: #fff;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   font-weight: 650;
   letter-spacing: -0.01em;
   cursor: pointer;
@@ -360,7 +367,7 @@ html[lang="zh-CN"] .focus-bubble-label {
   display: flex;
   align-items: stretch;
   justify-content: space-between;
-  gap: 0.35rem;
+  gap: 0.25rem;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -370,9 +377,9 @@ html[lang="zh-CN"] .focus-bubble-label {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.7rem 0.45rem;
-  border-radius: 1rem;
+  gap: 0.35rem;
+  padding: 0.55rem 0.35rem;
+  border-radius: 0.85rem;
   border: 1px solid rgba(74, 127, 248, 0.18);
   background: rgba(74, 127, 248, 0.06);
   text-align: center;
@@ -381,8 +388,8 @@ html[lang="zh-CN"] .focus-bubble-label {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.15rem;
-  height: 2.15rem;
+  width: 1.85rem;
+  height: 1.85rem;
   border-radius: 999px;
   background: #fff;
   color: #4a7ff8;
@@ -391,13 +398,13 @@ html[lang="zh-CN"] .focus-bubble-label {
 .install-step-text {
   display: flex;
   flex-direction: column;
-  gap: 0.12rem;
-  font-size: 0.68rem;
-  line-height: 1.3;
+  gap: 0.1rem;
+  font-size: 0.62rem;
+  line-height: 1.25;
   color: #6b6b6b;
 }
 .install-step-text strong {
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   font-weight: 700;
   color: #202020;
   letter-spacing: -0.01em;
@@ -408,7 +415,7 @@ html[lang="zh-CN"] .focus-bubble-label {
   justify-content: center;
   flex-shrink: 0;
   color: #4a7ff8;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 700;
   opacity: 0.7;
 }
@@ -417,11 +424,11 @@ html[lang="zh-CN"] .focus-bubble-label {
   border: 0;
   background: transparent;
   color: #8a8a8a;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: -0.01em;
   cursor: pointer;
-  padding: 0.35rem;
+  padding: 0.25rem;
   transition: color 0.12s ease, opacity 0.1s ease;
 }
 .install-sheet-skip:hover {

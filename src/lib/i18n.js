@@ -20,7 +20,8 @@ const en = {
   "brand.name": "Line Check",
   "brand.tagline": "Your interview coach",
 
-  "install.kicker": "One-tap practice",
+  "install.kickerAndroid": "One-tap practice",
+  "install.kickerIos": "Two-tap install",
   "install.title": "Keep practice on your phone",
   "install.titleAndroid": "Install {brand} for One-Tap Practice",
   "install.titleIos": "Add {brand} to Home Screen",
@@ -259,7 +260,8 @@ const zh = {
   "brand.name": "对词间",
   "brand.tagline": "你的面试教练",
 
-  "install.kicker": "一键开口练",
+  "install.kickerAndroid": "一键开口练",
+  "install.kickerIos": "两步安装",
   "install.title": "把练习留在手机上",
   "install.titleAndroid": "安装{brand}，一键开始练习",
   "install.titleIos": "把{brand}加到主屏幕",
