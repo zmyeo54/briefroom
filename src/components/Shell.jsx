@@ -44,16 +44,16 @@ export default function Shell({ children }) {
         aria-hidden
       />
 
-      <div className="shell-pad relative z-10 mx-auto max-w-[1100px] pb-20 pt-0 md:pb-24">
+      <div className="shell-pad relative z-10 mx-auto max-w-[1100px] pt-0">
         <header className="shell-banner">
           <div className="toolbar-glass">
             <Link
               to="/"
-              className="toolbar-brand group flex shrink-0 items-center gap-2 rounded-full px-0.5 py-0.5 transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(74,127,248,0.45)]"
+              className="toolbar-brand group flex shrink-0 items-center gap-2.5 rounded-full px-0.5 py-0.5 transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(74,127,248,0.45)]"
             >
-              <BrandLogo size={28} className="toolbar-logo shrink-0 md:hidden" title={brandName} />
-              <BrandLogo size={32} className="toolbar-logo hidden shrink-0 md:block" title={brandName} />
-              <span className="toolbar-brand-name display whitespace-nowrap text-[1rem] font-semibold title tracking-tight md:text-[1.15rem]">
+              <BrandLogo size={32} className="toolbar-logo shrink-0 md:hidden" title={brandName} />
+              <BrandLogo size={36} className="toolbar-logo hidden shrink-0 md:block" title={brandName} />
+              <span className="toolbar-brand-name display whitespace-nowrap font-semibold title">
                 {brandName}
               </span>
             </Link>
@@ -67,7 +67,7 @@ export default function Shell({ children }) {
                   aria-label={t("nav.home")}
                   title={t("nav.home")}
                 >
-                  <House size={16} weight={pathname === "/" ? "fill" : "bold"} />
+                  <House size={18} weight={pathname === "/" ? "fill" : "bold"} />
                   <span className="nav-chip-label">{t("nav.home")}</span>
                 </Link>
                 <Link
@@ -78,7 +78,7 @@ export default function Shell({ children }) {
                   title={t("nav.settings")}
                 >
                   <GearSix
-                    size={16}
+                    size={18}
                     weight={pathname === "/settings" ? "fill" : "bold"}
                   />
                   <span className="nav-chip-label">{t("nav.settings")}</span>

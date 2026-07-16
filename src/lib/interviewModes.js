@@ -26,7 +26,7 @@ export const ANSWER_LENGTHS = [
   },
   {
     id: "deep",
-    label: "Deep dive",
+    label: "Deep Dive",
     short: "2–3 min",
     eyebrow: "Panel / VP",
     hint: "Richer ownership story — stakes, trade-offs, result.",
@@ -39,6 +39,73 @@ export const ANSWER_LENGTHS = [
 ];
 
 export const DEFAULT_ANSWER_LENGTH = "standard";
+
+/**
+ * Optional interviewer persona for invented questions.
+ * `any` = no bias (default). Other ids shape how questions are asked.
+ */
+export const INTERVIEWER_ROLES = [
+  {
+    id: "any",
+    label: "Any",
+    short: "Default",
+    eyebrow: "Optional",
+    hint: "No role bias — typical mixed interview questions.",
+    prompt: "",
+  },
+  {
+    id: "hr",
+    label: "HR",
+    short: "Screen",
+    eyebrow: "Recruiter",
+    hint: "Screening, motivation, culture, logistics.",
+    prompt: `INTERVIEWER ROLE (strict): HR / recruiter screen.
+- Write every invented "q" as if asked by an HR recruiter or talent partner — not a deep technical peer.
+- Prefer: motivation & why this role/company, career narrative, culture/values fit, communication clarity, logistics/availability, high-level strengths & gaps.
+- Avoid deep domain grill or system-architecture probes unless the JD clearly requires them in a screen.
+- Tone: warm, structured, professional; questions should sound like a real phone/video screen.
+- Answers should still be rehearse-ready for that screen — clear, concise, credible.`,
+  },
+  {
+    id: "manager",
+    label: "Line Manager",
+    short: "HM",
+    eyebrow: "Hiring mgr",
+    hint: "Day-to-day ownership, delivery, team fit.",
+    prompt: `INTERVIEWER ROLE (strict): Line manager / hiring manager.
+- Write every invented "q" as if asked by the hiring manager who would manage this person day-to-day.
+- Prefer: ownership of outcomes, how they work with the team, prioritization under constraints, stakeholder friction, role-specific judgment, what success looks like in the first 90 days.
+- Probe for concrete examples the manager can trust — stakes, trade-offs, what YOU did.
+- Tone: practical, direct, curious about how the candidate would operate on this team.
+- Avoid pure HR logistics questions; keep culture questions tied to working style on the job.`,
+  },
+  {
+    id: "exec",
+    label: "Exec / VP",
+    short: "VP+",
+    eyebrow: "Leadership",
+    hint: "Strategy, judgment, scale, executive presence.",
+    prompt: `INTERVIEWER ROLE (strict): Executive / VP / President-level interviewer.
+- Write every invented "q" as if asked by a senior leader (VP, director+, or president) — not a peer IC screen.
+- Prefer: strategic judgment, trade-offs at scale, cross-org influence, leadership under ambiguity, risk & integrity calls, business impact, how the candidate thinks — not only what they did.
+- Questions should feel high-altitude but still answerable with resume-backed stories (no trivia, no gotchas).
+- Tone: calm, probing, senior — expects ownership language and clear thinking.
+- Avoid checklist HR screens; avoid low-level task walkthroughs unless used to reveal judgment.`,
+  },
+];
+
+export const DEFAULT_INTERVIEWER_ROLE = "any";
+
+export function interviewerRoleById(id) {
+  return (
+    INTERVIEWER_ROLES.find((x) => x.id === id) ||
+    INTERVIEWER_ROLES.find((x) => x.id === DEFAULT_INTERVIEWER_ROLE)
+  );
+}
+
+export function normalizeInterviewerRole(id) {
+  return interviewerRoleById(id).id;
+}
 
 /**
  * Multi-select rehearsal directions.
@@ -166,6 +233,14 @@ export const QUESTION_FOCUSES = [
 
 export const DEFAULT_FOCUSES = ["leadership", "delivery", "customer", "rolefit"];
 
+/** Themes this interviewer persona tends to lean on (soft prior, not a hard lock). */
+const ROLE_FOCUS_BIAS = {
+  any: [],
+  hr: ["rolefit", "culture", "gaps", "customer"],
+  manager: ["delivery", "leadership", "stakeholder", "customer"],
+  exec: ["leadership", "stakeholder", "domain", "rolefit"],
+};
+
 /** Always useful baselines when JD is thin */
 const ALWAYS_INCLUDE = ["rolefit"];
 
@@ -185,11 +260,22 @@ export function normalizeFocuses(raw) {
 
 /**
  * Score focus themes from resume + JD text and return recommended ids.
- * Extras = everything else (caller shows them as optional).
+ * Optional interviewerRole adds a soft prior (who asks × what to rehearse).
  */
-export function suggestFocusesFromText({ resume = "", jd = "" } = {}) {
+export function suggestFocusesFromText({
+  resume = "",
+  jd = "",
+  interviewerRole = DEFAULT_INTERVIEWER_ROLE,
+} = {}) {
   const blob = `${resume}\n${jd}`.toLowerCase();
-  if (!blob.trim()) {
+  const role = normalizeInterviewerRole(interviewerRole);
+  const roleBias = new Set(ROLE_FOCUS_BIAS[role] || []);
+  const hasDocs = Boolean(blob.trim());
+
+  if (!hasDocs) {
+    if (roleBias.size) {
+      return normalizeFocuses([...roleBias]).slice(0, 4);
+    }
     return [...DEFAULT_FOCUSES];
   }
 
@@ -210,6 +296,8 @@ export function suggestFocusesFromText({ resume = "", jd = "" } = {}) {
       }
       if (hits > 0) score += hits * (needle.length > 6 ? 2 : 1);
     }
+    // Soft prior from interviewer persona — never outweighs strong JD hits
+    if (roleBias.has(f.id)) score += 2.5;
     return { id: f.id, score };
   }).sort((a, b) => b.score - a.score);
 
@@ -224,9 +312,11 @@ export function suggestFocusesFromText({ resume = "", jd = "" } = {}) {
     if (!picked.includes(id)) picked.push(id);
   }
 
-  // If JD barely matched, keep a sensible default set
   if (picked.length < 3) {
-    return normalizeFocuses([...picked, ...DEFAULT_FOCUSES]).slice(0, 4);
+    const fallback = roleBias.size
+      ? [...roleBias, ...DEFAULT_FOCUSES]
+      : [...DEFAULT_FOCUSES];
+    return normalizeFocuses([...picked, ...fallback]).slice(0, 4);
   }
 
   return normalizeFocuses(picked).slice(0, 5);

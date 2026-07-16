@@ -2,8 +2,10 @@ import { DEFAULT_SYSTEM, SYSTEM_PROMPT_VERSION } from "./prompt";
 import {
   DEFAULT_ANSWER_LENGTH,
   DEFAULT_FOCUSES,
+  DEFAULT_INTERVIEWER_ROLE,
   ANSWER_LENGTHS,
   normalizeFocuses,
+  normalizeInterviewerRole,
 } from "./interviewModes";
 import { DEFAULT_UI_LANG, normalizeUiLang } from "./i18n";
 import { normalizeGender } from "./candidate";
@@ -133,6 +135,7 @@ export const defaultSettings = {
   voiceA: DEFAULT_VOICE_A,
   rate: 1,
   answerLength: DEFAULT_ANSWER_LENGTH,
+  interviewerRole: DEFAULT_INTERVIEWER_ROLE,
   focuses: [...DEFAULT_FOCUSES],
   systemPrompt: DEFAULT_SYSTEM,
 };
@@ -176,6 +179,7 @@ export function normalizeSettings(raw) {
   if (!ANSWER_LENGTHS.some((x) => x.id === merged.answerLength)) {
     merged.answerLength = DEFAULT_ANSWER_LENGTH;
   }
+  merged.interviewerRole = normalizeInterviewerRole(merged.interviewerRole);
   merged.focuses = normalizeFocuses(merged.focuses);
 
   if (!String(merged.apiKey || "").trim()) {

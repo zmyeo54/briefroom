@@ -137,9 +137,6 @@ export default function DocumentField({
       <div className="doc-card-head">
         <div className="min-w-0 flex-1 pr-2">
           <h2 className="display text-lg title md:text-xl">{title}</h2>
-          <p className="doc-card-hint mute mt-1 text-xs leading-snug md:mt-1.5 md:text-sm md:leading-relaxed">
-            {hint}
-          </p>
         </div>
         {loaded ? (
           <button

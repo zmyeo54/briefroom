@@ -8,6 +8,7 @@ import {
   DownloadSimple,
   FloppyDisk,
   SpinnerGap,
+  ArrowCounterClockwise,
 } from "@phosphor-icons/react";
 import DocumentField from "../components/DocumentField";
 import FocusBubbles from "../components/FocusBubbles";
@@ -17,6 +18,8 @@ import { pinMandatoryFirst } from "../lib/mandatoryQuestions";
 import {
   ANSWER_LENGTHS,
   DEFAULT_FOCUSES,
+  DEFAULT_INTERVIEWER_ROLE,
+  INTERVIEWER_ROLES,
   normalizeFocuses,
   partitionFocuses,
   suggestFocusesFromText,
@@ -60,6 +63,16 @@ export default function HomePage() {
     () => loadJson("draft", {}).autoQuestions !== false
   );
 
+  // Keep resume / JD / target questions until the user clears them
+  useEffect(() => {
+    const payload = { resume, jd, questions: questionsRaw, autoQuestions };
+    const id = setTimeout(() => saveJson("draft", payload), 200);
+    return () => {
+      clearTimeout(id);
+      saveJson("draft", payload);
+    };
+  }, [resume, jd, questionsRaw, autoQuestions]);
+
   const [qa, setQa] = useState(() => {
     const stored = loadJson("qa", []);
     return pinMandatoryFirst(
@@ -97,15 +110,17 @@ export default function HomePage() {
     [questionsRaw]
   );
 
-  // Pick up settings after visiting /settings
+  // Pick up settings after visiting /settings or UI-lang sync
   useEffect(() => {
     const refresh = () => setSettings(readSettings());
     refresh();
     window.addEventListener("focus", refresh);
     document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("briefroom-storage", refresh);
     return () => {
       window.removeEventListener("focus", refresh);
       document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("briefroom-storage", refresh);
     };
   }, []);
 
@@ -141,6 +156,54 @@ export default function HomePage() {
     setSettings(next);
   };
 
+  const resetAllContent = () => {
+    if (!window.confirm(t("home.resetAllConfirm"))) return;
+    stopSpeech();
+    setSpeaking(false);
+    setPlayingIndex(-1);
+    setJd("");
+    setQuestionsRaw("");
+    setAutoQuestions(true);
+    setQa([]);
+    setSelected(new Set());
+    setQaEpoch((n) => n + 1);
+    saveJson("draft", {
+      resume,
+      jd: "",
+      questions: "",
+      autoQuestions: true,
+    });
+    saveJson("qa", []);
+    try {
+      sessionStorage.removeItem("briefroom_focus_auto");
+    } catch {
+      /* ignore */
+    }
+    patchSettings({ focuses: [...DEFAULT_FOCUSES], interviewerRole: DEFAULT_INTERVIEWER_ROLE });
+    flash(t("home.flash.resetAll"), "ok");
+  };
+
+  /** Fill Settings → Your name from resume when the field is still empty. */
+  const catchNameFromResume = useCallback(
+    (resumeText = resume) => {
+      const extracted = extractCandidateName(resumeText);
+      if (!extracted) return "";
+      const cur = readSettings();
+      if (String(cur.name || "").trim()) return extracted;
+      patchSettings({ name: extracted });
+      return extracted;
+    },
+    // patchSettings is stable enough via readSettings; resume used as default arg
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [resume]
+  );
+
+  // When a resume is attached, catch the name into Settings if empty
+  useEffect(() => {
+    if (!resume.trim()) return;
+    catchNameFromResume(resume);
+  }, [resume, catchNameFromResume]);
+
   const setInterviewLang = (lang) => {
     const cur = readSettings();
     const voices = voicesForInterviewLang(
@@ -166,8 +229,13 @@ export default function HomePage() {
   };
 
   const suggestedFocuses = useMemo(
-    () => suggestFocusesFromText({ resume, jd }),
-    [resume, jd]
+    () =>
+      suggestFocusesFromText({
+        resume,
+        jd,
+        interviewerRole: settings.interviewerRole,
+      }),
+    [resume, jd, settings.interviewerRole]
   );
 
   const { recommended, extras } = useMemo(
@@ -175,26 +243,29 @@ export default function HomePage() {
     [settings.focuses, suggestedFocuses]
   );
 
-  // Standard focuses first; auto-refresh locally when resume/JD is attached or changes (no API)
+  // Auto-refresh themes when resume/JD/interviewer role changes (local, no API)
   useEffect(() => {
     const hasDocs = Boolean(resume.trim() || jd.trim());
-    const key = hasDocs
-      ? [
-          resume.trim().length,
-          jd.trim().length,
-          resume.trim().slice(0, 80),
-          jd.trim().slice(0, 80),
-          suggestedFocuses.join(","),
-        ].join("|")
-      : "empty";
+    const key = [
+      settings.interviewerRole || "any",
+      hasDocs
+        ? [
+            resume.trim().length,
+            jd.trim().length,
+            resume.trim().slice(0, 80),
+            jd.trim().slice(0, 80),
+            suggestedFocuses.join(","),
+          ].join("|")
+        : "empty",
+    ].join("::");
     const prev = sessionStorage.getItem("briefroom_focus_auto");
     if (prev === key) return;
     sessionStorage.setItem("briefroom_focus_auto", key);
     patchSettings({
-      focuses: hasDocs ? suggestedFocuses : [...DEFAULT_FOCUSES],
+      focuses: suggestedFocuses,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [suggestedFocuses, resume, jd]);
+  }, [suggestedFocuses, resume, jd, settings.interviewerRole]);
 
   const toggleFocus = (id) => {
     const cur = normalizeFocuses(readSettings().focuses);
@@ -224,6 +295,7 @@ export default function HomePage() {
     setSettings(latest);
 
     if (!latest.apiKey.trim()) {
+      saveJson("draft", { resume, jd, questions: questionsRaw, autoQuestions });
       flash(t("home.flash.needKey"), "error");
       navigate("/settings");
       return;
@@ -233,6 +305,7 @@ export default function HomePage() {
       return;
     }
 
+    saveJson("draft", { resume, jd, questions: questionsRaw, autoQuestions });
     setLoading(true);
     flash(t("home.flash.generating"));
     stopSpeech();
@@ -247,6 +320,7 @@ export default function HomePage() {
       autoQuestions,
       answerLength: latest.answerLength,
       focuses: latest.focuses,
+      interviewerRole: latest.interviewerRole,
       candidateName:
         String(latest.name || "").trim() || extractCandidateName(resume),
       gender: latest.gender,
@@ -307,10 +381,13 @@ export default function HomePage() {
 
       if (!raw.length) throw new Error("No Q&A parsed from response");
 
-      const named = applyCandidateNameToItems(
-        raw,
-        String(latest.name || "").trim() || extractCandidateName(resume)
-      );
+      const fromResume = catchNameFromResume(resume);
+      const nameForAnswers =
+        String(readSettings().name || "").trim() ||
+        fromResume ||
+        extractCandidateName(resume);
+
+      const named = applyCandidateNameToItems(raw, nameForAnswers);
       const items = pinMandatoryFirst(named, latest.lang, questions);
       setQa(items);
       setQaEpoch((n) => n + 1);
@@ -462,14 +539,25 @@ export default function HomePage() {
       </header>
 
       <section className="panel mb-4 space-y-5 p-3.5 md:mb-5 md:space-y-6 md:p-6">
-        <div>
-          <p className="label mb-1.5">{t("home.prepLabel")}</p>
-          <h2 className="display text-lg title md:text-2xl">
-            {t("home.prepTitle")}
-          </h2>
-          <p className="mt-1 max-w-[54ch] text-xs leading-relaxed mute md:mt-1.5 md:text-sm">
-            {t("home.prepHint")}
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="label mb-1.5">{t("home.prepLabel")}</p>
+            <h2 className="display text-lg title md:text-2xl">
+              {t("home.prepTitle")}
+            </h2>
+            <p className="mt-1 max-w-[54ch] text-xs leading-relaxed mute md:mt-1.5 md:text-sm">
+              {t("home.prepHint")}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn shrink-0"
+            onClick={resetAllContent}
+            title={t("home.resetAllHint")}
+          >
+            <ArrowCounterClockwise size={16} weight="bold" />
+            {t("home.resetAll")}
+          </button>
         </div>
 
         <div>
@@ -525,6 +613,34 @@ export default function HomePage() {
             })}
           </div>
         </div>
+
+        <div>
+          <h3 className="mb-1 text-sm font-semibold title">{t("home.interviewerRole")}</h3>
+          <p className="mb-2 text-xs mute">{t("home.interviewerRoleHint")}</p>
+          <div
+            className="choice-row choice-row--4"
+            role="radiogroup"
+            aria-label={t("home.interviewerRole")}
+          >
+            {INTERVIEWER_ROLES.map((opt) => {
+              const on = settings.interviewerRole === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  title={t(`role.${opt.id}.hint`)}
+                  className={`choice-card ${on ? "is-on" : ""}`}
+                  onClick={() => patchSettings({ interviewerRole: opt.id })}
+                >
+                  <span className="choice-card-eyebrow">{t(`role.${opt.id}.eyebrow`)}</span>
+                  <span className="choice-card-title">{t(`role.${opt.id}.label`)}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </section>
 
       <div className="doc-twin mb-4 lg:mb-5">
@@ -553,15 +669,12 @@ export default function HomePage() {
       ) : null}
 
       <section className="panel mb-4 space-y-3 p-3.5 md:mb-5 md:space-y-4 md:p-6">
-        <div className="flex flex-wrap items-end justify-between gap-2">
-          <div>
+        <div className="focus-head">
+          <div className="focus-head-top">
             <h2 className="display text-lg font-semibold title md:text-xl">
               {t("home.focusThemes")}
             </h2>
-            <p className="mt-1 text-xs leading-relaxed mute md:text-sm">
-              {t("home.focusThemesHint")}
-            </p>
-            <span className="focus-count mt-2.5 inline-flex">
+            <span className="focus-count inline-flex shrink-0">
               {t("home.focusSelectedPrefix") ? (
                 <span className="focus-count-label !pl-2">
                   {t("home.focusSelectedPrefix")}
@@ -575,12 +688,17 @@ export default function HomePage() {
               </span>
             </span>
           </div>
+          <p className="mt-1 text-xs leading-relaxed mute md:text-sm">
+            {t("home.focusThemesHint")}
+          </p>
         </div>
 
         <div className="space-y-4">
           <div>
             <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-[#4a7ff8]">
-              {resume.trim() || jd.trim()
+              {resume.trim() ||
+              jd.trim() ||
+              (settings.interviewerRole && settings.interviewerRole !== "any")
                 ? t("home.suggested")
                 : t("home.standardThemes")}
             </p>
@@ -591,7 +709,9 @@ export default function HomePage() {
               tone="primary"
               t={t}
               label={
-                resume.trim() || jd.trim()
+                resume.trim() ||
+                jd.trim() ||
+                (settings.interviewerRole && settings.interviewerRole !== "any")
                   ? t("home.suggested")
                   : t("home.standardThemes")
               }
@@ -658,18 +778,6 @@ export default function HomePage() {
             <FloppyDisk size={16} />
             {t("home.saveDraft")}
           </button>
-          <button
-            type="button"
-            className="btn-ghost btn"
-            onClick={() => {
-              setQa([]);
-              saveJson("qa", []);
-              setSelected(new Set());
-              flash(t("home.flash.cleared"), "ok");
-            }}
-          >
-            {t("home.clearAnswers")}
-          </button>
         </div>
         <AnimatePresence>
           {status.text ? (
@@ -719,7 +827,7 @@ export default function HomePage() {
         />
       </section>
 
-      <div className="action-dock-wrap sticky bottom-3 z-20 mt-5 md:bottom-4 md:mt-8">
+      <div className="action-dock-wrap sticky z-20 mt-5 md:mt-8">
         <motion.div layout className="action-dock">
           <button
             type="button"

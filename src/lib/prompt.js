@@ -6,8 +6,11 @@ import {
   answerLengthById,
   DEFAULT_ANSWER_LENGTH,
   DEFAULT_FOCUSES,
+  DEFAULT_INTERVIEWER_ROLE,
   focusPromptBlock,
+  interviewerRoleById,
   normalizeFocuses,
+  normalizeInterviewerRole,
 } from "./interviewModes";
 
 /** Default system + user prompt templates used for Q&A generation. */
@@ -69,10 +72,12 @@ export function buildUserPrompt({
   autoQuestions,
   answerLength = DEFAULT_ANSWER_LENGTH,
   focuses = DEFAULT_FOCUSES,
+  interviewerRole = DEFAULT_INTERVIEWER_ROLE,
   candidateName = "",
   gender = "male",
 }) {
   const length = answerLengthById(answerLength);
+  const role = interviewerRoleById(normalizeInterviewerRole(interviewerRole));
   const focusIds = normalizeFocuses(focuses);
   const g = String(gender || "").toLowerCase() === "female" ? "female" : "male";
   const name = String(candidateName || "").trim();
@@ -104,6 +109,15 @@ export function buildUserPrompt({
         ? "Invent additional questions in bilingual form (English / Chinese)."
         : "Invent additional questions in English only.";
 
+  const asker =
+    role.id === "hr"
+      ? "an HR recruiter / talent partner"
+      : role.id === "manager"
+        ? "the line / hiring manager"
+        : role.id === "exec"
+          ? "a VP / executive / president-level interviewer"
+          : "a hiring interviewer for this role";
+
   let addonBlock = "";
   if (addons.length) {
     addonBlock = `TARGET ADD-ONS — user-requested extras. They MUST appear immediately after the mandatory 3 (items 4–${3 + addons.length}), pinned in this order. Rewrite into the interview language if needed, then answer in that same language. Do NOT drop any of them:\n${addons
@@ -114,11 +128,13 @@ export function buildUserPrompt({
   let inventBlock = "";
   if (autoQuestions) {
     inventBlock = addons.length
-      ? `Then invent 4–6 more realistic job-interview questions for THIS role AFTER the target add-ons (starting at item ${startExtra}). Each invented question must clearly map to one of the SELECTED QUESTION DIRECTIONS below (cover as many directions as practical; label the intent in your reasoning but do NOT put labels in the JSON). Prefer questions a hiring manager would actually ask for this JD. ${inventLang}`
-      : `Then invent 5–7 more realistic job-interview questions for THIS role (after the mandatory 3). Each invented question must clearly map to one of the SELECTED QUESTION DIRECTIONS below (cover as many directions as practical; at least one per direction when you invent ${Math.max(5, focusIds.length)}+ extras). Prefer questions a hiring manager would actually ask for this JD. ${inventLang}`;
+      ? `Then invent 4–6 more realistic job-interview questions for THIS role AFTER the target add-ons (starting at item ${startExtra}). Each invented question must clearly map to one of the SELECTED QUESTION DIRECTIONS below (cover as many directions as practical; label the intent in your reasoning but do NOT put labels in the JSON). Prefer questions ${asker} would actually ask for this JD. ${inventLang}`
+      : `Then invent 5–7 more realistic job-interview questions for THIS role (after the mandatory 3). Each invented question must clearly map to one of the SELECTED QUESTION DIRECTIONS below (cover as many directions as practical; at least one per direction when you invent ${Math.max(5, focusIds.length)}+ extras). Prefer questions ${asker} would actually ask for this JD. ${inventLang}`;
   } else if (!addons.length) {
-    inventBlock = `Then invent 3–5 additional realistic job-interview questions for THIS role after the mandatory 3. Map each invented question to a SELECTED QUESTION DIRECTION below. Prefer questions a hiring manager would actually ask for this JD. ${inventLang}`;
+    inventBlock = `Then invent 3–5 additional realistic job-interview questions for THIS role after the mandatory 3. Map each invented question to a SELECTED QUESTION DIRECTION below. Prefer questions ${asker} would actually ask for this JD. ${inventLang}`;
   }
+
+  const roleBlock = role.prompt ? `${role.prompt}\n` : "";
 
   return `Prepare spoken job-interview Q&A for this candidate applying to the role in the job description.
 
@@ -126,6 +142,7 @@ Context:
 - This is rehearsal for a real hiring interview, not a generic chat or essay.
 - Ground every answer in the resume. Mirror the JD's priorities only where the resume supports them.
 - Invented questions must be role-relevant (scope, stakeholders, delivery, judgment) — not trivia.
+- The interviewer persona for invented questions is: ${role.label}${role.id === "any" ? " (no specific bias)" : ""}.
 
 ${languageBlock(lang)}
 
@@ -133,7 +150,7 @@ ${identityBlock}
 
 ${length.prompt}
 
-${focusPromptBlock(focusIds)}
+${roleBlock}${focusPromptBlock(focusIds)}
 
 MANDATORY — these 3 questions MUST be items 1–3 in the JSON, in this exact order (keep this wording / language):
 ${mandatoryBlock}
@@ -146,8 +163,9 @@ Quality bar:
 - Target questions are ADD-ONS on top of the mandatory set — never replace the mandatory 3.
 - Every answer must match the ANSWER LENGTH mode (${length.label}, ${length.speakSeconds}).
 - Invented extras MUST reflect the selected QUESTION DIRECTIONS (coverage + answer craft above).
+- Invented "q" lines MUST sound like ${asker} — not a generic chatbot.
 - Frame answers toward the matching direction when relevant; keep mandatory answers truthful and speakable.
-- Tone: hiring-manager / VP interview — calm, clear, ownership-focused.
+- Tone: calm, clear, ownership-focused${role.id === "exec" ? "; senior-executive presence" : role.id === "hr" ? "; screen-friendly clarity" : ""}.
 - No overselling, no empty buzzwords, no fabricated metrics.
 - Return STRICT JSON only: {"items":[{"q":"...","a":"..."}]}
 - Every item's "q" and "a" must obey INTERVIEW LANGUAGE above.

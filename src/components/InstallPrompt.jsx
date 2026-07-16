@@ -1,8 +1,16 @@
 import { useEffect, useState } from "react";
-import { DownloadSimple, X } from "@phosphor-icons/react";
+import {
+  DeviceMobile,
+  DownloadSimple,
+  PlusSquare,
+  ShareNetwork,
+  X,
+} from "@phosphor-icons/react";
 import { useI18n } from "../lib/I18nContext";
+import BrandLogo from "./BrandLogo";
 
 const DISMISS_KEY = "briefroom_install_dismissed";
+const SHOW_DELAY_MS = 1800;
 
 function isStandalone() {
   try {
@@ -16,18 +24,22 @@ function isStandalone() {
 
 function isIos() {
   const ua = navigator.userAgent || "";
-  return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  return (
+    /iPad|iPhone|iPod/.test(ua) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
 }
 
 /**
- * PWA install / Add to Home Screen prompt.
- * Chrome/Android: native beforeinstallprompt.
- * iOS Safari: short Share → Add to Home Screen tip.
+ * PWA install / Add to Home Screen sheet.
+ * Android/Chrome: one-tap via beforeinstallprompt.
+ * iOS Safari: visual Share → Add to Home Screen steps.
  */
 export default function InstallPrompt() {
   const { t } = useI18n();
   const [deferred, setDeferred] = useState(null);
   const [showIos, setShowIos] = useState(false);
+  const [ready, setReady] = useState(false);
   const [hidden, setHidden] = useState(() => {
     try {
       return localStorage.getItem(DISMISS_KEY) === "1" || isStandalone();
@@ -49,7 +61,12 @@ export default function InstallPrompt() {
       setShowIos(true);
     }
 
-    return () => window.removeEventListener("beforeinstallprompt", onBip);
+    const timer = setTimeout(() => setReady(true), SHOW_DELAY_MS);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onBip);
+      clearTimeout(timer);
+    };
   }, [hidden]);
 
   const dismiss = () => {
@@ -75,35 +92,103 @@ export default function InstallPrompt() {
     dismiss();
   };
 
-  if (hidden || isStandalone()) return null;
+  if (hidden || isStandalone() || !ready) return null;
   if (!deferred && !showIos) return null;
 
+  const isAndroidFlow = Boolean(deferred);
+  const brand = t("brand.name");
+
   return (
-    <div className="install-banner" role="region" aria-label={t("install.title")}>
-      <div className="install-banner-copy">
-        <p className="install-banner-title">{t("install.title")}</p>
-        <p className="install-banner-hint">
-          {deferred
-            ? t("install.hintAndroid", { brand: t("brand.name") })
+    <div
+      className="install-sheet"
+      role="dialog"
+      aria-modal="false"
+      aria-labelledby="install-sheet-title"
+      aria-describedby="install-sheet-hint"
+    >
+      <button
+        type="button"
+        className="install-sheet-close"
+        onClick={dismiss}
+        aria-label={t("install.dismiss")}
+      >
+        <X size={16} weight="bold" />
+      </button>
+
+      <div className="install-sheet-visual" aria-hidden>
+        <div className="install-phone">
+          <div className="install-phone-notch" />
+          <div className="install-phone-grid">
+            <span className="install-phone-dot" />
+            <span className="install-phone-dot" />
+            <span className="install-phone-dot" />
+            <span className="install-phone-app is-live">
+              <BrandLogo size={36} title={brand} />
+            </span>
+            <span className="install-phone-dot" />
+            <span className="install-phone-dot" />
+          </div>
+          <div className="install-phone-dock">
+            <span className="install-phone-dot is-dock" />
+            <span className="install-phone-dot is-dock" />
+            <span className="install-phone-dot is-dock" />
+            <span className="install-phone-dot is-dock" />
+          </div>
+        </div>
+        <div className="install-sheet-badge">
+          <DeviceMobile size={14} weight="bold" />
+          {isAndroidFlow ? t("install.badgeAndroid") : t("install.badgeIos")}
+        </div>
+      </div>
+
+      <div className="install-sheet-copy">
+        <p className="install-sheet-kicker">{t("install.kicker")}</p>
+        <h2 id="install-sheet-title" className="install-sheet-title">
+          {isAndroidFlow
+            ? t("install.titleAndroid", { brand })
+            : t("install.titleIos", { brand })}
+        </h2>
+        <p id="install-sheet-hint" className="install-sheet-hint">
+          {isAndroidFlow
+            ? t("install.hintAndroid", { brand })
             : t("install.hintIos")}
         </p>
       </div>
-      <div className="install-banner-actions">
-        {deferred ? (
-          <button type="button" className="btn btn-primary !py-1.5 !text-xs" onClick={install}>
-            <DownloadSimple size={14} weight="bold" />
-            {t("install.cta")}
-          </button>
-        ) : null}
-        <button
-          type="button"
-          className="btn-ghost btn !px-2 !py-1.5"
-          onClick={dismiss}
-          aria-label={t("install.dismiss")}
-        >
-          <X size={16} weight="bold" />
+
+      {isAndroidFlow ? (
+        <button type="button" className="install-sheet-cta" onClick={install}>
+          <DownloadSimple size={18} weight="bold" />
+          {t("install.cta")}
         </button>
-      </div>
+      ) : (
+        <ol className="install-steps">
+          <li className="install-step">
+            <span className="install-step-icon" aria-hidden>
+              <ShareNetwork size={18} weight="bold" />
+            </span>
+            <span className="install-step-text">
+              <strong>{t("install.step1Label")}</strong>
+              <span>{t("install.step1Hint")}</span>
+            </span>
+          </li>
+          <li className="install-step-arrow" aria-hidden>
+            →
+          </li>
+          <li className="install-step">
+            <span className="install-step-icon" aria-hidden>
+              <PlusSquare size={18} weight="bold" />
+            </span>
+            <span className="install-step-text">
+              <strong>{t("install.step2Label")}</strong>
+              <span>{t("install.step2Hint")}</span>
+            </span>
+          </li>
+        </ol>
+      )}
+
+      <button type="button" className="install-sheet-skip" onClick={dismiss}>
+        {t("install.dismiss")}
+      </button>
     </div>
   );
 }

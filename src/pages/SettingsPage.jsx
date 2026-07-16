@@ -1,11 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  ArrowCounterClockwise,
-  ArrowLeft,
+  CaretLeft,
   FloppyDisk,
-  Lock,
-  LockOpen,
   SpeakerHigh,
 } from "@phosphor-icons/react";
 import {
@@ -14,7 +11,6 @@ import {
   pickDefaultPair,
   voicesForInterviewLang,
 } from "../lib/settingsConfig";
-import { DEFAULT_SYSTEM } from "../lib/prompt";
 import { loadJson, saveJson } from "../lib/storage";
 import { speakQa, voicesForLang } from "../lib/tts";
 import { useI18n } from "../lib/I18nContext";
@@ -29,14 +25,33 @@ export default function SettingsPage() {
   const [status, setStatus] = useState("");
   const [ttsOk, setTtsOk] = useState(null);
   const [testing, setTesting] = useState(false);
-  const [promptUnlocked, setPromptUnlocked] = useState(false);
+  const saveGen = useRef(0);
 
   useEffect(() => {
+    const gen = ++saveGen.current;
     const saveTimer = setTimeout(() => {
+      if (gen !== saveGen.current) return;
       saveJson("settings", normalizeSettings(settings));
     }, 250);
     return () => clearTimeout(saveTimer);
   }, [settings]);
+
+  useEffect(() => {
+    const refresh = () => {
+      const next = normalizeSettings(loadJson("settings", {}));
+      setSettings((prev) => {
+        if (JSON.stringify(prev) === JSON.stringify(next)) return prev;
+        saveGen.current += 1;
+        return next;
+      });
+    };
+    window.addEventListener("briefroom-storage", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("briefroom-storage", refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,11 +81,12 @@ export default function SettingsPage() {
 
   return (
     <Shell>
-      <header className="mb-5 md:mb-8">
-        <p className="label mb-2 md:mb-3">{t("settings.eyebrow")}</p>
-        <h1 className="display text-[1.75rem] title md:text-4xl">
-          {t("settings.title")}
-        </h1>
+      <header className="settings-head">
+        <Link to="/" className="settings-back">
+          <CaretLeft size={22} weight="bold" aria-hidden />
+          <span>{t("nav.home")}</span>
+        </Link>
+        <h1 className="settings-large-title">{t("settings.title")}</h1>
       </header>
 
       <section className="panel p-3.5 md:p-6">
@@ -211,52 +227,10 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="mt-4 space-y-1.5 md:mt-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <label className="label">{t("settings.systemPrompt")}</label>
-            <div className="flex flex-wrap gap-1.5">
-              <button
-                type="button"
-                className="btn !px-2.5 !py-1.5 text-xs"
-                aria-pressed={promptUnlocked}
-                onClick={() => setPromptUnlocked((u) => !u)}
-              >
-                {promptUnlocked ? (
-                  <Lock size={14} weight="bold" />
-                ) : (
-                  <LockOpen size={14} weight="bold" />
-                )}
-                {promptUnlocked ? t("settings.lock") : t("settings.unlock")}
-              </button>
-              <button
-                type="button"
-                className="btn !px-2.5 !py-1.5 text-xs"
-                onClick={() => {
-                  patch({ systemPrompt: DEFAULT_SYSTEM });
-                  setPromptUnlocked(false);
-                  setStatus(t("settings.promptRestored"));
-                }}
-              >
-                <ArrowCounterClockwise size={14} weight="bold" />
-                {t("settings.restoreDefault")}
-              </button>
-            </div>
-          </div>
-          <textarea
-            className="field min-h-[72px] font-mono text-[11px] md:min-h-[80px] md:text-xs"
-            readOnly={!promptUnlocked}
-            value={settings.systemPrompt}
-            onChange={(e) => {
-              if (!promptUnlocked) return;
-              patch({ systemPrompt: e.target.value });
-            }}
-          />
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-2 md:mt-5">
+        <div className="mt-4 flex flex-col items-center gap-2 sm:flex-row sm:flex-wrap sm:justify-center md:mt-5">
           <button
             type="button"
-            className="btn btn-primary"
+            className="btn btn-primary w-full sm:w-auto"
             onClick={() => {
               saveJson("settings", normalizeSettings(settings));
               setStatus(t("settings.saved"));
@@ -268,7 +242,7 @@ export default function SettingsPage() {
           </button>
           <button
             type="button"
-            className="btn"
+            className="btn w-full sm:w-auto"
             disabled={testing}
             onClick={async () => {
               setTesting(true);
@@ -307,14 +281,10 @@ export default function SettingsPage() {
             <SpeakerHigh size={16} />
             {testing ? t("settings.playing") : t("settings.testQa")}
           </button>
-          <Link to="/" className="btn-ghost btn">
-            <ArrowLeft size={16} />
-            {t("settings.cancel")}
-          </Link>
         </div>
 
         {status ? (
-          <p className="mt-3 text-sm ok font-bold">{status}</p>
+          <p className="mt-3 text-center text-sm ok font-bold">{status}</p>
         ) : null}
       </section>
     </Shell>

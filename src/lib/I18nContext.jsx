@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { DEFAULT_UI_LANG, normalizeUiLang, translate } from "./i18n";
-import { normalizeSettings } from "./settingsConfig";
+import { normalizeSettings, voicesForInterviewLang } from "./settingsConfig";
 import { loadJson, saveJson } from "./storage";
 
 const I18nContext = createContext({
@@ -16,10 +16,20 @@ export function I18nProvider({ children }) {
 
   const setUiLang = useCallback((next) => {
     const lang = normalizeUiLang(next);
-    const merged = normalizeSettings({
-      ...loadJson("settings", {}),
+    const cur = loadJson("settings", {});
+    // App language ↔ practice language stay in sync (EN↔English, 中文↔Mandarin)
+    const practiceLang = lang === "zh" ? "zh" : "en";
+    const patch = {
       uiLang: lang,
-    });
+      lang: practiceLang,
+      ...voicesForInterviewLang(
+        practiceLang,
+        cur.voiceQ,
+        cur.voiceA,
+        cur.gender
+      ),
+    };
+    const merged = normalizeSettings({ ...cur, ...patch });
     saveJson("settings", merged);
     setUiLangState(lang);
     try {
