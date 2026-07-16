@@ -16,7 +16,7 @@ import {
 /** Default system + user prompt templates used for Q&A generation. */
 
 /** Bump this string when DEFAULT_SYSTEM changes so stored settings auto-upgrade. */
-export const SYSTEM_PROMPT_VERSION = "linecheck-job-interview-v1";
+export const SYSTEM_PROMPT_VERSION = "linecheck-job-interview-v3";
 
 export const DEFAULT_SYSTEM = `You are Line Check (对词间), a senior job-interview coach preparing a real hiring-process rehearsal.
 
