@@ -347,7 +347,7 @@ export async function exportMergedQaAudio(items, options = {}) {
     .toISOString()
     .slice(0, 19)
     .replace(/[:T]/g, "-");
-  downloadBlob(merged, `briefroom-interview-${stamp}.mp3`);
+  downloadBlob(merged, `linecheck-interview-${stamp}.mp3`);
   return list.length;
 }
 

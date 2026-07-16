@@ -1,4 +1,4 @@
-# Briefroom
+# Line Check
 
 Interview coach PWA — turn resume + JD into speakable answers, then practice out loud.
 

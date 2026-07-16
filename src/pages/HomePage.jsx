@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   MagicWand,
   SpeakerHigh,
   Stop,
   DownloadSimple,
   FloppyDisk,
+  SpinnerGap,
 } from "@phosphor-icons/react";
 import DocumentField from "../components/DocumentField";
 import FocusBubbles from "../components/FocusBubbles";
@@ -32,6 +33,7 @@ import {
   voicesForInterviewLang,
 } from "../lib/settingsConfig";
 import { useI18n } from "../lib/I18nContext";
+import { pickTargetPlaceholder } from "../lib/i18n";
 import { loadJson, saveJson } from "../lib/storage";
 import { speakQa, stopSpeech, exportMergedQaAudio } from "../lib/tts";
 
@@ -40,8 +42,14 @@ function readSettings() {
 }
 
 export default function HomePage() {
-  const { t } = useI18n();
+  const { t, uiLang } = useI18n();
   const navigate = useNavigate();
+  const reduce = useReducedMotion();
+  // One example set per visit — no rotating loop
+  const [targetPh, setTargetPh] = useState(() => pickTargetPlaceholder(uiLang));
+  useEffect(() => {
+    setTargetPh(pickTargetPlaceholder(uiLang));
+  }, [uiLang]);
   const [settings, setSettings] = useState(readSettings);
   const [resume, setResume] = useState(() => loadJson("draft", {}).resume || "");
   const [jd, setJd] = useState(() => loadJson("draft", {}).jd || "");
@@ -71,6 +79,14 @@ export default function HomePage() {
   const [speaking, setSpeaking] = useState(false);
   const [exportingAudio, setExportingAudio] = useState(false);
   const [audioNote, setAudioNote] = useState({ text: "", kind: "" });
+
+  useEffect(() => {
+    if (!status.text) return undefined;
+    if (status.kind === "error") return undefined;
+    const ms = status.kind === "ok" ? 2800 : 4200;
+    const id = setTimeout(() => setStatus({ text: "", kind: "" }), ms);
+    return () => clearTimeout(id);
+  }, [status]);
 
   const questions = useMemo(
     () =>
@@ -438,7 +454,7 @@ export default function HomePage() {
       <header className="mb-5 md:mb-8">
         <p className="label mb-2 md:mb-3">{t("home.eyebrow")}</p>
         <h1 className="display text-[1.75rem] title sm:text-3xl md:text-4xl">
-          Briefroom
+          {t("brand.name")}
         </h1>
         <p className="line-responsive mt-2 max-w-[36ch] text-sm leading-snug mute md:mt-3 md:max-w-none md:text-base md:leading-relaxed">
           {t("home.tagline")}
@@ -511,7 +527,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <div className="mb-4 grid grid-cols-1 gap-3 lg:mb-5 lg:grid-cols-2 lg:gap-4">
+      <div className="doc-twin mb-4 lg:mb-5">
         <DocumentField
           title={t("home.resume")}
           hint={t("home.resumeHint")}
@@ -611,7 +627,8 @@ export default function HomePage() {
           className="field mt-3 min-h-[88px] md:mt-4 md:min-h-[120px]"
           value={questionsRaw}
           onChange={(e) => setQuestionsRaw(e.target.value)}
-          placeholder={t("home.targetPlaceholder")}
+          placeholder={targetPh}
+          aria-label={t("home.targetQs")}
         />
           <label className="mt-3 flex items-center gap-2 text-sm ink md:mt-4">
             <input
@@ -630,7 +647,11 @@ export default function HomePage() {
             disabled={loading}
             onClick={generate}
           >
-            <MagicWand size={16} weight="bold" />
+            {loading ? (
+              <SpinnerGap size={16} weight="bold" className="animate-spin" />
+            ) : (
+              <MagicWand size={16} weight="bold" />
+            )}
             {loading ? t("home.generating") : t("home.generate")}
           </button>
           <button type="button" className="btn" onClick={saveDraft}>
@@ -650,35 +671,36 @@ export default function HomePage() {
             {t("home.clearAnswers")}
           </button>
         </div>
-        {status.text ? (
-          <p
-            className={`mt-3 text-sm ${
-              status.kind === "error"
-                ? "err"
-                : status.kind === "ok"
-                  ? "ok"
-                  : "warn"
-            }`}
-          >
-            {status.text}
-          </p>
-        ) : null}
+        <AnimatePresence>
+          {status.text ? (
+            <motion.p
+              key={status.text}
+              initial={reduce ? false : { opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className={`mt-3 text-sm ${
+                status.kind === "error"
+                  ? "err"
+                  : status.kind === "ok"
+                    ? "ok"
+                    : "warn"
+              }`}
+            >
+              {status.text}
+            </motion.p>
+          ) : null}
+        </AnimatePresence>
       </section>
 
       <section className="panel p-3.5 md:p-6">
-        <div className="mb-3 flex items-end justify-between gap-3 md:mb-4">
-          <div>
-            <h2 className="display text-lg font-semibold title md:text-xl">
-              {t("home.questions")}
-            </h2>
-            <p className="mt-1 text-xs leading-relaxed mute md:mt-1.5 md:text-sm">
-              {t("home.questionsHint")}
-            </p>
-          </div>
-          <span className="focus-count focus-count--stack inline-flex shrink-0">
-            <span className="focus-count-n">{qa.length}</span>
-            <span className="focus-count-label">{t("home.itemsLabel")}</span>
-          </span>
+        <div className="mb-3 md:mb-4">
+          <h2 className="display text-lg font-semibold title md:text-xl">
+            {t("home.questions")}
+          </h2>
+          <p className="mt-1 text-xs leading-relaxed mute md:mt-1.5 md:text-sm">
+            {t("home.questionsHint")}
+          </p>
         </div>
         <QaList
           key={qaEpoch}
@@ -690,7 +712,6 @@ export default function HomePage() {
           onSaveAudio={(i) => exportAudio([i])}
           onCopy={async (i) => {
             await navigator.clipboard.writeText(`Q: ${qa[i].q}\n\nA: ${qa[i].a}`);
-            flash(t("home.flash.copied"), "ok");
           }}
           playingIndex={playingIndex}
           loading={loading}
@@ -714,6 +735,7 @@ export default function HomePage() {
             className="action-dock-stop"
             aria-label={t("home.stop")}
             title={t("home.stop")}
+            disabled={!speaking}
             onClick={() => {
               stopSpeech();
               setSpeaking(false);

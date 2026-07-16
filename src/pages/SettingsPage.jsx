@@ -66,14 +66,14 @@ export default function SettingsPage() {
 
   return (
     <Shell>
-      <header className="mb-5 max-w-3xl md:mb-8">
+      <header className="mb-5 md:mb-8">
         <p className="label mb-2 md:mb-3">{t("settings.eyebrow")}</p>
         <h1 className="display text-[1.75rem] title md:text-4xl">
           {t("settings.title")}
         </h1>
       </header>
 
-      <section className="panel max-w-3xl p-3.5 md:p-6">
+      <section className="panel p-3.5 md:p-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
           <div className="space-y-3">
             <Field label={t("settings.name")}>

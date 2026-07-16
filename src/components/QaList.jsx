@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   CheckSquare,
   Square,
@@ -24,7 +24,15 @@ export default function QaList({
   exportingAudio,
 }) {
   const { t } = useI18n();
+  const reduce = useReducedMotion();
   const [open, setOpen] = useState(() => new Set());
+  const [copiedIdx, setCopiedIdx] = useState(-1);
+
+  useEffect(() => {
+    if (copiedIdx < 0) return undefined;
+    const id = setTimeout(() => setCopiedIdx(-1), 1800);
+    return () => clearTimeout(id);
+  }, [copiedIdx]);
 
   const allSelected = items.length > 0 && items.every((_, i) => selected.has(i));
   const someSelected = items.some((_, i) => selected.has(i));
@@ -36,6 +44,11 @@ export default function QaList({
       else next.add(i);
       return next;
     });
+  };
+
+  const handleCopy = async (i) => {
+    await onCopy?.(i);
+    setCopiedIdx(i);
   };
 
   if (loading) {
@@ -93,15 +106,19 @@ export default function QaList({
             return (
               <motion.li
                 key={`${item.mandatoryId || i}-${item.q.slice(0, 24)}`}
-                layout
-                initial={{ opacity: 0, y: 8 }}
+                layout={!reduce}
+                initial={reduce ? false : { opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  delay: Math.min(i * 0.03, 0.24),
-                  type: "spring",
-                  stiffness: 140,
-                  damping: 18,
-                }}
+                transition={
+                  reduce
+                    ? { duration: 0 }
+                    : {
+                        delay: Math.min(i * 0.03, 0.24),
+                        type: "spring",
+                        stiffness: 140,
+                        damping: 18,
+                      }
+                }
                 className={`px-3 py-2.5 transition md:px-4 md:py-3 ${
                   playing
                     ? "qa-row-playing"
@@ -163,10 +180,10 @@ export default function QaList({
                       {expanded ? (
                         <motion.div
                           key="body"
-                          initial={{ height: 0, opacity: 0 }}
+                          initial={reduce ? false : { height: 0, opacity: 0 }}
                           animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
+                          exit={reduce ? undefined : { height: 0, opacity: 0 }}
+                          transition={{ duration: reduce ? 0 : 0.2 }}
                           className="overflow-hidden"
                         >
                           {item.a?.trim() ? (
@@ -178,7 +195,7 @@ export default function QaList({
                               {t("qa.noAnswer")}
                             </p>
                           )}
-                          <div className="mt-3 flex flex-wrap gap-2 pb-1">
+                          <div className="mt-3 flex flex-wrap items-center gap-2 pb-1">
                             <button
                               type="button"
                               className="btn text-xs"
@@ -205,11 +222,25 @@ export default function QaList({
                               type="button"
                               className="btn-ghost btn text-xs"
                               disabled={!item.a?.trim()}
-                              onClick={() => onCopy(i)}
+                              onClick={() => handleCopy(i)}
                             >
                               <Copy size={15} weight="bold" />
-                              {t("qa.copy")}
+                              {copiedIdx === i ? t("qa.copied") : t("qa.copy")}
                             </button>
+                            <AnimatePresence>
+                              {copiedIdx === i ? (
+                                <motion.span
+                                  key="copied"
+                                  initial={reduce ? false : { opacity: 0, x: -4 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  exit={{ opacity: 0 }}
+                                  transition={{ duration: 0.18 }}
+                                  className="ok text-xs font-semibold"
+                                >
+                                  {t("home.flash.copied")}
+                                </motion.span>
+                              ) : null}
+                            </AnimatePresence>
                           </div>
                         </motion.div>
                       ) : null}

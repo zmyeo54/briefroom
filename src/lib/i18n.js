@@ -17,7 +17,7 @@ const en = {
   "nav.keyNeeded": "Key",
   "nav.uiLang": "App language",
 
-  "brand.name": "Briefroom",
+  "brand.name": "Line Check",
   "brand.tagline": "Your interview coach",
 
   "install.title": "Keep practice on your phone",
@@ -42,7 +42,7 @@ const en = {
   "home.answerLengthHint": "Match the pace of the round you’re preparing for.",
   "home.focusThemes": "What to lean into",
   "home.focusThemesHint":
-    "Start with a solid set. Add your resume or job posting and we’ll refine the themes for this role.",
+    "These themes steer the questions we invent and how answers are framed. Start solid — we’ll refine when you add a resume or job posting.",
   "home.focusSelected": "{n} selected",
   "home.focusSelectedLabel": "selected",
   "home.focusSelectedPrefix": "",
@@ -52,11 +52,9 @@ const en = {
   "home.optionalExtras": "Optional extras",
 
   "home.resume": "Your resume",
-  "home.resumeHint":
-    "Upload PDF, Word, or a photo — or paste text. We’ll read scanned pages for you.",
+  "home.resumeHint": "PDF, Word, photo, or paste — scans work too.",
   "home.jd": "The role",
-  "home.jdHint":
-    "Paste a job link, upload the posting, or drop in the description — we’ll learn the role from there.",
+  "home.jdHint": "Job link, upload, or paste the posting.",
   "home.resumePlaceholder": "Drop in your resume…",
   "home.jdPlaceholder": "Drop in the job description…",
   "home.nameFromResume": "We’ll call you: {name}",
@@ -65,8 +63,6 @@ const en = {
   "home.targetQs": "Questions you want to nail",
   "home.targetQsHint":
     "Add the questions that make you nervous. They sit under your three foundations — and never replace them.",
-  "home.targetPlaceholder":
-    "Tell me about a time you turned around an unhappy customer\nHow do you lead a team under pressure?\n…",
   "home.autoInvent": "Also draft likely questions from my resume and this role",
   "home.genPrompt": "Generation prompt",
   "home.systemInSettings": "System prompt is edited in",
@@ -143,6 +139,7 @@ const en = {
   "qa.speak": "Practice",
   "qa.saveAudio": "Save this one",
   "qa.copy": "Copy",
+  "qa.copied": "Copied",
 
   "settings.eyebrow": "Your setup",
   "settings.title": "Settings",
@@ -206,9 +203,9 @@ const en = {
   "length.deep.hint": "More ownership — stakes, trade-offs, and the win.",
 
   "focus.leadership.label": "Leadership",
-  "focus.leadership.hint": "Calls & ownership",
+  "focus.leadership.hint": "Decisions you owned",
   "focus.delivery.label": "Delivery",
-  "focus.delivery.hint": "Ops, SLAs, scale",
+  "focus.delivery.hint": "Deadlines, SLAs, scale",
   "focus.customer.label": "Customer",
   "focus.customer.hint": "Hard moments & recovery",
   "focus.rolefit.label": "Role fit",
@@ -216,7 +213,7 @@ const en = {
   "focus.gaps.label": "Gaps",
   "focus.gaps.hint": "Tenure, title, pivots",
   "focus.stakeholder.label": "Stakeholders",
-  "focus.stakeholder.hint": "HQ, partners, conflict",
+  "focus.stakeholder.hint": "Conflict & alignment",
   "focus.culture.label": "Culture",
   "focus.culture.hint": "Values under pressure",
   "focus.domain.label": "Domain",
@@ -229,7 +226,7 @@ const zh = {
   "nav.keyNeeded": "密钥",
   "nav.uiLang": "界面语言",
 
-  "brand.name": "简练间",
+  "brand.name": "对词间",
   "brand.tagline": "你的面试教练",
 
   "install.title": "把练习留在手机上",
@@ -251,7 +248,7 @@ const zh = {
   "home.answerLengthHint": "按你即将面对的那一轮来选。",
   "home.focusThemes": "重点方向",
   "home.focusThemesHint":
-    "先从稳妥的方向开始。加上简历或招聘信息后，我们会按这个岗位再帮你收一收重点。",
+    "这些方向会决定我们发明什么题、以及答案怎么写。先选稳妥的一套；放进简历或岗位后会再帮你收窄。",
   "home.focusSelected": "已选 {n} 项",
   "home.focusSelectedLabel": "项",
   "home.focusSelectedPrefix": "已选",
@@ -261,10 +258,9 @@ const zh = {
   "home.optionalExtras": "可选补充",
 
   "home.resume": "你的简历",
-  "home.resumeHint": "上传 PDF、Word 或截图，也可直接粘贴。扫描件我们会帮你识别。",
+  "home.resumeHint": "PDF、Word、截图或粘贴均可，扫描件也能读。",
   "home.jd": "目标岗位",
-  "home.jdHint":
-    "粘贴职位链接、上传招聘文件，或直接贴上描述——我们会据此了解这个岗位。",
+  "home.jdHint": "职位链接、上传文件，或直接粘贴描述。",
   "home.resumePlaceholder": "放进你的简历…",
   "home.jdPlaceholder": "放进职位描述…",
   "home.nameFromResume": "练习时称呼你：{name}",
@@ -273,8 +269,6 @@ const zh = {
   "home.targetQs": "你最想练透的题",
   "home.targetQsHint":
     "把心里没底的问题写进来。它们排在三个基础题后面——不会挤掉它们。",
-  "home.targetPlaceholder":
-    "请讲一次你挽回不满客户的经历\n压力下你怎么带团队？\n…",
   "home.autoInvent": "再根据我的简历和岗位，补一些很可能被问到的题",
   "home.genPrompt": "生成提示词",
   "home.systemInSettings": "系统提示词请到",
@@ -350,6 +344,7 @@ const zh = {
   "qa.speak": "开口练",
   "qa.saveAudio": "保存本条",
   "qa.copy": "复制",
+  "qa.copied": "已复制",
 
   "settings.eyebrow": "你的设置",
   "settings.title": "设置",
@@ -411,9 +406,9 @@ const zh = {
   "length.deep.hint": "更多主导权——利害、取舍、结果。",
 
   "focus.leadership.label": "领导力",
-  "focus.leadership.hint": "拍板与带队",
+  "focus.leadership.hint": "你拍板的决策",
   "focus.delivery.label": "交付",
-  "focus.delivery.hint": "运营、SLA、规模",
+  "focus.delivery.hint": "期限、SLA、规模",
   "focus.customer.label": "客户",
   "focus.customer.hint": "难关与补救",
   "focus.rolefit.label": "岗位契合",
@@ -421,7 +416,7 @@ const zh = {
   "focus.gaps.label": "缺口",
   "focus.gaps.hint": "年限、职级、转型",
   "focus.stakeholder.label": "干系人",
-  "focus.stakeholder.hint": "总部、伙伴、冲突",
+  "focus.stakeholder.hint": "冲突与对齐",
   "focus.culture.label": "文化",
   "focus.culture.hint": "压力下的价值观",
   "focus.domain.label": "领域",
@@ -429,6 +424,40 @@ const zh = {
 };
 
 const TABLES = { en, zh };
+
+/** One example set is picked per page load (no rotation loop). Keep lines short for mobile. */
+export const TARGET_PLACEHOLDERS = {
+  en: [
+    "A time you turned an unhappy customer around\nHow you lead under pressure\n…",
+    "A hard decision you owned end-to-end\nWhat your last manager says is your edge\n…",
+    "A project that nearly missed — what changed?\nHow you prioritize when everything is urgent\n…",
+    "A conflict with a stakeholder — how it ended\nWhy this role, and why now?\n…",
+    "A time you influenced without authority\nA weakness you’re actively fixing\n…",
+    "Onboarding into a messy process and still delivering\nCoaching someone who was struggling\n…",
+    "Your proudest metric — how you moved it\nAmbiguous goals from leadership — your approach\n…",
+    "Shipping on a tight deadline with incomplete specs\nQuestions you’d ask in week one\n…",
+  ],
+  zh: [
+    "一次挽回不满客户的经历\n压力下你怎么带团队？\n…",
+    "一次你拍板落地的艰难决策\n上一任老板会说你的优势是？\n…",
+    "一个差点延期的项目——你改了什么？\n事事都急时，你怎么排优先级？\n…",
+    "一次和干系人起冲突，最后怎么收场\n为什么是这个岗位，为什么是现在？\n…",
+    "一次没有职权却做成事的经历\n你正在改的一个短板是什么？\n…",
+    "流程很乱时，你怎么快速上手还交付？\n一次带教状态不好的同事\n…",
+    "你最自豪的一项指标，怎么推上去的？\n领导目标很模糊时，你怎么推进？\n…",
+    "信息不完整、deadline很紧时怎么交付\n入职第一周你会先问什么？\n…",
+  ],
+};
+
+export function pickTargetPlaceholder(uiLang) {
+  const list = targetPlaceholders(uiLang);
+  return list[Math.floor(Math.random() * list.length)] || list[0];
+}
+
+export function targetPlaceholders(uiLang) {
+  const lang = normalizeUiLang(uiLang);
+  return TARGET_PLACEHOLDERS[lang] || TARGET_PLACEHOLDERS.en;
+}
 
 export function normalizeUiLang(id) {
   return id === "zh" ? "zh" : "en";

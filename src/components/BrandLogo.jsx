@@ -1,5 +1,5 @@
 /**
- * Briefroom mark — nested rehearsal room.
+ * Line Check mark — nested rehearsal room.
  * dormi-inspired multi-stop warm→cool gradient tile.
  */
 export default function BrandLogo({ size = 28, className = "", title }) {

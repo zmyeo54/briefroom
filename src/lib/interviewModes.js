@@ -40,13 +40,20 @@ export const ANSWER_LENGTHS = [
 
 export const DEFAULT_ANSWER_LENGTH = "standard";
 
-/** Multi-select directions for invented / framed questions */
+/**
+ * Multi-select rehearsal directions.
+ * `ask` = what a hiring manager probes; `answer` = how to frame spoken answers;
+ * `invent` = short bias line (kept for compatibility).
+ */
 export const QUESTION_FOCUSES = [
   {
     id: "leadership",
     label: "Leadership",
-    hint: "Team calls & ownership",
-    invent: "leadership / team ownership / hard decisions",
+    hint: "Calls & ownership",
+    invent: "leadership, ownership, hard decisions, coaching others",
+    ask: "Hard decisions you owned; leading through conflict or ambiguity; coaching someone who was struggling; influence without formal authority.",
+    answer:
+      "Lead with the decision and stakes, then what YOU did (not “we”), then the outcome and what you’d repeat. Name trade-offs. Avoid generic “I’m a people person.”",
     keywords: [
       "lead", "leadership", "manager", "management", "team", "mentor",
       "people", "own", "ownership", "decision", "vp", "director", "supervise",
@@ -57,7 +64,10 @@ export const QUESTION_FOCUSES = [
     id: "delivery",
     label: "Delivery",
     hint: "Ops, SLAs, scale",
-    invent: "delivery excellence, operations, SLA / scale challenges",
+    invent: "execution under constraints, ops/SLA, prioritization, scale",
+    ask: "Near-miss deadlines; prioritizing when everything is urgent; fixing a broken process; shipping with incomplete specs; owning a metric or SLA.",
+    answer:
+      "Situation → constraint → your actions → measurable result (only if resume supports numbers). Show judgment under pressure, not busywork.",
     keywords: [
       "delivery", "operations", "ops", "sla", "fulfillment", "warehouse",
       "logistics", "distribution", "supply chain", "order", "inventory",
@@ -68,8 +78,11 @@ export const QUESTION_FOCUSES = [
   {
     id: "customer",
     label: "Customer",
-    hint: "Tough clients & recovery",
-    invent: "unhappy customer / escalation / service recovery",
+    hint: "Hard moments & recovery",
+    invent: "unhappy customer, escalation, service recovery, trust rebuild",
+    ask: "Turning around an unhappy customer; handling an escalation; rebuilding trust after a miss; balancing customer ask vs company constraint.",
+    answer:
+      "Name the emotion/stakes briefly, your listening + action, recovery steps, and the lasting fix — not just “I apologized.”",
     keywords: [
       "customer", "client", "account", "escalation", "service", "support",
       "complaint", "nps", "csat", "partner", "patient",
@@ -80,7 +93,10 @@ export const QUESTION_FOCUSES = [
     id: "rolefit",
     label: "Role fit",
     hint: "Why this job, why now",
-    invent: "role-fit, motivation for this company and scope",
+    invent: "why this role/company/now; motivation grounded in evidence",
+    ask: "Why this role; why this company; why now in your career; what in the JD matches your strongest proof points.",
+    answer:
+      "Tie motivation to specific JD priorities + 1–2 resume proofs. No flattery. Clear “why me / why now” without inventing company facts you don’t know.",
     keywords: [
       "motivation", "why join", "career", "growth", "mission", "vision",
       "purpose", "passion", "fit",
@@ -91,7 +107,10 @@ export const QUESTION_FOCUSES = [
     id: "gaps",
     label: "Gaps",
     hint: "Tenure, title, pivots",
-    invent: "honest gap / weakness / career transition reframes",
+    invent: "honest gap / weakness / pivot reframes with transferable proof",
+    ask: "Missing years or title vs JD; career pivot; skill you are still building; a real weakness with a fix-in-progress.",
+    answer:
+      "Name the gap honestly in one line, then transferable evidence from the resume, then how you’re closing it. Never fake experience or credentials.",
     keywords: [
       "gap", "weakness", "transition", "career change", "pivot", "junior",
       "without experience", "learning", "stretch",
@@ -102,7 +121,10 @@ export const QUESTION_FOCUSES = [
     id: "stakeholder",
     label: "Stakeholders",
     hint: "HQ, partners, conflict",
-    invent: "cross-border / HQ / partner stakeholder management",
+    invent: "cross-functional / HQ / partner alignment and conflict",
+    ask: "Conflict with a stakeholder; aligning HQ vs local; pushing a decision across functions; managing a difficult partner.",
+    answer:
+      "Show how you read interests, what you negotiated, and how you protected the outcome — calm ownership, not blame.",
     keywords: [
       "stakeholder", "cross-functional", "global", "regional", "apac", "hq",
       "collaborate", "collaboration", "alignment", "workshop", "europe", "us",
@@ -114,7 +136,10 @@ export const QUESTION_FOCUSES = [
     id: "culture",
     label: "Culture",
     hint: "Values under pressure",
-    invent: "culture fit, working style, values under pressure",
+    invent: "values under pressure, integrity, working style, disagreement",
+    ask: "Values tested under pressure; disagreeing with a manager; integrity call; how you work when the team is stressed.",
+    answer:
+      "One concrete moment > abstract values speech. Show the principle, the action, and the cost you accepted.",
     keywords: [
       "culture", "values", "inclusive", "diversity", "integrity", "trust",
       "way of working", "mindset",
@@ -126,6 +151,9 @@ export const QUESTION_FOCUSES = [
     label: "Domain",
     hint: "Industry judgment",
     invent: "domain / industry / role-specific technical judgment",
+    ask: "A judgment call in this domain; trade-off between tools/process options; teaching a non-expert; catching a risk others missed.",
+    answer:
+      "Explain the judgment in plain spoken language — what you knew, what you chose, why — tied only to tools/domains on the resume.",
     keywords: [
       "oracle", "erp", "fusion", "sql", "tableau", "jira", "confluence",
       "analyst", "technical", "techno-functional", "system", "data",
@@ -213,13 +241,33 @@ export function partitionFocuses(selectedIds, suggestedIds) {
   return { recommended, extras, selected };
 }
 
+/** Build the prompt block that steers invented Qs + answer framing. */
 export function focusPromptBlock(focusIds) {
   const ids = normalizeFocuses(focusIds);
   const items = QUESTION_FOCUSES.filter((f) => ids.includes(f.id));
-  const lines = items.map((f) => `- ${f.label}: ${f.invent}`).join("\n");
-  return `QUESTION DIRECTIONS (bias invented extras and answer framing toward these job-interview themes):
-${lines}
-- Still keep the mandatory 3 and any user target add-ons.
-- Prefer directions above when inventing extras; cover as many selected directions as practical without forcing duplicates.
-- Keep questions realistic for this role's seniority and scope.`;
+  const n = items.length;
+
+  const detail = items
+    .map(
+      (f, i) => `${i + 1}. ${f.label.toUpperCase()}
+   Probe for: ${f.ask}
+   Answer craft: ${f.answer}`
+    )
+    .join("\n");
+
+  return `QUESTION DIRECTIONS — selected by the candidate (${n}). These are REQUIRED rehearsal themes, not soft suggestions.
+
+COVERAGE (invented extras only — after mandatory 3 and any user target add-ons):
+- Aim for at least one invented question per selected direction when inventing 5+ extras.
+- If inventing fewer extras than selected directions, cover the highest-priority directions first (order listed below).
+- Do not invent duplicate questions that only rephrase the same probe.
+- Mandatory intros / self-intro may lightly echo role-fit; do not force every direction into the mandatory 3.
+
+ANSWER FRAMING:
+- When a question maps to a selected direction, shape the spoken answer with that direction's "Answer craft".
+- Stay truthful to the resume. Prefer ownership language ("I led…", "I decided…").
+- Score for substance + structure: one clear story beat, concrete action, believable result — not buzzwords.
+
+SELECTED DIRECTIONS (in priority order):
+${detail}`;
 }

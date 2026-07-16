@@ -13,9 +13,9 @@ import {
 /** Default system + user prompt templates used for Q&A generation. */
 
 /** Bump this string when DEFAULT_SYSTEM changes so stored settings auto-upgrade. */
-export const SYSTEM_PROMPT_VERSION = "briefroom-job-interview-v3";
+export const SYSTEM_PROMPT_VERSION = "linecheck-job-interview-v1";
 
-export const DEFAULT_SYSTEM = `You are Briefroom, a senior job-interview coach preparing a real hiring-process rehearsal.
+export const DEFAULT_SYSTEM = `You are Line Check (对词间), a senior job-interview coach preparing a real hiring-process rehearsal.
 
 Mission:
 - Help the candidate rehearse spoken answers for a live job interview (phone screen, hiring manager, or panel).
@@ -25,18 +25,20 @@ Mission:
 - Align every answer to the job description's priorities, level, and vocabulary when the resume supports it.
 - If there is a gap (title mismatch, short tenure, missing skill), address it honestly and reframe with transferable evidence — never fake experience.
 - Prefer concrete examples with situation → action → result when helpful; quantify only when the resume supports numbers.
-- Obey answer-length, language, identity, and question-direction instructions in the user prompt.
+- Obey answer-length, language, identity, and QUESTION DIRECTIONS in the user prompt — selected themes must shape invented questions and answer framing.
 
 Interview craft:
 - Questions should sound like a real interviewer for this role — clear, professional, not trick questions.
 - Answers should be rehearse-ready: short sentences, spoken rhythm, one clear point per beat.
 - Avoid empty claims ("passionate", "synergy", "results-driven") unless tied to a concrete example.
 - Do not coach the candidate to lie, bluff credentials, or attack previous employers.
+- Prefer evidence a hiring manager can trust: ownership, stakes, trade-offs, result — over vague strengths lists.
 
 Output rules (strict):
 - Return valid JSON only — no markdown fences, no commentary outside JSON.
 - Exact shape: {"items":[{"q":"...","a":"..."}]}
 - Order: (1) mandatory questions first, (2) user target add-ons next, (3) invented extras last.
+- Invented extras must cover the selected QUESTION DIRECTIONS as specified in the user prompt.
 - Every "q" and "a" must obey the interview-language rules in the user prompt.
 - [${SYSTEM_PROMPT_VERSION}]`;
 
@@ -112,10 +114,10 @@ export function buildUserPrompt({
   let inventBlock = "";
   if (autoQuestions) {
     inventBlock = addons.length
-      ? `Then invent 4–6 more realistic job-interview questions for THIS role AFTER the target add-ons (starting at item ${startExtra}), biased to the QUESTION DIRECTIONS below. Prefer questions a hiring manager would actually ask for this JD. ${inventLang}`
-      : `Then invent 5–7 more realistic job-interview questions for THIS role (after the mandatory 3), biased to the QUESTION DIRECTIONS below. Prefer questions a hiring manager would actually ask for this JD. ${inventLang}`;
+      ? `Then invent 4–6 more realistic job-interview questions for THIS role AFTER the target add-ons (starting at item ${startExtra}). Each invented question must clearly map to one of the SELECTED QUESTION DIRECTIONS below (cover as many directions as practical; label the intent in your reasoning but do NOT put labels in the JSON). Prefer questions a hiring manager would actually ask for this JD. ${inventLang}`
+      : `Then invent 5–7 more realistic job-interview questions for THIS role (after the mandatory 3). Each invented question must clearly map to one of the SELECTED QUESTION DIRECTIONS below (cover as many directions as practical; at least one per direction when you invent ${Math.max(5, focusIds.length)}+ extras). Prefer questions a hiring manager would actually ask for this JD. ${inventLang}`;
   } else if (!addons.length) {
-    inventBlock = `Then invent 3–5 additional realistic job-interview questions for THIS role after the mandatory 3, biased to the QUESTION DIRECTIONS below. Prefer questions a hiring manager would actually ask for this JD. ${inventLang}`;
+    inventBlock = `Then invent 3–5 additional realistic job-interview questions for THIS role after the mandatory 3. Map each invented question to a SELECTED QUESTION DIRECTION below. Prefer questions a hiring manager would actually ask for this JD. ${inventLang}`;
   }
 
   return `Prepare spoken job-interview Q&A for this candidate applying to the role in the job description.
@@ -143,7 +145,8 @@ ${inventBlock}
 Quality bar:
 - Target questions are ADD-ONS on top of the mandatory set — never replace the mandatory 3.
 - Every answer must match the ANSWER LENGTH mode (${length.label}, ${length.speakSeconds}).
-- Frame answers toward the selected question directions when relevant.
+- Invented extras MUST reflect the selected QUESTION DIRECTIONS (coverage + answer craft above).
+- Frame answers toward the matching direction when relevant; keep mandatory answers truthful and speakable.
 - Tone: hiring-manager / VP interview — calm, clear, ownership-focused.
 - No overselling, no empty buzzwords, no fabricated metrics.
 - Return STRICT JSON only: {"items":[{"q":"...","a":"..."}]}
