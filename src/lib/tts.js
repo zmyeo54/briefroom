@@ -449,7 +449,7 @@ function getSilentUrl() {
   const buf = new ArrayBuffer(len);
   const v = new DataView(buf);
   const w = (p, s) => { v.setUint32(p, s, true); };
-  const s = (p, v) => { v.setUint16(p, v, true); };
+  const s = (p, val) => { v.setUint16(p, val, true); };
   v.setUint32(0, 0x52494646, false); // "RIFF"
   w(4, len - 8);
   v.setUint32(8, 0x57415645, false); // "WAVE"
