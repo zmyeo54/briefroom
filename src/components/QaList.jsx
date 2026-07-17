@@ -125,10 +125,10 @@ export default function QaList({
                         : "bg-white"
                 }`}
               >
-                <div className="flex gap-3">
+                <div className="flex items-center gap-3">
                   <button
                     type="button"
-                    className="mt-0.5 shrink-0 text-[#8b939e] transition hover:text-[#4a7ff8]"
+                    className="shrink-0 text-[#8b939e] transition hover:text-[#4a7ff8]"
                     onClick={() => onToggle(i)}
                     aria-label={on ? "Deselect" : "Select"}
                     aria-pressed={on}
@@ -143,13 +143,13 @@ export default function QaList({
                   <div className="min-w-0 flex-1">
                     <button
                       type="button"
-                      className="flex w-full items-start gap-2 text-left"
+                      className="flex w-full items-center gap-2 text-left"
                       onClick={() => toggleOpen(i)}
                       aria-expanded={expanded}
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="faint font-mono text-xs font-medium tabular-nums">
+                          <span className="qa-number faint font-mono text-xs font-medium tabular-nums">
                             {String(i + 1).padStart(2, "0")}
                           </span>
                           {pinned ? (
@@ -166,7 +166,7 @@ export default function QaList({
                       <CaretDown
                         size={18}
                         weight="bold"
-                        className={`mt-1 shrink-0 text-[#8b939e] transition ${
+                        className={`shrink-0 text-[#8b939e] transition ${
                           expanded ? "rotate-180" : ""
                         }`}
                       />

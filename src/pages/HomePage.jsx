@@ -1103,15 +1103,7 @@ export default function HomePage() {
               {t("home.questionsHint")}
             </p>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-            {showGenSecret && genSecretLabel ? (
-              <span
-                className="max-w-[14rem] truncate font-mono text-[10px] leading-tight tracking-tight text-[#c5cad1] sm:max-w-none sm:text-[11px]"
-                title={genSecretLabel}
-              >
-                {genSecretLabel}
-              </span>
-            ) : null}
+          <div className="flex shrink-0 flex-col items-end gap-2">
             {qa.length ? (
               <button
                 type="button"
@@ -1123,6 +1115,14 @@ export default function HomePage() {
                 <Trash size={16} weight="bold" />
                 {t("home.clearAnswers")}
               </button>
+            ) : null}
+            {showGenSecret && genSecretLabel ? (
+              <span
+                className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 font-mono text-[10px] leading-none tracking-tight text-[#c5cad1] sm:text-[11px]"
+                title={genSecretLabel}
+              >
+                {genSecretLabel}
+              </span>
             ) : null}
           </div>
         </div>
@@ -1157,7 +1157,10 @@ export default function HomePage() {
             onClick={playSelected}
           >
             <SpeakerHigh size={17} weight="bold" />
-            {t("home.speak", { n: selected.size })}
+            <span className="action-dock-speak-label">
+              {t("home.speakLabel")}
+              <span className="action-dock-badge">{selected.size}</span>
+            </span>
           </button>
           <button
             type="button"
@@ -1176,18 +1179,21 @@ export default function HomePage() {
             onClick={() => exportAudio()}
             title={t("home.saveAudioHint")}
           >
-            <DownloadSimple size={15} weight="bold" />
             {exportingAudio ? (
               t("home.exportingAudioShort")
             ) : (
-              <span className="action-dock-export-label">
-                <span>{t("home.exportLine1")}</span>
-                <span>
-                  {t("home.exportAudioLine2", {
-                    n: selected.size || qa.length,
-                  })}
+              <>
+                <span className="action-dock-export-body">
+                  <DownloadSimple size={15} weight="bold" />
+                  <span className="action-dock-export-label">
+                    <span>{t("home.exportLine1")}</span>
+                    <span>{t("home.exportAudioLabel")}</span>
+                  </span>
                 </span>
-              </span>
+                <span className="action-dock-badge">
+                  {selected.size || qa.length}
+                </span>
+              </>
             )}
           </button>
           <button
@@ -1197,18 +1203,21 @@ export default function HomePage() {
             onClick={() => exportPdf()}
             title={t("home.savePdfHint")}
           >
-            <FilePdf size={15} weight="bold" />
             {exportingPdf ? (
               t("home.exportingPdfShort")
             ) : (
-              <span className="action-dock-export-label">
-                <span>{t("home.exportLine1")}</span>
-                <span>
-                  {t("home.exportPdfLine2", {
-                    n: selected.size || qa.length,
-                  })}
+              <>
+                <span className="action-dock-export-body">
+                  <FilePdf size={15} weight="bold" />
+                  <span className="action-dock-export-label">
+                    <span>{t("home.exportLine1")}</span>
+                    <span>{t("home.exportPdfLabel")}</span>
+                  </span>
                 </span>
-              </span>
+                <span className="action-dock-badge">
+                  {selected.size || qa.length}
+                </span>
+              </>
             )}
           </button>
         </motion.div>
