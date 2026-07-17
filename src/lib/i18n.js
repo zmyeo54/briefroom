@@ -116,6 +116,8 @@ const en = {
   "home.flash.needKey": "Add your Gemini API key in Settings so we can build answers.",
   "home.flash.rateLimited":
     "Too many requests right now. Wait a minute and try again — or add your own Gemini key in Settings.",
+  "home.flash.modelUnavailable":
+    "That AI model isn’t available right now. Wait a moment and try again.",
   "home.flash.needDocs": "Add your resume and the role first — then we’ll coach from your real story.",
   "home.flash.generating": "Crafting answers you can actually say…",
   "home.flash.generated":
@@ -364,6 +366,8 @@ const zh = {
   "home.flash.needKey": "请先在设置里填入 Gemini API 密钥，我们才能帮你生成回答。",
   "home.flash.rateLimited":
     "请求太频繁了。请稍等一分钟再试——或在设置里填入你自己的 Gemini 密钥。",
+  "home.flash.modelUnavailable":
+    "当前 AI 模型暂不可用。请稍后再试。",
   "home.flash.needDocs": "先放上简历和岗位——我们要基于你的真实经历来练。",
   "home.flash.generating": "正在写出你能说出口的回答…",
   "home.flash.generated":

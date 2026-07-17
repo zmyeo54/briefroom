@@ -381,6 +381,10 @@ export default function HomePage() {
         flash(t("home.flash.rateLimited"), "error");
         return;
       }
+      if (lastStatus === 404) {
+        flash(t("home.flash.modelUnavailable"), "error");
+        return;
+      }
       if (!res.ok) {
         const detail =
           data?.error?.message ||

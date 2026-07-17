@@ -96,7 +96,7 @@ export function voiceForInterviewLang(lang, currentVoice) {
   return voiceA;
 }
 
-/** Light / free-tier friendly models — cheapest first */
+/** Light / free-tier friendly models — cheapest first; last is a stable alias. */
 export const GEMINI_MODELS = [
   {
     id: "gemini-2.5-flash-lite",
@@ -111,8 +111,8 @@ export const GEMINI_MODELS = [
     label: "2.0 Flash (free · balanced)",
   },
   {
-    id: "gemini-2.5-flash",
-    label: "2.5 Flash (free · stronger)",
+    id: "gemini-flash-latest",
+    label: "Flash latest (fallback)",
   },
 ];
 
