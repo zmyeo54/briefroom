@@ -58,7 +58,7 @@ export function normalizeInventCount(raw) {
 }
 
 /** Bump this string when DEFAULT_SYSTEM changes so stored settings auto-upgrade. */
-export const SYSTEM_PROMPT_VERSION = "linecheck-job-interview-v8";
+export const SYSTEM_PROMPT_VERSION = "linecheck-job-interview-v9";
 
 export const DEFAULT_SYSTEM = `You are Line Check (对词间), a senior interview coach. Produce spoken Q&A a candidate can rehearse and memorize.
 
@@ -77,7 +77,8 @@ Mindmap per answer — extract THIS answer's actual facts into "map":
 - Bilingual/Mix: provide topicZh and labelZh for every branch.
 
 JSON output (strict, no markdown fences):
-{"items":[{"q":"...","a":"...","category":"...","map":{"topic":"...","topicZh":"...","branches":[{"label":"...","labelZh":"...","detail":"...","example":"..."}]}}]}
+{"jobTitle":"...","company":"...","items":[{"q":"...","a":"...","category":"...","map":{"topic":"...","topicZh":"...","branches":[{"label":"...","labelZh":"...","detail":"...","example":"..."}]}}]}
+jobTitle = concise role name only (≤80 chars, no location/applicants/UI chrome). company = employer name only.
 Category: "foundation" (mandatory 1-3), "addon" (user targets), or direction id ("leadership"/"delivery"/"customer"/"rolefit"/"gaps"/"stakeholder"/"culture"/"domain") for invented extras.
 Order: foundation → addon → extras. Extras must cover selected QUESTION DIRECTIONS.
 [${SYSTEM_PROMPT_VERSION}]`;
@@ -187,6 +188,7 @@ ${inventBlock}
 LENGTH HARD: every "a" = ${length.label} (≤${length.maxWords} words${lang === "both" ? " per lang" : ""}). Do not blur modes.
 Tone: calm, ownership${role.id === "exec" ? ", exec presence" : role.id === "hr" ? ", screen-friendly" : ""}. No buzzwords or fabricated metrics.
 Maps: 3-5 key points per answer, short labels, no new claims. Every item needs "category".
+Also set top-level jobTitle (short role name only) and company from the JD — strip LinkedIn chrome (applicants, Apply, Save, etc).
 
 RESUME:
 ${clipDoc(resume)}

@@ -615,6 +615,13 @@ export default function HomePage() {
         saveJson("genMeta", meta);
         setGenMeta(meta);
       }
+      // AI often sees the real role name even when LinkedIn scrape polluted jobTitle
+      const aiTitle = cleanJobTitle(
+        parsed.jobTitle || parsed.role || parsed.title || ""
+      );
+      const aiCompany = cleanJobTitle(parsed.company || "");
+      if (aiTitle) setJobTitle(aiTitle);
+      if (aiCompany) setJobCompany(aiCompany);
       setQa(items);
       setQaEpoch((n) => n + 1);
       setSelected(new Set());
