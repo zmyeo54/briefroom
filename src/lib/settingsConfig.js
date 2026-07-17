@@ -133,25 +133,32 @@ export const GEMINI_MODELS = [
 
 export const DEFAULT_MODEL = GEMINI_MODELS[0].id;
 
-/** Preferred model first, then the rest — for 429 / unavailable fallback. */
+/**
+ * Preferred + one fallback only.
+ * Cascading every model on failure burns free-tier RPD (each try = 1 request).
+ */
 export function geminiModelsToTry(preferred = DEFAULT_MODEL) {
   const ids = GEMINI_MODELS.map((m) => m.id);
   const first = ids.includes(preferred) ? preferred : DEFAULT_MODEL;
-  return [first, ...ids.filter((id) => id !== first)];
+  const fallback = ids.find((id) => id !== first);
+  return fallback ? [first, fallback] : [first];
 }
 
-/** Retry another model on quota / missing model — not on auth or bad-request. */
+/**
+ * Retry another model only when this model is missing/unsupported.
+ * Never on 429/quota — that multiplies daily request burn.
+ */
 export function shouldTryNextGeminiModel(status, data) {
-  if (status === 429 || status === 404) return true;
+  if (status === 429) return false;
+  if (status === 404) return true;
   const msg = String(
     data?.error?.message ||
       data?.error?.status ||
       (typeof data?.error === "string" ? data.error : "") ||
       ""
   );
-  return /quota|rate.?limit|RESOURCE_EXHAUSTED|no longer available|not found|not supported/i.test(
-    msg
-  );
+  if (/quota|rate.?limit|RESOURCE_EXHAUSTED/i.test(msg)) return false;
+  return /no longer available|not found|not supported/i.test(msg);
 }
 
 /** Build-time Vite env (local .env.local / Vercel VITE_* at build). */

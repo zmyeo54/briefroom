@@ -8,10 +8,12 @@ export const ANSWER_LENGTHS = [
     eyebrow: "Elevator",
     hint: "One claim, one proof — perfect for warm-up rounds.",
     speakSeconds: "20–35 seconds",
-    prompt: `ANSWER LENGTH: Brief (about 20–35 seconds spoken).
-- 3–5 short sentences max.
-- One main claim + one concrete proof. No long stories.
-- Cut filler and preambles.`,
+    /** Soft cap the model must stay under (per language if Mix). */
+    maxWords: 55,
+    prompt: `ANSWER LENGTH (HARD — every "a" must obey): Brief (~20–35 seconds spoken).
+- Max ~55 words per answer (if Mix: ~55 words English AND ~55 words Chinese, not combined).
+- 3–5 short sentences only.
+- One claim + one proof. No STAR monologue, no filler, no preamble.`,
   },
   {
     id: "standard",
@@ -20,9 +22,11 @@ export const ANSWER_LENGTHS = [
     eyebrow: "Most interviews",
     hint: "Clear STAR story you can say without rushing.",
     speakSeconds: "60–90 seconds",
-    prompt: `ANSWER LENGTH: Standard (about 60–90 seconds spoken).
-- Tight structure: context → action → result.
-- One solid example is enough. Stay conversational.`,
+    maxWords: 160,
+    prompt: `ANSWER LENGTH (HARD — every "a" must obey): Standard (~60–90 seconds spoken).
+- Target ~120–160 words per answer (if Mix: that budget PER language).
+- Structure: context → action → result. One solid example.
+- Conversational speech — not an essay. Do not write Deep Dive length.`,
   },
   {
     id: "deep",
@@ -31,10 +35,11 @@ export const ANSWER_LENGTHS = [
     eyebrow: "Panel / VP",
     hint: "Richer ownership story — stakes, trade-offs, result.",
     speakSeconds: "2–3 minutes",
-    prompt: `ANSWER LENGTH: Deep dive (about 2–3 minutes spoken).
-- Fuller STAR with stakes, trade-offs, and what you owned.
-- Still oral — not an essay. Use short paragraphs / natural pauses.
-- Include one measurable result when the resume supports it.`,
+    maxWords: 320,
+    prompt: `ANSWER LENGTH (HARD — every "a" must obey): Deep dive (~2–3 minutes spoken).
+- Target ~240–320 words per answer (if Mix: that budget PER language).
+- Fuller STAR: stakes, trade-offs, what you owned, one measurable result when resume supports it.
+- Still oral — short paragraphs / natural pauses. Use the full budget; do not stay Brief.`,
   },
 ];
 

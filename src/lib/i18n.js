@@ -19,6 +19,8 @@ const en = {
 
   "brand.name": "Line Check",
   "brand.tagline": "Your interview coach",
+  "brand.docTitle":
+    "Interview coach for answers you can say out loud",
 
   "install.kickerAndroid": "One-tap practice",
   "install.kickerIos": "Two-tap install",
@@ -76,6 +78,8 @@ const en = {
   "home.targetQsHint":
     "Add the questions that make you nervous. They sit under your three foundations — and never replace them.",
   "home.autoInvent": "Also draft likely questions from my resume and this role",
+  "home.inventCount": "How many extras",
+  "home.inventCountOption": "{n}",
   "home.genPrompt": "Generation prompt",
   "home.systemInSettings": "System prompt is edited in",
   "home.editUserPrompt": "Edit user prompt before send",
@@ -280,6 +284,7 @@ const zh = {
 
   "brand.name": "对词间",
   "brand.tagline": "你的面试教练",
+  "brand.docTitle": "把简历和 JD 练成能说出口的面试答案",
 
   "install.kickerAndroid": "一键开口练",
   "install.kickerIos": "两步安装",
@@ -334,6 +339,8 @@ const zh = {
   "home.targetQsHint":
     "把心里没底的问题写进来。它们排在三个基础题后面——不会挤掉它们。",
   "home.autoInvent": "再根据我的简历和岗位，补一些很可能被问到的题",
+  "home.inventCount": "额外题数量",
+  "home.inventCountOption": "{n} 题",
   "home.genPrompt": "生成提示词",
   "home.systemInSettings": "系统提示词请到",
   "home.editUserPrompt": "发送前编辑用户提示词",

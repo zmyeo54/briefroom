@@ -52,7 +52,7 @@ export function I18nProvider({ children }) {
   useEffect(() => {
     document.documentElement.lang = uiLang === "zh" ? "zh-CN" : "en";
     const brand = translate(uiLang, "brand.name");
-    const tag = translate(uiLang, "brand.tagline");
+    const tag = translate(uiLang, "brand.docTitle");
     document.title = `${brand} — ${tag}`;
     const refresh = () => {
       const lang = normalizeUiLang(

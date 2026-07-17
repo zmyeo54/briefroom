@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://linecheck-app.vercel.app/sitemap.xml

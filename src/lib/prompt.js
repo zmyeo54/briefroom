@@ -15,8 +15,50 @@ import {
 
 /** Default system + user prompt templates used for Q&A generation. */
 
+/** How many AI-invented extras to draft (on top of mandatory 3 + user targets). */
+export const INVENT_COUNTS = [3, 5, 7, 10];
+/** Fewer extras = fewer output tokens per generate (free-tier TPM/RPD). */
+export const DEFAULT_INVENT_COUNT = 3;
+
+/** Cap pasted docs — long resume+JD dominates input tokens. */
+export const MAX_DOC_CHARS = 6000;
+
+export function clipDoc(text, max = MAX_DOC_CHARS) {
+  const t = String(text || "").trim();
+  if (t.length <= max) return t;
+  return `${t.slice(0, max)}\n…[truncated for length]`;
+}
+
+/** Bound completion size from Q count × answer mode × language. */
+export function estimateMaxTokens({
+  lang,
+  answerLength,
+  inventCount,
+  addonCount = 0,
+  autoQuestions = true,
+}) {
+  const extras = autoQuestions
+    ? normalizeInventCount(inventCount)
+    : addonCount
+      ? 0
+      : 3;
+  const items = 3 + Number(addonCount || 0) + extras;
+  const length = answerLengthById(answerLength);
+  // ~1.35 tokens/word + short "q"; Mix doubles answer body
+  const words = Number(length.maxWords) || 160;
+  const perItem = Math.ceil(words * 1.35) + 48;
+  const mult = lang === "both" ? 2 : 1;
+  const floor = answerLength === "brief" ? 512 : 768;
+  return Math.min(8192, Math.max(floor, Math.ceil(items * perItem * mult) + 64));
+}
+
+export function normalizeInventCount(raw) {
+  const n = Number(raw);
+  return INVENT_COUNTS.includes(n) ? n : DEFAULT_INVENT_COUNT;
+}
+
 /** Bump this string when DEFAULT_SYSTEM changes so stored settings auto-upgrade. */
-export const SYSTEM_PROMPT_VERSION = "linecheck-job-interview-v3";
+export const SYSTEM_PROMPT_VERSION = "linecheck-job-interview-v4";
 
 export const DEFAULT_SYSTEM = `You are Line Check (对词间), a senior job-interview coach preparing a real hiring-process rehearsal.
 
@@ -29,6 +71,7 @@ Mission:
 - If there is a gap (title mismatch, short tenure, missing skill), address it honestly and reframe with transferable evidence — never fake experience.
 - Prefer concrete examples with situation → action → result when helpful; quantify only when the resume supports numbers.
 - Obey answer-length, language, identity, and QUESTION DIRECTIONS in the user prompt — selected themes must shape invented questions and answer framing.
+- Answer length mode is hard: Brief / Standard / Deep budgets in the user prompt apply to every "a". Do not ignore them.
 
 Interview craft:
 - Questions should sound like a real interviewer for this role — clear, professional, not trick questions.
@@ -70,6 +113,7 @@ export function buildUserPrompt({
   questions,
   lang,
   autoQuestions,
+  inventCount = DEFAULT_INVENT_COUNT,
   answerLength = DEFAULT_ANSWER_LENGTH,
   focuses = DEFAULT_FOCUSES,
   interviewerRole = DEFAULT_INTERVIEWER_ROLE,
@@ -79,6 +123,7 @@ export function buildUserPrompt({
   const length = answerLengthById(answerLength);
   const role = interviewerRoleById(normalizeInterviewerRole(interviewerRole));
   const focusIds = normalizeFocuses(focuses);
+  const extras = normalizeInventCount(inventCount);
   const g = String(gender || "").toLowerCase() === "female" ? "female" : "male";
   const name = String(candidateName || "").trim();
 
@@ -128,10 +173,10 @@ export function buildUserPrompt({
   let inventBlock = "";
   if (autoQuestions) {
     inventBlock = addons.length
-      ? `Then invent 4–6 more realistic job-interview questions for THIS role AFTER the target add-ons (starting at item ${startExtra}). Each invented question must clearly map to one of the SELECTED QUESTION DIRECTIONS below (cover as many directions as practical; label the intent in your reasoning but do NOT put labels in the JSON). Prefer questions ${asker} would actually ask for this JD. ${inventLang}`
-      : `Then invent 5–7 more realistic job-interview questions for THIS role (after the mandatory 3). Each invented question must clearly map to one of the SELECTED QUESTION DIRECTIONS below (cover as many directions as practical; at least one per direction when you invent ${Math.max(5, focusIds.length)}+ extras). Prefer questions ${asker} would actually ask for this JD. ${inventLang}`;
+      ? `Then invent exactly ${extras} more realistic job-interview questions for THIS role AFTER the target add-ons (starting at item ${startExtra}). Each invented question must clearly map to one of the SELECTED QUESTION DIRECTIONS below (cover as many directions as practical; label the intent in your reasoning but do NOT put labels in the JSON). Prefer questions ${asker} would actually ask for this JD. ${inventLang}`
+      : `Then invent exactly ${extras} more realistic job-interview questions for THIS role (after the mandatory 3). Each invented question must clearly map to one of the SELECTED QUESTION DIRECTIONS below (cover as many directions as practical; at least one per direction when extras ≥ focus count). Prefer questions ${asker} would actually ask for this JD. ${inventLang}`;
   } else if (!addons.length) {
-    inventBlock = `Then invent 3–5 additional realistic job-interview questions for THIS role after the mandatory 3. Map each invented question to a SELECTED QUESTION DIRECTION below. Prefer questions ${asker} would actually ask for this JD. ${inventLang}`;
+    inventBlock = `Then invent exactly 3 additional realistic job-interview questions for THIS role after the mandatory 3. Map each invented question to a SELECTED QUESTION DIRECTION below. Prefer questions ${asker} would actually ask for this JD. ${inventLang}`;
   }
 
   const roleBlock = role.prompt ? `${role.prompt}\n` : "";
@@ -161,7 +206,7 @@ ${inventBlock}
 
 Quality bar:
 - Target questions are ADD-ONS on top of the mandatory set — never replace the mandatory 3.
-- Every answer must match the ANSWER LENGTH mode (${length.label}, ${length.speakSeconds}).
+- LENGTH IS MANDATORY: every "a" must match ${length.label} (~${length.speakSeconds}, ≤~${length.maxWords} words${lang === "both" ? " per language" : ""}). Brief stays short; Deep uses the fuller budget; do not blur modes.
 - Invented extras MUST reflect the selected QUESTION DIRECTIONS (coverage + answer craft above).
 - Invented "q" lines MUST sound like ${asker} — not a generic chatbot.
 - Frame answers toward the matching direction when relevant; keep mandatory answers truthful and speakable.
@@ -171,10 +216,10 @@ Quality bar:
 - Every item's "q" and "a" must obey INTERVIEW LANGUAGE above.
 
 RESUME:
-${resume}
+${clipDoc(resume)}
 
 JOB DESCRIPTION:
-${jd}`;
+${clipDoc(jd)}`;
 }
 
 export function previewPrompt(opts) {

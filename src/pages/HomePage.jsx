@@ -26,7 +26,14 @@ import {
   partitionFocuses,
   suggestFocusesFromText,
 } from "../lib/interviewModes";
-import { buildUserPrompt, DEFAULT_SYSTEM } from "../lib/prompt";
+import {
+  buildUserPrompt,
+  DEFAULT_SYSTEM,
+  INVENT_COUNTS,
+  normalizeInventCount,
+  DEFAULT_INVENT_COUNT,
+  estimateMaxTokens,
+} from "../lib/prompt";
 import {
   extractCandidateName,
   applyCandidateNameToItems,
@@ -74,17 +81,26 @@ export default function HomePage() {
   const [autoQuestions, setAutoQuestions] = useState(
     () => loadJson("draft", {}).autoQuestions !== false
   );
+  const [inventCount, setInventCount] = useState(() =>
+    normalizeInventCount(loadJson("draft", {}).inventCount)
+  );
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
 
   // Keep resume / JD / target questions until the user clears them
   useEffect(() => {
-    const payload = { resume, jd, questions: questionsRaw, autoQuestions };
+    const payload = {
+      resume,
+      jd,
+      questions: questionsRaw,
+      autoQuestions,
+      inventCount,
+    };
     const id = setTimeout(() => saveJson("draft", payload), 200);
     return () => {
       clearTimeout(id);
       saveJson("draft", payload);
     };
-  }, [resume, jd, questionsRaw, autoQuestions]);
+  }, [resume, jd, questionsRaw, autoQuestions, inventCount]);
 
   const [qa, setQa] = useState(() => {
     const stored = loadJson("qa", []);
@@ -202,6 +218,7 @@ export default function HomePage() {
     setJd("");
     setQuestionsRaw("");
     setAutoQuestions(true);
+    setInventCount(DEFAULT_INVENT_COUNT);
     setQa([]);
     setSelected(new Set());
     setQaEpoch((n) => n + 1);
@@ -210,6 +227,7 @@ export default function HomePage() {
       jd: "",
       questions: "",
       autoQuestions: true,
+      inventCount: DEFAULT_INVENT_COUNT,
     });
     saveJson("qa", []);
     patchSettings({ focuses: [...DEFAULT_FOCUSES], interviewerRole: DEFAULT_INTERVIEWER_ROLE });
@@ -314,7 +332,13 @@ export default function HomePage() {
       return;
     }
 
-    saveJson("draft", { resume, jd, questions: questionsRaw, autoQuestions });
+    saveJson("draft", {
+      resume,
+      jd,
+      questions: questionsRaw,
+      autoQuestions,
+      inventCount,
+    });
     setLoading(true);
     flash(t("home.flash.generating"));
     haltPlayback();
@@ -325,6 +349,7 @@ export default function HomePage() {
       questions,
       lang: latest.lang,
       autoQuestions,
+      inventCount,
       answerLength: latest.answerLength,
       focuses: latest.focuses,
       interviewerRole: latest.interviewerRole,
@@ -336,6 +361,13 @@ export default function HomePage() {
     try {
       const body = {
         temperature: 0.6,
+        max_tokens: estimateMaxTokens({
+          lang: latest.lang,
+          answerLength: latest.answerLength,
+          inventCount,
+          addonCount: questions.filter((q) => q.trim()).length,
+          autoQuestions,
+        }),
         messages: [
           { role: "system", content: latest.systemPrompt || DEFAULT_SYSTEM },
           { role: "user", content: userContent },
@@ -820,15 +852,74 @@ export default function HomePage() {
           placeholder={targetPh}
           aria-label={t("home.targetQs")}
         />
-          <label className="mt-3 flex items-center gap-2 text-sm ink md:mt-4">
-            <input
-              type="checkbox"
-              checked={autoQuestions}
-              onChange={(e) => setAutoQuestions(e.target.checked)}
-              className="accent-check"
-            />
-            {t("home.autoInvent")}
-          </label>
+          <div className="mt-3 flex flex-col gap-2.5 md:mt-4">
+            <label className="flex items-center gap-2 text-sm ink">
+              <input
+                type="checkbox"
+                checked={autoQuestions}
+                onChange={(e) => setAutoQuestions(e.target.checked)}
+                className="accent-check"
+              />
+              {t("home.autoInvent")}
+            </label>
+            <AnimatePresence initial={false}>
+              {autoQuestions ? (
+                <motion.div
+                  key="invent-count"
+                  className="count-tiles"
+                  role="radiogroup"
+                  aria-label={t("home.inventCount")}
+                  initial={
+                    reduce ? false : { opacity: 0, scale: 0.97 }
+                  }
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={
+                    reduce
+                      ? { opacity: 0 }
+                      : { opacity: 0, scale: 0.97 }
+                  }
+                  transition={{
+                    duration: reduce ? 0.14 : 0.18,
+                    ease: [0.16, 1, 0.3, 1],
+                  }}
+                  style={{ transformOrigin: "left center" }}
+                >
+                  <span className="count-tiles-label">
+                    {t("home.inventCount")}
+                  </span>
+                  <div className="count-tiles-row">
+                    {INVENT_COUNTS.map((n) => {
+                      const on = inventCount === n;
+                      return (
+                        <button
+                          key={n}
+                          type="button"
+                          role="radio"
+                          aria-checked={on}
+                          className={`count-tile ${on ? "is-on" : ""}`}
+                          onClick={() => setInventCount(n)}
+                        >
+                          {on ? (
+                            <motion.span
+                              layoutId={
+                                reduce ? undefined : "invent-count-thumb"
+                              }
+                              className="count-tile-thumb"
+                              transition={{
+                                duration: 0.18,
+                                ease: [0.16, 1, 0.3, 1],
+                              }}
+                            />
+                          ) : null}
+                          <span className="count-tile-num">{n}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+          </div>
 
         <div className="mt-4 flex justify-center md:mt-5">
           <button
@@ -943,20 +1034,30 @@ export default function HomePage() {
                 })}
           </button>
         </motion.div>
-        {audioNote.text ? (
-          <p
-            className={`action-dock-note ${
-              audioNote.kind === "error"
-                ? "err"
-                : audioNote.kind === "ok"
-                  ? "ok"
-                  : "mute"
-            }`}
-            role="status"
-          >
-            {audioNote.text}
-          </p>
-        ) : null}
+        <AnimatePresence mode="wait" initial={false}>
+          {audioNote.text ? (
+            <motion.p
+              key={audioNote.text}
+              className={`action-dock-note ${
+                audioNote.kind === "error"
+                  ? "err"
+                  : audioNote.kind === "ok"
+                    ? "ok"
+                    : "mute"
+              }`}
+              role="status"
+              initial={reduce ? false : { opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={reduce ? { opacity: 0 } : { opacity: 0, y: 4 }}
+              transition={{
+                duration: 0.18,
+                ease: [0.16, 1, 0.3, 1],
+              }}
+            >
+              {audioNote.text}
+            </motion.p>
+          ) : null}
+        </AnimatePresence>
       </div>
 
       <AnimatePresence>

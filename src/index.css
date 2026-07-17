@@ -142,6 +142,10 @@ html[lang="zh-CN"] .focus-bubble-label {
   -webkit-backdrop-filter: blur(18px) saturate(1.2);
   animation: install-sheet-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+.install-sheet.is-out {
+  pointer-events: none;
+  animation: install-sheet-out 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
 @media (min-width: 640px) {
   .install-sheet {
     left: 50%;
@@ -161,6 +165,16 @@ html[lang="zh-CN"] .focus-bubble-label {
     transform: translateY(0) scale(1);
   }
 }
+@keyframes install-sheet-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+}
 @media (min-width: 640px) {
   @keyframes install-sheet-in {
     from {
@@ -172,10 +186,28 @@ html[lang="zh-CN"] .focus-bubble-label {
       transform: translateX(-50%) translateY(0) scale(1);
     }
   }
+  @keyframes install-sheet-out {
+    from {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0) scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(-50%) translateY(18px) scale(0.97);
+    }
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .install-sheet {
     animation: none;
+  }
+  .install-sheet.is-out {
+    animation: install-sheet-out-fade 0.16s ease forwards;
+  }
+}
+@keyframes install-sheet-out-fade {
+  to {
+    opacity: 0;
   }
 }
 
@@ -574,14 +606,30 @@ html[lang="zh-CN"] .install-sheet-badge {
     transform: translateX(-50%) translateY(0) scale(1);
   }
 }
+@keyframes install-sheet-out-landscape {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px) scale(0.98);
+  }
+}
 @media (orientation: landscape) and (max-height: 520px) {
   .install-sheet {
     animation-name: install-sheet-in-landscape;
+  }
+  .install-sheet.is-out {
+    animation-name: install-sheet-out-landscape;
   }
 }
 @media (orientation: landscape) and (max-height: 520px) and (prefers-reduced-motion: reduce) {
   .install-sheet {
     animation: none;
+  }
+  .install-sheet.is-out {
+    animation: install-sheet-out-fade 0.16s ease forwards;
   }
 }
 
@@ -1535,6 +1583,104 @@ html[lang="zh-CN"] .app-dialog-body {
   color: #fff;
   background: #4a7ff8;
   box-shadow: 0 4px 12px -6px rgba(74, 127, 248, 0.5);
+}
+
+/* Compact one-row segmented count picker */
+.count-tiles {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.count-tiles-label {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-mute);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.count-tiles-row {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0;
+  padding: 0.2rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-line);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(247, 246, 243, 0.9));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 6px 14px -12px rgba(32, 32, 32, 0.2);
+}
+.count-tile {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.1rem;
+  height: 1.85rem;
+  padding: 0 0.55rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #6b6862;
+  font-size: 0.75rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.16s ease, transform 0.12s ease;
+}
+.count-tile-thumb {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--color-accent);
+  box-shadow:
+    0 4px 12px -6px rgba(74, 127, 248, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  z-index: 0;
+}
+.count-tile-num {
+  position: relative;
+  z-index: 1;
+}
+.count-tile + .count-tile::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 22%;
+  bottom: 22%;
+  width: 1px;
+  background: rgba(32, 32, 32, 0.08);
+  pointer-events: none;
+  transition: opacity 0.16s ease;
+  z-index: 0;
+}
+.count-tile.is-on + .count-tile::before,
+.count-tile.is-on::before {
+  opacity: 0;
+}
+.count-tile:hover:not(.is-on) {
+  color: var(--color-ink);
+}
+.count-tile:active {
+  transform: scale(0.97);
+}
+.count-tile.is-on {
+  color: #fff;
+}
+.count-tile.is-on:hover {
+  color: #fff;
+}
+.count-tile.is-on:hover .count-tile-thumb {
+  background: var(--color-accent-deep);
 }
 
 /* Always one row of 3 compact options */

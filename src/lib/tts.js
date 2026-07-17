@@ -205,12 +205,15 @@ export function buildSpeakParts(
     return parts;
   }
 
+  const family = lang === "zh" ? "zh" : "en";
+  const qAligned = voiceForLangFamily(qVoice, family);
+  const aAligned = voiceForLangFamily(aVoice, family);
   const pref = sanitizeSpeakText(preface);
   const q = sanitizeSpeakText(question);
   const a = sanitizeSpeakText(answer);
-  if (pref) parts.push({ text: pref, voice: qVoice });
-  if (q) parts.push({ text: q, voice: qVoice });
-  if (a) parts.push({ text: a, voice: aVoice });
+  if (pref) parts.push({ text: pref, voice: qAligned });
+  if (q) parts.push({ text: q, voice: qAligned });
+  if (a) parts.push({ text: a, voice: aAligned });
   return parts;
 }
 

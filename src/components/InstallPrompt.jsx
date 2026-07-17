@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DeviceMobile,
   DownloadSimple,
@@ -10,6 +10,8 @@ import { useI18n } from "../lib/I18nContext";
 
 const DISMISS_KEY = "briefroom_install_dismissed";
 const SHOW_DELAY_MS = 1800;
+const EXIT_MS = 280;
+const EXIT_MS_REDUCED = 160;
 
 function isStandalone() {
   try {
@@ -29,6 +31,14 @@ function isIos() {
   );
 }
 
+function prefersReducedMotion() {
+  try {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * PWA install / Add to Home Screen sheet.
  * Android/Chrome: one-tap via beforeinstallprompt.
@@ -39,6 +49,8 @@ export default function InstallPrompt() {
   const [deferred, setDeferred] = useState(null);
   const [showIos, setShowIos] = useState(false);
   const [ready, setReady] = useState(false);
+  const [exiting, setExiting] = useState(false);
+  const exitTimer = useRef(0);
   const [hidden, setHidden] = useState(() => {
     try {
       return localStorage.getItem(DISMISS_KEY) === "1" || isStandalone();
@@ -74,15 +86,31 @@ export default function InstallPrompt() {
     };
   }, [hidden]);
 
-  const dismiss = () => {
+  useEffect(
+    () => () => {
+      if (exitTimer.current) window.clearTimeout(exitTimer.current);
+    },
+    []
+  );
+
+  const finalizeDismiss = () => {
     setHidden(true);
     setDeferred(null);
     setShowIos(false);
+    setExiting(false);
     try {
       localStorage.setItem(DISMISS_KEY, "1");
     } catch {
       /* ignore */
     }
+  };
+
+  const dismiss = () => {
+    if (exiting || hidden) return;
+    setExiting(true);
+    const ms = prefersReducedMotion() ? EXIT_MS_REDUCED : EXIT_MS;
+    if (exitTimer.current) window.clearTimeout(exitTimer.current);
+    exitTimer.current = window.setTimeout(finalizeDismiss, ms);
   };
 
   const install = async () => {
@@ -108,7 +136,7 @@ export default function InstallPrompt() {
 
   return (
     <div
-      className="install-sheet"
+      className={`install-sheet${exiting ? " is-out" : ""}`}
       role="dialog"
       aria-modal="false"
       aria-labelledby="install-sheet-title"

@@ -2,15 +2,23 @@
   "name": "Line Check",
   "short_name": "Line Check",
   "description": "Your interview coach — turn resume and job description into answers you can say out loud, then practice until they feel natural.",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#F0EFEB",
+  "background_color": "#F7F6F2",
   "theme_color": "#4A7FF8",
   "lang": "en",
+  "dir": "ltr",
   "categories": ["education", "productivity"],
   "icons": [
+    {
+      "src": "/favicon-32.png",
+      "sizes": "32x32",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
@@ -24,13 +32,13 @@
       "purpose": "any"
     },
     {
-      "src": "/icon-192.png",
+      "src": "/icon-maskable-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
