@@ -601,6 +601,7 @@ export default function HomePage() {
       setSpeaking(true);
       setAudioPaused(false);
       setAudioReady(false);
+      setAudioNote({ text: t("home.preparingAudio"), kind: "" });
       setPlayingIndex(i);
       try {
         await speakQa(qa[i].q, qa[i].a, {
@@ -608,7 +609,10 @@ export default function HomePage() {
           voiceQ: latest.voiceQ,
           voiceA: latest.voiceA,
           lang: latest.lang,
-          onStart: () => setAudioReady(true),
+          onStart: () => {
+            setAudioReady(true);
+            setAudioNote({ text: "", kind: "" });
+          },
         });
       } catch (e) {
         flash(e.message || "TTS failed.", "error");
@@ -616,7 +620,7 @@ export default function HomePage() {
         endPlayback();
       }
     },
-    [qa]
+    [qa, t]
   );
 
   const playSelected = async () => {
@@ -632,6 +636,7 @@ export default function HomePage() {
     setSpeaking(true);
     setAudioPaused(false);
     setAudioReady(false);
+    setAudioNote({ text: t("home.preparingAudio"), kind: "" });
     try {
       const entries = indices.map((i) => {
         const preface =
@@ -648,7 +653,10 @@ export default function HomePage() {
         voiceA: latest.voiceA,
         lang: latest.lang,
         onProgress: (j) => setPlayingIndex(j >= 0 ? indices[j] : -1),
-        onStart: () => setAudioReady(true),
+        onStart: () => {
+          setAudioReady(true);
+          setAudioNote({ text: "", kind: "" });
+        },
       });
     } catch (e) {
       flash(e.message || "TTS failed.", "error");
@@ -1254,7 +1262,7 @@ export default function HomePage() {
       </div>
 
       <AnimatePresence>
-        {speaking ? (
+        {speaking && (audioReady || audioPaused) ? (
           <motion.div
             key="playback-fab"
             className="playback-fab"
@@ -1266,16 +1274,7 @@ export default function HomePage() {
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
           >
             <span className="playback-fab-label">
-              {!audioReady ? (
-                <>
-                  <SpinnerGap size={16} className="animate-spin" />
-                  {t("home.preparingAudio")}
-                </>
-              ) : audioPaused ? (
-                t("home.paused")
-              ) : (
-                t("home.playingAudio")
-              )}
+              {audioPaused ? t("home.paused") : t("home.playingAudio")}
             </span>
             <button
               type="button"

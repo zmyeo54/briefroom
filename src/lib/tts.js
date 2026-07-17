@@ -437,8 +437,17 @@ function playBlob(blob, token, { onStart } = {}) {
     }
     cleanup();
     currentUrl = URL.createObjectURL(blob);
-    const audio = new Audio(currentUrl);
+    const audio = document.createElement("audio");
+    audio.src = currentUrl;
+    audio.preload = "auto";
+    audio.autoplay = true;
+    audio.playsInline = true;
+    audio.setAttribute("playsinline", "");
+    audio.setAttribute("webkit-playsinline", "");
+    audio.crossOrigin = "anonymous";
+    audio.style.display = "none";
     currentAudio = audio;
+    document.body.appendChild(audio);
     audio.onended = () => {
       if (token === playToken) cleanup();
       resolve();
@@ -575,6 +584,15 @@ export function stopSpeech() {
 }
 
 function cleanup() {
+  if (currentAudio) {
+    try {
+      if (currentAudio.parentNode) {
+        currentAudio.parentNode.removeChild(currentAudio);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
   if (currentUrl) {
     URL.revokeObjectURL(currentUrl);
     currentUrl = null;
