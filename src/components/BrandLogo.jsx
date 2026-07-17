@@ -1,9 +1,7 @@
 /**
- * Line Check mark — nested rehearsal room.
- * dormi-inspired multi-stop warm→cool gradient tile.
+ * Line Check mark — nested rehearsal room on a solid warm tile.
  */
 export default function BrandLogo({ size = 28, className = "", title }) {
-  const gradId = `br-room-${size}`;
   const softId = `br-room-soft-${size}`;
   return (
     <svg
@@ -17,19 +15,13 @@ export default function BrandLogo({ size = 28, className = "", title }) {
     >
       {title ? <title>{title}</title> : null}
       <defs>
-        <linearGradient id={gradId} x1="0%" y1="20%" x2="100%" y2="85%">
-          <stop offset="0%" stopColor="#FFC757" />
-          <stop offset="35%" stopColor="#FF7648" />
-          <stop offset="68%" stopColor="#4A7FF8" />
-          <stop offset="100%" stopColor="#C5B4E3" />
-        </linearGradient>
         <linearGradient id={softId} x1="50%" y1="12%" x2="50%" y2="70%">
           <stop offset="0%" stopColor="#fff" stopOpacity="0.35" />
           <stop offset="100%" stopColor="#fff" stopOpacity="0" />
         </linearGradient>
       </defs>
 
-      <rect width="64" height="64" rx="18" fill={`url(#${gradId})`} />
+      <rect width="64" height="64" rx="18" fill="#FFC757" />
       <rect x="10" y="10" width="44" height="44" rx="14" fill={`url(#${softId})`} />
 
       <path

@@ -118,6 +118,27 @@ export const GEMINI_MODELS = [
 
 export const DEFAULT_MODEL = GEMINI_MODELS[0].id;
 
+/** Preferred model first, then the rest — for 429 / unavailable fallback. */
+export function geminiModelsToTry(preferred = DEFAULT_MODEL) {
+  const ids = GEMINI_MODELS.map((m) => m.id);
+  const first = ids.includes(preferred) ? preferred : DEFAULT_MODEL;
+  return [first, ...ids.filter((id) => id !== first)];
+}
+
+/** Retry another model on quota / missing model — not on auth or bad-request. */
+export function shouldTryNextGeminiModel(status, data) {
+  if (status === 429 || status === 404) return true;
+  const msg = String(
+    data?.error?.message ||
+      data?.error?.status ||
+      (typeof data?.error === "string" ? data.error : "") ||
+      ""
+  );
+  return /quota|rate.?limit|RESOURCE_EXHAUSTED|no longer available|not found|not supported/i.test(
+    msg
+  );
+}
+
 /** Build-time Vite env (local .env.local / Vercel VITE_* at build). */
 export function getSavedApiKey() {
   return String(import.meta.env.VITE_GEMINI_API_KEY || "").trim();

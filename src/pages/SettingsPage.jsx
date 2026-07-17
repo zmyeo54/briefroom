@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
-  CaretLeft,
   ClipboardText,
   FloppyDisk,
   SpeakerHigh,
@@ -125,12 +124,11 @@ export default function SettingsPage() {
 
   return (
     <Shell>
-      <header className="settings-head">
-        <Link to="/" className="settings-back">
-          <CaretLeft size={22} weight="bold" aria-hidden />
-          <span>{t("nav.home")}</span>
-        </Link>
-        <h1 className="settings-large-title">{t("settings.title")}</h1>
+      <header className="mb-5 md:mb-8">
+        <p className="label mb-2 md:mb-3">{t("settings.eyebrow")}</p>
+        <h1 className="display text-[1.75rem] title sm:text-3xl md:text-4xl">
+          {t("settings.title")}
+        </h1>
       </header>
 
       <section className="panel p-3.5 md:p-6">

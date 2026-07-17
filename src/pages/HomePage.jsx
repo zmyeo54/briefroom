@@ -33,6 +33,8 @@ import {
   interviewLangLabel,
   normalizeSettings,
   resolveApiKey,
+  geminiModelsToTry,
+  shouldTryNextGeminiModel,
   voicesForInterviewLang,
 } from "../lib/settingsConfig";
 import { useI18n } from "../lib/I18nContext";
@@ -62,6 +64,7 @@ export default function HomePage() {
   const [autoQuestions, setAutoQuestions] = useState(
     () => loadJson("draft", {}).autoQuestions !== false
   );
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
 
   // Keep resume / JD / target questions until the user clears them
   useEffect(() => {
@@ -142,6 +145,15 @@ export default function HomePage() {
     setSelected(new Set(qa.map((_, i) => i)));
   }, [qa]);
 
+  useEffect(() => {
+    if (!resetConfirmOpen) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") setResetConfirmOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [resetConfirmOpen]);
+
   const flash = (text, kind = "") => setStatus({ text, kind });
 
   const patchSettings = (partial) => {
@@ -151,7 +163,7 @@ export default function HomePage() {
   };
 
   const resetAllContent = () => {
-    if (!window.confirm(t("home.resetAllConfirm"))) return;
+    setResetConfirmOpen(false);
     stopSpeech();
     setSpeaking(false);
     setPlayingIndex(-1);
@@ -168,11 +180,6 @@ export default function HomePage() {
       autoQuestions: true,
     });
     saveJson("qa", []);
-    try {
-      sessionStorage.removeItem("briefroom_focus_auto");
-    } catch {
-      /* ignore */
-    }
     patchSettings({ focuses: [...DEFAULT_FOCUSES], interviewerRole: DEFAULT_INTERVIEWER_ROLE });
     flash(t("home.flash.resetAll"), "ok");
   };
@@ -237,30 +244,6 @@ export default function HomePage() {
     [settings.focuses, suggestedFocuses]
   );
 
-  // Auto-refresh themes when resume/JD/interviewer role changes (local, no API)
-  useEffect(() => {
-    const hasDocs = Boolean(resume.trim() || jd.trim());
-    const key = [
-      settings.interviewerRole || "any",
-      hasDocs
-        ? [
-            resume.trim().length,
-            jd.trim().length,
-            resume.trim().slice(0, 80),
-            jd.trim().slice(0, 80),
-            suggestedFocuses.join(","),
-          ].join("|")
-        : "empty",
-    ].join("::");
-    const prev = sessionStorage.getItem("briefroom_focus_auto");
-    if (prev === key) return;
-    sessionStorage.setItem("briefroom_focus_auto", key);
-    patchSettings({
-      focuses: suggestedFocuses,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [suggestedFocuses, resume, jd, settings.interviewerRole]);
-
   const toggleFocus = (id) => {
     const cur = normalizeFocuses(readSettings().focuses);
     const next = cur.includes(id)
@@ -314,7 +297,6 @@ export default function HomePage() {
 
     try {
       const body = {
-        model: latest.model,
         temperature: 0.6,
         messages: [
           { role: "system", content: latest.systemPrompt || DEFAULT_SYSTEM },
@@ -347,20 +329,44 @@ export default function HomePage() {
         return { res, data };
       }
 
-      let { res, data } = await callChat({
-        ...body,
-        response_format: { type: "json_object" },
-      });
-      if (
-        !res.ok &&
-        !useServer &&
-        /response_format|json_object|unknown/i.test(data?.error?.message || "")
-      ) {
-        ({ res, data } = await callChat(body));
+      async function callChatWithModel(model) {
+        let { res, data } = await callChat({
+          ...body,
+          model,
+          response_format: { type: "json_object" },
+        });
+        if (
+          !res.ok &&
+          !useServer &&
+          /response_format|json_object|unknown/i.test(data?.error?.message || "")
+        ) {
+          ({ res, data } = await callChat({ ...body, model }));
+        }
+        return { res, data };
       }
-      if (res.status === 503 && useServer) {
-        flash(t("home.flash.needKey"), "error");
-        navigate("/settings");
+
+      const models = geminiModelsToTry(latest.model);
+      let res;
+      let data;
+      let lastStatus = 0;
+      for (let i = 0; i < models.length; i++) {
+        ({ res, data } = await callChatWithModel(models[i]));
+        lastStatus = res.status;
+        if (res.ok) break;
+        if (res.status === 503 && useServer) {
+          flash(t("home.flash.needKey"), "error");
+          navigate("/settings");
+          return;
+        }
+        // Quota / missing model → try next; other errors stop immediately.
+        if (shouldTryNextGeminiModel(res.status, data) && i < models.length - 1) {
+          continue;
+        }
+        break;
+      }
+
+      if (lastStatus === 429) {
+        flash(t("home.flash.rateLimited"), "error");
         return;
       }
       if (!res.ok) {
@@ -563,7 +569,7 @@ export default function HomePage() {
           <button
             type="button"
             className="btn shrink-0"
-            onClick={resetAllContent}
+            onClick={() => setResetConfirmOpen(true)}
             title={t("home.resetAllHint")}
           >
             <ArrowCounterClockwise size={16} weight="bold" />
@@ -882,6 +888,57 @@ export default function HomePage() {
           </p>
         ) : null}
       </div>
+
+      <AnimatePresence>
+        {resetConfirmOpen ? (
+          <motion.div
+            key="reset-confirm"
+            className="app-dialog-backdrop"
+            role="presentation"
+            initial={reduce ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={reduce ? undefined : { opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onClick={() => setResetConfirmOpen(false)}
+          >
+            <motion.div
+              className="app-dialog"
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby="reset-confirm-title"
+              aria-describedby="reset-confirm-body"
+              initial={reduce ? false : { opacity: 0, y: 16, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={reduce ? undefined : { opacity: 0, y: 10, scale: 0.98 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 id="reset-confirm-title" className="app-dialog-title">
+                {t("home.resetAllConfirmTitle")}
+              </h2>
+              <p id="reset-confirm-body" className="app-dialog-body">
+                {t("home.resetAllConfirmBody")}
+              </p>
+              <div className="app-dialog-actions">
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => setResetConfirmOpen(false)}
+                >
+                  {t("doc.cancel")}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={resetAllContent}
+                >
+                  {t("home.resetAll")}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </Shell>
   );
 }

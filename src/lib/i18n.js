@@ -84,9 +84,10 @@ const en = {
   "home.generating": "Coaching Your Answers…",
   "home.saveDraft": "Save Progress",
   "home.resetAll": "New Interview",
-  "home.resetAllHint": "Clear role, questions, and answers. Your resume and Settings stay.",
-  "home.resetAllConfirm":
-    "Start a new interview?\nThis clears the role, target questions, and answers.\nYour resume and Settings stay.",
+  "home.resetAllHint": "Clear role, themes, questions, and answers. Your resume and Settings stay.",
+  "home.resetAllConfirmTitle": "Start a new interview?",
+  "home.resetAllConfirmBody":
+    "This clears the role, themes, target questions, and answers. Your resume and Settings stay.",
   "home.clearAnswers": "Start Fresh",
 
   "home.questions": "Your practice set",
@@ -112,11 +113,13 @@ const en = {
   "home.flash.resetAll": "Ready for a new interview. Resume kept — drop in the next role.",
   "home.flash.cleared": "Answers cleared. Fresh page — same coach energy.",
   "home.flash.needKey": "Add your Gemini API key in Settings so we can build answers.",
+  "home.flash.rateLimited":
+    "Too many requests right now. Wait a minute and try again — or add your own Gemini key in Settings.",
   "home.flash.needDocs": "Add your resume and the role first — then we’ll coach from your real story.",
   "home.flash.generating": "Crafting answers you can actually say…",
   "home.flash.generated":
-    "Ready: {n} in {lang}. Your three foundations{addons} are pinned on top — start practicing.",
-  "home.flash.addons": " + {n} of yours",
+    "Your practice set is ready — {n} answers in {lang}{addons}. Open one and say it out loud.",
+  "home.flash.addons": ", including {n} you asked for",
   "home.flash.selectAnswer": "Pick at least one question that has an answer, then try again.",
   "home.flash.copied": "Copied — keep going.",
 
@@ -330,9 +333,9 @@ const zh = {
   "home.generating": "正在打磨你的回答…",
   "home.saveDraft": "保存进度",
   "home.resetAll": "新一场面试",
-  "home.resetAllHint": "清空岗位、题目和回答。简历与设置会保留。",
-  "home.resetAllConfirm":
-    "开始新一场面试？\n会清空岗位、目标题和回答。\n简历与设置会保留。",
+  "home.resetAllHint": "清空岗位、主题、题目和回答。简历与设置会保留。",
+  "home.resetAllConfirmTitle": "开始新一场面试？",
+  "home.resetAllConfirmBody": "会清空岗位、主题、目标题和回答。简历与设置会保留。",
   "home.clearAnswers": "清空重来",
 
   "home.questions": "你的练习清单",
@@ -357,11 +360,13 @@ const zh = {
   "home.flash.resetAll": "可以开始新一场面试了。简历已保留——放入下一个岗位即可。",
   "home.flash.cleared": "回答已清空。新的一页，同样认真练。",
   "home.flash.needKey": "请先在设置里填入 Gemini API 密钥，我们才能帮你生成回答。",
+  "home.flash.rateLimited":
+    "请求太频繁了。请稍等一分钟再试——或在设置里填入你自己的 Gemini 密钥。",
   "home.flash.needDocs": "先放上简历和岗位——我们要基于你的真实经历来练。",
   "home.flash.generating": "正在写出你能说出口的回答…",
   "home.flash.generated":
-    "就绪：{n} 题（{lang}）。三个基础题{addons}已置顶——可以开始开口了。",
-  "home.flash.addons": " + 你的 {n} 题",
+    "练习清单已就绪——{n} 道回答（{lang}）{addons}。点开一道，大声说出来。",
+  "home.flash.addons": "，含你指定的 {n} 题",
   "home.flash.selectAnswer": "请至少选一道已有回答的题，再试一次。",
   "home.flash.copied": "已复制——继续练。",
 

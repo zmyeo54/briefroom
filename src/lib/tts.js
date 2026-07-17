@@ -115,7 +115,8 @@ export function splitBilingualText(text) {
     for (const p of parts) {
       const zhChars = (p.match(/[\u4e00-\u9fff]/g) || []).length;
       const latin = (p.match(/[A-Za-z]/g) || []).length;
-      if (zhChars > latin) zhParts.push(p);
+      // "你好，我是 Alex。" → zh wins (CJK present, not Latin-dominant)
+      if (zhChars >= 2 && zhChars >= latin * 0.5) zhParts.push(p);
       else enParts.push(p);
     }
     if (enParts.length && zhParts.length) {
@@ -123,15 +124,24 @@ export function splitBilingualText(text) {
     }
   }
 
+  const hasLatin = /[A-Za-z]{3,}/.test(raw);
   const zhStart = raw.search(/[\u4e00-\u9fff]/);
-  if (zhStart > 24) {
+  // English then Chinese in one block (threshold was 24 — missed short intros)
+  if (zhStart > 0 && hasLatin) {
     return {
       en: raw.slice(0, zhStart).trim(),
       zh: raw.slice(zhStart).trim(),
     };
   }
+  const latinStart = raw.search(/[A-Za-z]{3,}/);
+  if (latinStart > 0 && /[\u4e00-\u9fff]/.test(raw.slice(0, latinStart))) {
+    return {
+      zh: raw.slice(0, latinStart).trim(),
+      en: raw.slice(latinStart).trim(),
+    };
+  }
 
-  if (/[\u4e00-\u9fff]/.test(raw) && !/[A-Za-z]{3,}/.test(raw)) {
+  if (/[\u4e00-\u9fff]/.test(raw) && !hasLatin) {
     return { en: "", zh: raw };
   }
   return { en: raw, zh: "" };
@@ -398,6 +408,8 @@ export async function speakText(
 /**
  * Speak question with interviewer voice, then answer with candidate voice.
  * Mix mode: English half → Mandarin half, each with a matching voice.
+ * Fetches all segments first, then plays one concatenated MP3 so mobile
+ * Safari does not stop after the question (multiple play() calls lose the gesture).
  */
 export async function speakQa(
   question,
@@ -420,12 +432,13 @@ export async function speakQa(
   });
   if (!parts.length) return;
 
+  const blobs = [];
   for (const part of parts) {
     if (token !== playToken) return;
-    const blob = await fetchAudio(part.text, part.voice, rate);
-    if (token !== playToken) return;
-    await playBlob(blob, token);
+    blobs.push(await fetchAudio(part.text, part.voice, rate));
   }
+  if (token !== playToken) return;
+  await playBlob(new Blob(blobs, { type: "audio/mpeg" }), token);
 }
 
 export function stopSpeech() {
