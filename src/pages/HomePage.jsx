@@ -39,7 +39,11 @@ import {
   extractCandidateName,
   applyCandidateNameToItems,
 } from "../lib/candidate";
-import { extractJobTitle, extractJobCompany } from "../lib/jobMeta";
+import {
+  cleanJobTitle,
+  extractJobTitle,
+  extractJobCompany,
+} from "../lib/jobMeta";
 import { exportQaPdf } from "../lib/exportPdf";
 import {
   INTERVIEW_LANGS,
@@ -389,7 +393,6 @@ export default function HomePage() {
       inventCount,
     });
     setLoading(true);
-    flash(t("home.flash.generating"));
     haltPlayback();
 
     const userContent = buildUserPrompt({
@@ -652,6 +655,22 @@ export default function HomePage() {
   };
 
   const handleJdChange = (text, meta) => {
+    if (meta?.source === "url") {
+      const body = String(meta.body || "").trim();
+      if (!body) {
+        setJd("");
+        setJobTitle("");
+        setJobCompany("");
+        return;
+      }
+      setJd(body);
+      setJobTitle(cleanJobTitle(meta.title || text));
+      setJobCompany(
+        cleanJobTitle(meta.company) || extractJobCompany(body)
+      );
+      return;
+    }
+
     const next = String(text || "");
     setJd(next);
     if (!next.trim()) {
@@ -659,8 +678,8 @@ export default function HomePage() {
       setJobCompany("");
       return;
     }
-    setJobTitle(meta?.title?.trim() || extractJobTitle(next));
-    setJobCompany(meta?.company?.trim() || extractJobCompany(next));
+    setJobTitle(cleanJobTitle(meta?.title) || extractJobTitle(next));
+    setJobCompany(cleanJobTitle(meta?.company) || extractJobCompany(next));
   };
 
   const exportPdf = async (indices) => {
@@ -874,7 +893,7 @@ export default function HomePage() {
         <DocumentField
           title={t("home.jd")}
           hint={t("home.jdHint")}
-          value={jd}
+          value={jobTitle.trim() ? jobTitle : jd}
           onChange={handleJdChange}
           displayTitle={jobTitle}
           displaySubtitle={jobCompany}
@@ -1120,6 +1139,11 @@ export default function HomePage() {
           }}
           playingIndex={playingIndex}
           loading={loading}
+          loadingCount={
+            3 +
+            questions.filter((q) => q.trim()).length +
+            (autoQuestions ? normalizeInventCount(inventCount) : 0)
+          }
           exportingAudio={exportingAudio || exportingPdf}
         />
       </section>

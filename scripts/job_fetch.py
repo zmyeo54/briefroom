@@ -166,13 +166,26 @@ def fetch_linkedin_job(url: str) -> dict[str, str]:
     return parsed
 
 
+def _parse_reader_meta(text: str) -> dict[str, str]:
+    title = ""
+    company = ""
+    m = re.search(r"(?:^|\n)Title:\s*(.+)", text, re.I)
+    if m:
+        title = _strip_tags(m.group(1))
+    m = re.search(r"(?:^|\n)(?:Company|Publisher):\s*(.+)", text, re.I)
+    if m:
+        company = _strip_tags(m.group(1))
+    return {"title": title, "company": company}
+
+
 def fetch_generic_page(url: str) -> dict[str, str]:
     # Prefer Jina reader from the server (no browser CORS)
     jina = f"https://r.jina.ai/{url}"
     try:
         text = _http_get(jina, timeout=40).strip()
         if len(text) >= 80 and "AbuseAlleviationError" not in text:
-            return {"text": text, "sourceUrl": url}
+            meta = _parse_reader_meta(text)
+            return {"text": text, "sourceUrl": url, **meta}
     except Exception:
         pass
 

@@ -87,13 +87,22 @@ async function fetchLinkedIn(url) {
   return { text, title, company, source: "linkedin" };
 }
 
+function parseReaderMeta(text) {
+  const raw = String(text || "");
+  const title = raw.match(/(?:^|\n)Title:\s*(.+)/i)?.[1]?.trim() || "";
+  const company =
+    raw.match(/(?:^|\n)(?:Company|Publisher):\s*(.+)/i)?.[1]?.trim() || "";
+  return { title, company };
+}
+
 async function fetchGeneric(url) {
   const reader = `https://r.jina.ai/${url}`;
   const res = await fetch(reader, { headers: { Accept: "text/plain" } });
   if (!res.ok) throw new Error(`Reader failed (${res.status})`);
   const text = (await res.text()).trim();
   if (text.length < 80) throw new Error("Could not extract enough text from this link");
-  return { text, title: "", company: "", source: "reader" };
+  const meta = parseReaderMeta(text);
+  return { text, title: meta.title, company: meta.company, source: "reader" };
 }
 
 export default async function handler(req, res) {

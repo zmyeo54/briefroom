@@ -4,7 +4,7 @@
  * Other sites: local helper first, then browser Jina / AllOrigins fallbacks.
  */
 
-import { extractJobTitle, parseJinaMeta } from "./jobMeta.js";
+import { cleanJobTitle, extractJobTitle, parseJinaMeta } from "./jobMeta.js";
 
 function normalizeUrl(input) {
   const raw = (input || "").trim();
@@ -71,8 +71,9 @@ async function viaLocalHelper(url) {
   }
   return {
     text,
-    title: String(data.title || "").trim() || extractJobTitle(text),
-    company: String(data.company || "").trim(),
+    title:
+      cleanJobTitle(data.title) || extractJobTitle(text),
+    company: cleanJobTitle(data.company) || "",
   };
 }
 

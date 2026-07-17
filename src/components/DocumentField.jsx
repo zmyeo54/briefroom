@@ -10,6 +10,7 @@ import {
 } from "@phosphor-icons/react";
 import { extractTextFromFile } from "../lib/ocr";
 import { extractTextFromUrl } from "../lib/fetchUrl";
+import { cleanJobTitle, extractJobTitle } from "../lib/jobMeta";
 import { useI18n } from "../lib/I18nContext";
 
 export default function DocumentField({
@@ -101,13 +102,22 @@ export default function DocumentField({
     setStatus(t("doc.fetching"));
     try {
       const result = await extractTextFromUrl(url, setStatus);
-      const text = String(result?.text ?? result ?? "").trim();
-      if (!text) {
+      const body = String(result?.text ?? "").trim();
+      if (!body) {
         throw new Error("No text found at that URL.");
       }
-      applyValue(text, {
-        title: result?.title || "",
-        company: result?.company || "",
+      const title =
+        cleanJobTitle(result?.title) || extractJobTitle(body);
+      if (!title) {
+        throw new Error(
+          "Couldn't find a job title at that link. Paste the posting instead."
+        );
+      }
+      applyValue(title, {
+        source: "url",
+        body,
+        title,
+        company: cleanJobTitle(result?.company) || "",
       });
       setSourceUrl(url.trim());
       setStatus("Ready");

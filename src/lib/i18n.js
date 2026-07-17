@@ -148,7 +148,7 @@ const en = {
   "home.flash.copied": "Copied — keep going.",
 
   "doc.ready": "{title} locked in",
-  "doc.roleReady": "Job description locked in",
+  "doc.roleReady": "Full posting saved for coaching",
   "doc.fromUpload": "From your upload",
   "doc.fromLink": "From the job link",
   "doc.fromPaste": "From your paste",
@@ -175,6 +175,11 @@ const en = {
   "qa.emptyTitle": "Your set is empty — let’s fill it",
   "qa.emptyHint":
     "Add your resume and the role, then tap Build my answers. Select questions and practice them out loud.",
+  "qa.loading.title": "Coaching your answers",
+  "qa.loading.read": "Reading your resume and role…",
+  "qa.loading.match": "Matching themes to the job…",
+  "qa.loading.draft": "Drafting speakable Q&A…",
+  "qa.loading.polish": "Polishing for rehearsal…",
   "qa.selectAll": "Select All",
   "qa.deselectAll": "Clear Selection",
   "qa.selected": "{n}/{total} selected",
@@ -422,7 +427,7 @@ const zh = {
   "home.flash.copied": "已复制——继续练。",
 
   "doc.ready": "{title} 已就绪",
-  "doc.roleReady": "职位描述已就绪",
+  "doc.roleReady": "完整职位描述已保存，可用于生成回答",
   "doc.fromUpload": "来自你的上传",
   "doc.fromLink": "来自职位链接",
   "doc.fromPaste": "来自粘贴",
@@ -449,6 +454,11 @@ const zh = {
   "qa.emptyTitle": "清单还空着——我们一起填满",
   "qa.emptyHint":
     "加上简历和岗位，再点「生成我的回答」。勾选题目，大声练出来。",
+  "qa.loading.title": "正在打磨你的回答",
+  "qa.loading.read": "阅读简历与岗位说明…",
+  "qa.loading.match": "对照岗位主题整理方向…",
+  "qa.loading.draft": "撰写可口述的问答…",
+  "qa.loading.polish": "润色成演练稿…",
   "qa.selectAll": "全选",
   "qa.deselectAll": "取消全选",
   "qa.selected": "已选 {n}/{total}",

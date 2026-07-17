@@ -10,6 +10,7 @@ import {
   DownloadSimple,
 } from "@phosphor-icons/react";
 import { useI18n } from "../lib/I18nContext";
+import GenerateLoading from "./GenerateLoading";
 
 export default function QaList({
   items,
@@ -21,6 +22,7 @@ export default function QaList({
   onCopy,
   playingIndex,
   loading,
+  loadingCount = 6,
   exportingAudio,
 }) {
   const { t } = useI18n();
@@ -52,13 +54,7 @@ export default function QaList({
   };
 
   if (loading) {
-    return (
-      <div className="space-y-3">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="skeleton h-16" />
-        ))}
-      </div>
-    );
+    return <GenerateLoading count={loadingCount} />;
   }
 
   if (!items.length) {
