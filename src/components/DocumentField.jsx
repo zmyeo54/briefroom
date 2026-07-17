@@ -47,20 +47,36 @@ export default function DocumentField({
     setUrlReplaceOpen(false);
   }
 
-  async function onFile(file) {
-    if (!file) return;
+  async function onFiles(fileList) {
+    const files = [...(fileList || [])].filter(Boolean);
+    if (!files.length) return;
     setBusy(true);
     setError("");
-    setFileName(file.name);
     setSourceUrl("");
     setPasteOpen(false);
+    const names = files.map((f) => f.name);
+    setFileName(names.length === 1 ? names[0] : t("doc.multiFiles", { n: names.length }));
     setStatus(t("doc.reading"));
     try {
-      const text = await extractTextFromFile(file, setStatus);
-      if (!text?.trim()) {
+      const parts = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setStatus(
+          files.length > 1
+            ? t("doc.readingN", { n: i + 1, total: files.length, name: file.name })
+            : t("doc.reading")
+        );
+        const text = await extractTextFromFile(file, setStatus);
+        if (text?.trim()) {
+          parts.push(
+            files.length > 1 ? `--- ${file.name} ---\n${text.trim()}` : text.trim()
+          );
+        }
+      }
+      if (!parts.length) {
         throw new Error("No text extracted. Try a clearer scan or paste manually.");
       }
-      onChange(text.trim());
+      onChange(parts.join("\n\n"));
       setStatus("Ready");
     } catch (e) {
       setError(e.message || "Upload failed");
@@ -249,8 +265,8 @@ export default function DocumentField({
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
                 e.preventDefault();
-                const f = e.dataTransfer.files?.[0];
-                if (f) onFile(f);
+                const list = e.dataTransfer.files;
+                if (list?.length) onFiles(list);
               }}
               className="dropzone doc-card-drop"
             >
@@ -286,9 +302,10 @@ export default function DocumentField({
           ref={inputRef}
           type="file"
           className="hidden"
+          multiple
           accept=".pdf,.doc,.docx,.txt,.md,.png,.jpg,.jpeg,.webp,.gif,.bmp"
           onChange={(e) => {
-            onFile(e.target.files?.[0]);
+            onFiles(e.target.files);
             e.target.value = "";
           }}
         />

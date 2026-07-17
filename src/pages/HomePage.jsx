@@ -6,7 +6,6 @@ import {
   SpeakerHigh,
   Stop,
   DownloadSimple,
-  FloppyDisk,
   SpinnerGap,
   ArrowCounterClockwise,
 } from "@phosphor-icons/react";
@@ -33,6 +32,7 @@ import {
   INTERVIEW_LANGS,
   interviewLangLabel,
   normalizeSettings,
+  resolveApiKey,
   voicesForInterviewLang,
 } from "../lib/settingsConfig";
 import { useI18n } from "../lib/I18nContext";
@@ -141,12 +141,6 @@ export default function HomePage() {
   useEffect(() => {
     setSelected(new Set(qa.map((_, i) => i)));
   }, [qa]);
-
-  const candidateName = useMemo(() => {
-    const fromSettings = String(settings.name || "").trim();
-    if (fromSettings) return fromSettings;
-    return extractCandidateName(resume);
-  }, [settings.name, resume]);
 
   const flash = (text, kind = "") => setStatus({ text, kind });
 
@@ -285,21 +279,13 @@ export default function HomePage() {
       : [...DEFAULT_FOCUSES];
   }
 
-  const saveDraft = () => {
-    saveJson("draft", { resume, jd, questions: questionsRaw, autoQuestions });
-    flash(t("home.flash.draft"), "ok");
-  };
-
   async function generate() {
     const latest = readSettings();
     setSettings(latest);
 
-    if (!latest.apiKey.trim()) {
-      saveJson("draft", { resume, jd, questions: questionsRaw, autoQuestions });
-      flash(t("home.flash.needKey"), "error");
-      navigate("/settings");
-      return;
-    }
+    const apiKey = resolveApiKey(latest);
+    const useServer = !apiKey;
+
     if (!resume.trim() || !jd.trim()) {
       flash(t("home.flash.needDocs"), "error");
       return;
@@ -335,28 +321,47 @@ export default function HomePage() {
           { role: "user", content: userContent },
         ],
       };
-      let res = await fetch(`${latest.baseUrl.replace(/\/$/, "")}/chat/completions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${latest.apiKey.trim()}`,
-        },
-        body: JSON.stringify({ ...body, response_format: { type: "json_object" } }),
+
+      async function callChat(payload) {
+        if (useServer) {
+          const res = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json().catch(() => ({}));
+          return { res, data };
+        }
+        const res = await fetch(
+          `${latest.baseUrl.replace(/\/$/, "")}/chat/completions`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify(payload),
+          }
+        );
+        const data = await res.json().catch(() => ({}));
+        return { res, data };
+      }
+
+      let { res, data } = await callChat({
+        ...body,
+        response_format: { type: "json_object" },
       });
-      let data = await res.json().catch(() => ({}));
       if (
         !res.ok &&
+        !useServer &&
         /response_format|json_object|unknown/i.test(data?.error?.message || "")
       ) {
-        res = await fetch(`${latest.baseUrl.replace(/\/$/, "")}/chat/completions`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${latest.apiKey.trim()}`,
-          },
-          body: JSON.stringify(body),
-        });
-        data = await res.json().catch(() => ({}));
+        ({ res, data } = await callChat(body));
+      }
+      if (res.status === 503 && useServer) {
+        flash(t("home.flash.needKey"), "error");
+        navigate("/settings");
+        return;
       }
       if (!res.ok) {
         throw new Error(data?.error?.message || res.statusText || "API error");
@@ -660,13 +665,6 @@ export default function HomePage() {
           allowUrl
         />
       </div>
-      {candidateName ? (
-        <p className="mb-4 -mt-2 text-xs mute md:mb-5">
-          {settings.name?.trim()
-            ? t("home.nameFromSettings", { name: candidateName })
-            : t("home.nameFromResume", { name: candidateName })}
-        </p>
-      ) : null}
 
       <section className="panel mb-4 space-y-3 p-3.5 md:mb-5 md:space-y-4 md:p-6">
         <div className="focus-head">
@@ -760,7 +758,7 @@ export default function HomePage() {
             {t("home.autoInvent")}
           </label>
 
-        <div className="mt-4 flex flex-wrap gap-2 md:mt-5">
+        <div className="mt-4 flex justify-center md:mt-5">
           <button
             type="button"
             className="btn btn-primary"
@@ -773,10 +771,6 @@ export default function HomePage() {
               <MagicWand size={16} weight="bold" />
             )}
             {loading ? t("home.generating") : t("home.generate")}
-          </button>
-          <button type="button" className="btn" onClick={saveDraft}>
-            <FloppyDisk size={16} />
-            {t("home.saveDraft")}
           </button>
         </div>
         <AnimatePresence>

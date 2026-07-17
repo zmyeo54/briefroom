@@ -118,9 +118,16 @@ export const GEMINI_MODELS = [
 
 export const DEFAULT_MODEL = GEMINI_MODELS[0].id;
 
-/** Saved in .env.local — used only when Settings has no key yet */
+/** Build-time Vite env (local .env.local / Vercel VITE_* at build). */
 export function getSavedApiKey() {
   return String(import.meta.env.VITE_GEMINI_API_KEY || "").trim();
+}
+
+/** User-pasted key wins; otherwise fall back to build-time env. */
+export function resolveApiKey(settings) {
+  const user = String(settings?.apiKey || "").trim();
+  if (user) return user;
+  return getSavedApiKey();
 }
 
 export const defaultSettings = {
@@ -182,9 +189,9 @@ export function normalizeSettings(raw) {
   merged.interviewerRole = normalizeInterviewerRole(merged.interviewerRole);
   merged.focuses = normalizeFocuses(merged.focuses);
 
-  if (!String(merged.apiKey || "").trim()) {
-    merged.apiKey = getSavedApiKey();
-  }
+  // Keep apiKey as the user override only — empty means "use env / server key".
+  // (Previously we refilled from VITE_ here, which made Clear impossible.)
+  merged.apiKey = String(merged.apiKey || "").trim();
   // Upgrade legacy / outdated system prompts to the current job-interview default
   const sp = merged.systemPrompt?.trim() || "";
   if (

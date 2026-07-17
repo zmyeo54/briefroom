@@ -4,7 +4,7 @@ import { GearSix, House } from "@phosphor-icons/react";
 import { useI18n } from "../lib/I18nContext";
 import { UI_LANGS } from "../lib/i18n";
 import { loadJson } from "../lib/storage";
-import { normalizeSettings } from "../lib/settingsConfig";
+import { getSavedApiKey, normalizeSettings, resolveApiKey } from "../lib/settingsConfig";
 import BrandLogo from "./BrandLogo";
 import InstallPrompt from "./InstallPrompt";
 
@@ -14,6 +14,7 @@ export default function Shell({ children }) {
   const [settings, setSettings] = useState(() =>
     normalizeSettings(loadJson("settings", {}))
   );
+  const [serverKey, setServerKey] = useState(false);
 
   useEffect(() => {
     const refresh = () => setSettings(normalizeSettings(loadJson("settings", {})));
@@ -28,7 +29,22 @@ export default function Shell({ children }) {
     };
   }, [pathname]);
 
-  const hasKey = Boolean(settings.apiKey?.trim());
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/chat")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled) setServerKey(Boolean(data?.hasKey));
+      })
+      .catch(() => {
+        if (!cancelled) setServerKey(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const hasKey = Boolean(resolveApiKey(settings) || serverKey || getSavedApiKey());
   const brandName = t("brand.name");
 
   return (

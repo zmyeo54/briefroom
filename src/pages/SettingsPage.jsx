@@ -2,11 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   CaretLeft,
+  ClipboardText,
   FloppyDisk,
   SpeakerHigh,
+  Trash,
 } from "@phosphor-icons/react";
 import {
   INTERVIEW_LANGS,
+  getSavedApiKey,
   normalizeSettings,
   pickDefaultPair,
   voicesForInterviewLang,
@@ -24,8 +27,10 @@ export default function SettingsPage() {
   );
   const [status, setStatus] = useState("");
   const [ttsOk, setTtsOk] = useState(null);
+  const [serverKey, setServerKey] = useState(null);
   const [testing, setTesting] = useState(false);
   const saveGen = useRef(0);
+  const keyInputRef = useRef(null);
 
   useEffect(() => {
     const gen = ++saveGen.current;
@@ -76,8 +81,47 @@ export default function SettingsPage() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/chat")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled) setServerKey(Boolean(data?.hasKey));
+      })
+      .catch(() => {
+        if (!cancelled) setServerKey(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const patch = (partial) =>
     setSettings((s) => normalizeSettings({ ...s, ...partial }));
+
+  const envKey = getSavedApiKey();
+  const userKey = settings.apiKey?.trim() || "";
+
+  const pasteKey = async () => {
+    try {
+      const text = (await navigator.clipboard.readText()).trim();
+      if (!text) {
+        setStatus(t("settings.pasteEmpty"));
+        keyInputRef.current?.focus();
+        return;
+      }
+      patch({ apiKey: text });
+      setStatus(t("settings.keySaved"));
+    } catch {
+      setStatus(t("settings.pasteFailed"));
+      keyInputRef.current?.focus();
+    }
+  };
+
+  const clearKey = () => {
+    patch({ apiKey: "" });
+    setStatus(t("settings.keyCleared"));
+  };
 
   return (
     <Shell>
@@ -122,6 +166,7 @@ export default function SettingsPage() {
             <p className="text-xs mute">{t("settings.genderHint")}</p>
             <Field label={t("settings.apiKey")}>
               <input
+                ref={keyInputRef}
                 className="field"
                 type="password"
                 autoComplete="off"
@@ -133,17 +178,35 @@ export default function SettingsPage() {
                 placeholder={t("settings.apiKeyPlaceholder")}
               />
             </Field>
-            {settings.apiKey?.trim() ? (
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className="btn text-xs" onClick={pasteKey}>
+                <ClipboardText size={14} weight="bold" />
+                {t("settings.pasteKey")}
+              </button>
+              {userKey ? (
+                <button
+                  type="button"
+                  className="btn-ghost btn text-xs"
+                  onClick={clearKey}
+                >
+                  <Trash size={14} weight="bold" />
+                  {t("settings.clearKey")}
+                </button>
+              ) : null}
+            </div>
+            {userKey ? (
               <p className="text-xs ok">
                 {t("settings.keyLoaded", {
-                  preview: settings.apiKey.trim().slice(0, 6),
-                  n: settings.apiKey.trim().length,
+                  preview: userKey.slice(0, 6),
+                  n: userKey.length,
                 })}
               </p>
+            ) : envKey ? (
+              <p className="text-xs ok">{t("settings.keyFromEnv")}</p>
+            ) : serverKey ? (
+              <p className="text-xs ok">{t("settings.keyFromServer")}</p>
             ) : (
-              <p className="warn text-xs font-bold">
-                {t("settings.noKey")}
-              </p>
+              <p className="warn text-xs font-bold">{t("settings.noKey")}</p>
             )}
           </div>
 
@@ -172,9 +235,7 @@ export default function SettingsPage() {
                 ))}
               </select>
             </Field>
-            <p className="text-xs mute">
-              {t("settings.interviewLangHint")}
-            </p>
+            <p className="text-xs mute">{t("settings.interviewLangHint")}</p>
             <Field label={t("settings.voiceQ")}>
               <select
                 className="field"
@@ -201,9 +262,7 @@ export default function SettingsPage() {
                 ))}
               </select>
             </Field>
-            <p className="text-xs mute">
-              {t("settings.voiceHint")}
-            </p>
+            <p className="text-xs mute">{t("settings.voiceHint")}</p>
             {ttsOk === false ? (
               <p className="err text-xs font-bold">{t("settings.ttsOffline")}</p>
             ) : ttsOk === true ? (
