@@ -140,12 +140,17 @@ export default function HomePage() {
   const [speaking, setSpeaking] = useState(false);
   const [audioPaused, setAudioPaused] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
+  const [fabPos, setFabPos] = useState({ dragged: false, left: 0, top: 0 });
+  const [fabDragging, setFabDragging] = useState(false);
+  const fabDragState = useRef({ active: false, startX: 0, startY: 0, startLeft: 0, startTop: 0 });
   const [exportingAudio, setExportingAudio] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [audioNote, setAudioNote] = useState({ text: "", kind: "" });
   const [genMeta, setGenMeta] = useState(() => loadJson("genMeta", null));
   const [showGenSecret, setShowGenSecret] = useState(false);
   const practiceSetTaps = useRef({ n: 0, timer: null });
+
+  const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
   const endPlayback = () => {
     setPlayingIndex(-1);
@@ -157,6 +162,51 @@ export default function HomePage() {
   const haltPlayback = () => {
     stopSpeech();
     endPlayback();
+  };
+
+  const onFabPointerMove = (event) => {
+    if (!fabDragState.current.active) return;
+    const dx = event.clientX - fabDragState.current.startX;
+    const dy = event.clientY - fabDragState.current.startY;
+    const left = fabDragState.current.startLeft + dx;
+    const top = fabDragState.current.startTop + dy;
+    const minX = 8;
+    const minY = 8;
+    const maxX = window.innerWidth - 8 - 240;
+    const maxY = window.innerHeight - 8 - 72;
+    setFabPos({
+      dragged: true,
+      left: clamp(left, minX, maxX),
+      top: clamp(top, minY, maxY),
+    });
+  };
+
+  const onFabPointerUp = () => {
+    if (!fabDragState.current.active) return;
+    fabDragState.current.active = false;
+    setFabDragging(false);
+    window.removeEventListener("pointermove", onFabPointerMove);
+    window.removeEventListener("pointerup", onFabPointerUp);
+    window.removeEventListener("pointercancel", onFabPointerUp);
+  };
+
+  const onFabPointerDown = (event) => {
+    if (event.button !== 0) return;
+    const target = event.target;
+    if (target.closest("button")) return;
+    const fabRect = event.currentTarget.getBoundingClientRect();
+    fabDragState.current = {
+      active: true,
+      startX: event.clientX,
+      startY: event.clientY,
+      startLeft: fabPos.dragged ? fabPos.left : fabRect.left,
+      startTop: fabPos.dragged ? fabPos.top : fabRect.top,
+    };
+    setFabDragging(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+    window.addEventListener("pointermove", onFabPointerMove);
+    window.addEventListener("pointerup", onFabPointerUp);
+    window.addEventListener("pointercancel", onFabPointerUp);
   };
 
   const togglePause = async () => {
@@ -1265,9 +1315,21 @@ export default function HomePage() {
         {speaking && (audioReady || audioPaused) ? (
           <motion.div
             key="playback-fab"
-            className="playback-fab"
+            ref={fabDragState}
+            className={`playback-fab ${fabDragging ? "dragging" : ""}`}
             role="group"
             aria-label={t("home.playbackControls")}
+            style={
+              fabPos.dragged
+                ? {
+                    left: fabPos.left,
+                    top: fabPos.top,
+                    bottom: "auto",
+                    transform: "translate(0, 0)",
+                  }
+                : undefined
+            }
+            onPointerDown={onFabPointerDown}
             initial={reduce ? false : { opacity: 0, y: 18, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={reduce ? undefined : { opacity: 0, y: 12, scale: 0.96 }}

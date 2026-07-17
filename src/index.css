@@ -1682,6 +1682,8 @@ html[lang="zh-CN"] .app-dialog-body {
   bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
   transform: translateX(-50%);
   display: flex;
+  touch-action: none;
+  cursor: grab;
   align-items: center;
   gap: 0.45rem;
   max-width: calc(100vw - 1.5rem);
