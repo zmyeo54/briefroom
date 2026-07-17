@@ -233,6 +233,107 @@ JOB DESCRIPTION:
 ${clipDoc(jd)}`;
 }
 
+/**
+ * Parse model JSON output resiliently — handles trailing commas, 
+ * truncated JSON, and common LLM quirks.
+ *
+ * 1. Try JSON.parse directly
+ * 2. Try extracting JSON from within backticks or braces
+ * 3. Try stripping trailing commas before trailing } or ]
+ * 4. Try repairing truncated JSON (close open brackets/braces)
+ */
+export function parseModelJson(raw) {
+  const str = String(raw || "").trim();
+  if (!str) throw new Error("Empty model response");
+
+  // Direct parse
+  try {
+    return JSON.parse(str);
+  } catch {
+    /* fall through */
+  }
+
+  // Try extracting JSON from markdown fences (```json ... ```)
+  const fenceMatch = str.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+  if (fenceMatch) {
+    try {
+      return JSON.parse(fenceMatch[1]);
+    } catch {
+      /* fall through */
+    }
+  }
+
+  // Try extracting the outermost {...} block
+  const braceMatch = str.match(/\{[\s\S]*\}/);
+  if (braceMatch) {
+    const candidate = braceMatch[0];
+    // Strip trailing commas before ] or }
+    const cleaned = candidate
+      .replace(/,(\s*[}\]])/g, "$1")     // remove trailing commas in arrays/objects
+      .replace(/,\s*$/, "");             // remove trailing comma at end
+    try {
+      return JSON.parse(cleaned);
+    } catch {
+      /* fall through — try to repair truncation */
+    }
+
+    // Try repairing truncated JSON: close unclosed brackets
+    const repaired = repairTruncatedJson(cleaned);
+    if (repaired !== cleaned) {
+      try {
+        return JSON.parse(repaired);
+      } catch {
+        /* final fall through */
+      }
+    }
+  }
+
+  throw new Error("Model did not return valid JSON");
+}
+
+/** Attempt to close unclosed brackets/braces in truncated JSON. */
+function repairTruncatedJson(str) {
+  const stack = [];
+  const pairs = { "{": "}", "[": "]", '"': '"' };
+  const openers = new Set(["{", "[", '"']);
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\" && inString) {
+      escaped = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (ch === "{" || ch === "[") {
+      stack.push(ch);
+    } else if (ch === "}" || ch === "]") {
+      if (stack.length > 0) {
+        const last = stack[stack.length - 1];
+        if ((ch === "}" && last === "{") || (ch === "]" && last === "[")) {
+          stack.pop();
+        }
+      }
+    }
+  }
+
+  // Close remaining open brackets in reverse
+  let result = str.replace(/[,\s]*$/, ""); // trim trailing comma/space
+  for (let i = stack.length - 1; i >= 0; i--) {
+    result += pairs[stack[i]];
+  }
+  return result;
+}
+
 export function previewPrompt(opts) {
   return buildUserPrompt({
     ...opts,

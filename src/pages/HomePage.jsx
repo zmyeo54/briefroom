@@ -10,6 +10,7 @@ import {
   Trash,
   Pause,
   Play,
+  Square,
 } from "@phosphor-icons/react";
 import DocumentField from "../components/DocumentField";
 import FocusBubbles from "../components/FocusBubbles";
@@ -32,6 +33,7 @@ import {
   normalizeInventCount,
   DEFAULT_INVENT_COUNT,
   estimateMaxTokens,
+  parseModelJson,
 } from "../lib/prompt";
 import {
   extractCandidateName,
@@ -582,11 +584,9 @@ export default function HomePage() {
       const content = data.choices?.[0]?.message?.content || "";
       let parsed;
       try {
-        parsed = JSON.parse(content);
-      } catch {
-        const m = content.match(/\{[\s\S]*\}/);
-        if (!m) throw new Error("Model did not return JSON");
-        parsed = JSON.parse(m[0]);
+        parsed = parseModelJson(content);
+      } catch (e) {
+        throw new Error(`Model did not return valid JSON: ${e.message}`);
       }
 
       const raw = (parsed.items || parsed.qa || parsed.answers || [])
@@ -1218,7 +1218,7 @@ export default function HomePage() {
       </section>
 
       <div className="action-dock-wrap sticky z-20 mt-5 md:mt-8">
-        <motion.div layout className="action-dock">
+        <motion.div className="action-dock">
           <button
             type="button"
             className={`action-dock-speak ${speaking ? "action-dock-speak--active" : ""}`}
