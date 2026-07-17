@@ -41,7 +41,12 @@ import {
 import { useI18n } from "../lib/I18nContext";
 import { pickTargetPlaceholder } from "../lib/i18n";
 import { loadJson, saveJson } from "../lib/storage";
-import { speakQa, stopSpeech, exportMergedQaAudio } from "../lib/tts";
+import {
+  speakQa,
+  speakQaSequence,
+  stopSpeech,
+  exportMergedQaAudio,
+} from "../lib/tts";
 
 function readSettings() {
   return normalizeSettings(loadJson("settings", {}));
@@ -279,7 +284,6 @@ export default function HomePage() {
     setSettings(latest);
 
     const apiKey = resolveApiKey(latest);
-    const useServer = !apiKey;
 
     if (!resume.trim() || !jd.trim()) {
       flash(t("home.flash.needDocs"), "error");
@@ -316,15 +320,30 @@ export default function HomePage() {
         ],
       };
 
+      // Prefer /api/chat (user key + Vercel keys rotate there). Local Vite has no
+      // chat proxy — fall back to direct Gemini with the pasted key only.
       async function callChat(payload) {
-        if (useServer) {
+        const headers = { "Content-Type": "application/json" };
+        if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+        try {
           const res = await fetch("/api/chat", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers,
             body: JSON.stringify(payload),
           });
-          const data = await res.json().catch(() => ({}));
-          return { res, data };
+          const ct = res.headers.get("content-type") || "";
+          if (ct.includes("application/json")) {
+            const data = await res.json().catch(() => ({}));
+            return { res, data };
+          }
+        } catch {
+          /* offline / no local api */
+        }
+        if (!apiKey) {
+          return {
+            res: { ok: false, status: 503, statusText: "No API" },
+            data: { error: { message: "No server key and no local key" } },
+          };
         }
         const res = await fetch(
           `${latest.baseUrl.replace(/\/$/, "")}/chat/completions`,
@@ -349,7 +368,6 @@ export default function HomePage() {
         });
         if (
           !res.ok &&
-          !useServer &&
           /response_format|json_object|unknown/i.test(data?.error?.message || "")
         ) {
           ({ res, data } = await callChat({ ...body, model }));
@@ -365,7 +383,7 @@ export default function HomePage() {
         ({ res, data } = await callChatWithModel(models[i]));
         lastStatus = res.status;
         if (res.ok) break;
-        if (res.status === 503 && useServer) {
+        if (res.status === 503) {
           flash(t("home.flash.needKey"), "error");
           navigate("/settings");
           return;
@@ -493,22 +511,23 @@ export default function HomePage() {
     stopSpeech();
     setSpeaking(true);
     try {
-      for (const i of indices) {
-        setPlayingIndex(i);
+      const entries = indices.map((i) => {
         const preface =
           latest.lang === "zh"
             ? `第${i + 1}题。`
             : latest.lang === "both"
               ? `Question ${i + 1}. / 第${i + 1}题。`
               : `Question ${i + 1}.`;
-        await speakQa(qa[i].q, qa[i].a, {
-          rate: latest.rate,
-          voiceQ: latest.voiceQ,
-          voiceA: latest.voiceA,
-          preface,
-          lang: latest.lang,
-        });
-      }
+        return { q: qa[i].q, a: qa[i].a, preface };
+      });
+      await speakQaSequence(entries, {
+        rate: latest.rate,
+        voiceQ: latest.voiceQ,
+        voiceA: latest.voiceA,
+        lang: latest.lang,
+        onProgress: (j) =>
+          setPlayingIndex(j >= 0 ? indices[j] : -1),
+      });
     } catch (e) {
       flash(e.message || "TTS failed.", "error");
     } finally {

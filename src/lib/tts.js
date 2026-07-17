@@ -257,21 +257,37 @@ export function sanitizeSpeakText(text) {
   return t;
 }
 
+function isTransientTtsError(status, msg) {
+  if (status === 502 || status === 504 || status === 500) return true;
+  const m = String(msg || "").toLowerCase();
+  return (
+    m.includes("stream closed") ||
+    m.includes("timed out") ||
+    m.includes("websocket") ||
+    m.includes("empty audio")
+  );
+}
+
 async function fetchAudio(text, voice, rate) {
   const clean = sanitizeSpeakText(text);
   if (!clean) throw new Error("Nothing to speak");
 
-  const res = await fetch("/api/tts", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      text: clean,
-      voice: normalizeVoiceId(voice),
-      rate: rateForRequest(rate),
-    }),
-  });
+  const payload = {
+    text: clean,
+    voice: normalizeVoiceId(voice),
+    rate: rateForRequest(rate),
+  };
 
-  if (!res.ok) {
+  let lastMsg = "TTS failed";
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const res = await fetch("/api/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) return res.blob();
+
     let msg = `TTS failed (${res.status})`;
     try {
       const data = await res.json();
@@ -282,9 +298,14 @@ async function fetchAudio(text, voice, rate) {
     if (res.status === 502 || res.status === 504) {
       msg = "Practice voice isn’t ready yet. Give it a moment and try again.";
     }
+    lastMsg = msg;
+    if (attempt === 0 && isTransientTtsError(res.status, msg)) {
+      await new Promise((r) => setTimeout(r, 500));
+      continue;
+    }
     throw new Error(msg);
   }
-  return res.blob();
+  throw new Error(lastMsg);
 }
 
 /**
@@ -422,22 +443,52 @@ export async function speakQa(
     lang = "en",
   } = {}
 ) {
-  stopSpeech();
-  const token = playToken;
-  const parts = buildSpeakParts(question, answer, {
+  return speakQaSequence([{ q: question, a: answer, preface }], {
+    rate,
     voiceQ,
     voiceA,
-    preface,
     lang,
   });
-  if (!parts.length) return;
+}
+
+/**
+ * Prefetch every Q&A into one MP3, then play once.
+ * Needed for multi-item runs — a second audio.play() after the first ends
+ * often fails (Safari gesture), and one TTS error used to abort the rest.
+ */
+export async function speakQaSequence(entries, options = {}) {
+  const list = (entries || []).filter(
+    (e) => e?.q?.trim() || e?.a?.trim() || e?.preface?.trim()
+  );
+  if (!list.length) return;
+
+  stopSpeech();
+  const token = playToken;
+  const {
+    rate = 1,
+    voiceQ = DEFAULT_VOICE_Q,
+    voiceA = DEFAULT_VOICE_A,
+    lang = "en",
+    onProgress,
+  } = options;
 
   const blobs = [];
-  for (const part of parts) {
+  for (let i = 0; i < list.length; i++) {
     if (token !== playToken) return;
-    blobs.push(await fetchAudio(part.text, part.voice, rate));
+    onProgress?.(i);
+    const e = list[i];
+    blobs.push(
+      await synthesizeQaAudio(e.q, e.a, {
+        rate,
+        voiceQ,
+        voiceA,
+        preface: e.preface || "",
+        lang,
+      })
+    );
   }
   if (token !== playToken) return;
+  onProgress?.(-1);
   await playBlob(new Blob(blobs, { type: "audio/mpeg" }), token);
 }
 

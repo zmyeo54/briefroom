@@ -96,23 +96,38 @@ export function voiceForInterviewLang(lang, currentVoice) {
   return voiceA;
 }
 
-/** Light / free-tier friendly models — cheapest first; last is a stable alias. */
+/**
+ * Cheapest / highest free-tier headroom first, then older models
+ * (kept for when their quota resets). Drop only deprecated IDs.
+ */
 export const GEMINI_MODELS = [
   {
-    id: "gemini-2.5-flash-lite",
-    label: "2.5 Flash-Lite (default · free · lightest)",
+    id: "gemini-flash-lite-latest",
+    label: "Flash-Lite latest (default · cheapest)",
   },
   {
-    id: "gemini-2.0-flash-lite",
-    label: "2.0 Flash-Lite (free · light)",
-  },
-  {
-    id: "gemini-2.0-flash",
-    label: "2.0 Flash (free · balanced)",
+    id: "gemini-3.1-flash-lite",
+    label: "3.1 Flash-Lite",
   },
   {
     id: "gemini-flash-latest",
-    label: "Flash latest (fallback)",
+    label: "Flash latest",
+  },
+  {
+    id: "gemini-3.5-flash",
+    label: "3.5 Flash",
+  },
+  {
+    id: "gemini-2.5-flash-lite",
+    label: "2.5 Flash-Lite",
+  },
+  {
+    id: "gemini-2.0-flash-lite",
+    label: "2.0 Flash-Lite",
+  },
+  {
+    id: "gemini-2.0-flash",
+    label: "2.0 Flash",
   },
 ];
 

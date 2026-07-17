@@ -75,6 +75,52 @@ def sanitize_speak_text(text: str) -> str:
     return t
 
 
+CHUNK_CHARS = 900
+MAX_ATTEMPTS = 3
+
+
+def split_speak_chunks(text: str, max_len: int = CHUNK_CHARS) -> list[str]:
+    """Keep each Edge turn short — long answers often get WS-dropped mid-synthesis."""
+    raw = (text or "").strip()
+    if not raw:
+        return []
+    if len(raw) <= max_len:
+        return [raw]
+
+    sentences = [s for s in re.split(r"(?<=[.!?。！？；;])\s+", raw) if s]
+    parts: list[str] = []
+    buf = ""
+    for s in sentences:
+        if buf and len(buf) + 1 + len(s) > max_len:
+            parts.append(buf)
+            buf = s
+        else:
+            buf = f"{buf} {s}" if buf else s
+    if buf:
+        parts.append(buf)
+
+    out: list[str] = []
+    for p in parts:
+        if len(p) <= max_len:
+            out.append(p)
+        else:
+            for i in range(0, len(p), max_len):
+                out.append(p[i : i + max_len])
+    return out
+
+
+async def _synthesize_once(text: str, edge_name: str, rate_str: str) -> bytes:
+    communicate = edge_tts.Communicate(text, edge_name, rate=rate_str)
+    chunks: list[bytes] = []
+    async for item in communicate.stream():
+        if item["type"] == "audio":
+            chunks.append(item["data"])
+    audio = b"".join(chunks)
+    if not audio:
+        raise ValueError("empty audio")
+    return audio
+
+
 async def synthesize(text: str, voice_id: str, rate: float) -> bytes:
     # Plain text only — SSML was being spoken as literal "codes" by Edge TTS.
     edge_name, _style = resolve_voice(voice_id)
@@ -82,12 +128,21 @@ async def synthesize(text: str, voice_id: str, rate: float) -> bytes:
     if not clean:
         raise ValueError("empty speech text")
     rate_str = rate_to_edge(rate)
-    communicate = edge_tts.Communicate(clean, edge_name, rate=rate_str)
-    chunks: list[bytes] = []
-    async for item in communicate.stream():
-        if item["type"] == "audio":
-            chunks.append(item["data"])
-    return b"".join(chunks)
+
+    buffers: list[bytes] = []
+    for piece in split_speak_chunks(clean):
+        last: Exception | None = None
+        for attempt in range(MAX_ATTEMPTS):
+            try:
+                buffers.append(await _synthesize_once(piece, edge_name, rate_str))
+                last = None
+                break
+            except Exception as e:
+                last = e
+                await asyncio.sleep(0.35 * (attempt + 1))
+        if last is not None:
+            raise last
+    return b"".join(buffers)
 
 
 class Handler(BaseHTTPRequestHandler):
