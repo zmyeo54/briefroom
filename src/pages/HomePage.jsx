@@ -1316,10 +1316,10 @@ export default function HomePage() {
 
       <AnimatePresence>
         {speaking ? (
-          <motion.div
+          <div
             key="playback-fab"
             ref={fabElementRef}
-            className={`playback-fab ${fabDragging ? "dragging" : ""} ${fabPos.dragged ? "playback-fab--placed" : ""}`}
+            className={`playback-fab ${fabDragging ? "dragging" : ""} ${fabPos.dragged ? "playback-fab--placed" : "playback-fab--enter"}`}
             role="group"
             aria-label={t("home.playbackControls")}
             style={
@@ -1328,14 +1328,11 @@ export default function HomePage() {
                     left: fabPos.left,
                     top: fabPos.top,
                     bottom: "auto",
+                    right: "auto",
                   }
                 : undefined
             }
             onPointerDown={onFabPointerDown}
-            initial={reduce ? false : { opacity: 0, y: 18, scale: 0.96 }}
-            animate={fabPos.dragged ? false : { opacity: 1, y: 0, scale: 1 }}
-            exit={reduce ? undefined : { opacity: 0, y: 12, scale: 0.96 }}
-            transition={fabPos.dragged ? { duration: 0 } : { duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
           >
             <span className="playback-fab-label">
               {!audioReady && !audioPaused ? (
@@ -1372,7 +1369,7 @@ export default function HomePage() {
             >
               <Square size={16} weight="fill" />
             </button>
-          </motion.div>
+          </div>
         ) : null}
       </AnimatePresence>
 
