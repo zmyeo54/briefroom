@@ -15,6 +15,7 @@ import DocumentField from "../components/DocumentField";
 import FocusBubbles from "../components/FocusBubbles";
 import QaList from "../components/QaList";
 import Shell from "../components/Shell";
+import OnboardingTour, { isOnboardingDone } from "../components/OnboardingTour";
 import { pinMandatoryFirst } from "../lib/mandatoryQuestions";
 import {
   ANSWER_LENGTHS,
@@ -99,6 +100,7 @@ export default function HomePage() {
     normalizeInventCount(loadJson("draft", {}).inventCount)
   );
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => !isOnboardingDone());
 
   // Keep resume / JD / target questions until the user clears them
   useEffect(() => {
@@ -813,6 +815,8 @@ export default function HomePage() {
         voiceQ: latest.voiceQ,
         voiceA: latest.voiceA,
         lang: latest.lang,
+        jobTitle,
+        candidateName: latest.name,
       });
       setAudioNote({
         text: t("home.flash.audioSaved", { n }),
@@ -1427,6 +1431,12 @@ export default function HomePage() {
         ) : null}
       </AnimatePresence>
       </div>
+
+      <AnimatePresence>
+        {showOnboarding ? (
+          <OnboardingTour onFinish={() => setShowOnboarding(false)} />
+        ) : null}
+      </AnimatePresence>
     </Shell>
   );
 }

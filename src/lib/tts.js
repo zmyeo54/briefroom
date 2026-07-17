@@ -395,6 +395,15 @@ export function downloadBlob(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
+/** Title-case a string for professional filenames. */
+function titleCase(text) {
+  return String(text || "")
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .replace(/\s+-\s+/g, " - ")
+    .slice(0, 60);
+}
+
 /**
  * Merge all Q&A into one continuous MP3 and save to Downloads.
  * Returns number of Q&A pairs included.
@@ -416,11 +425,12 @@ export async function exportMergedQaAudio(items, options = {}) {
   });
 
   const merged = new Blob(blobs, { type: "audio/mpeg" });
-  const stamp = new Date()
-    .toISOString()
-    .slice(0, 19)
-    .replace(/[:T]/g, "-");
-  downloadBlob(merged, `linecheck-interview-${stamp}.mp3`);
+  const stamp = new Date().toISOString().slice(0, 10);
+  const parts = ["Line Check"];
+  if (options.jobTitle) parts.push(titleCase(options.jobTitle));
+  if (options.candidateName) parts.push(titleCase(options.candidateName));
+  parts.push(stamp);
+  downloadBlob(merged, `${parts.join(" - ")}.mp3`);
   return list.length;
 }
 
