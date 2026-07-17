@@ -1,0 +1,21 @@
+# Line Check (对词间)
+
+> Interview coach that turns your resume and job description into speakable answers you can practice out loud.
+
+Line Check is a free web app (PWA) for interview rehearsal in English, Mandarin, or bilingual mix. Paste or upload a resume and JD, generate tailored Q&A, listen with text-to-speech, then export audio or PDF.
+
+## Who it's for
+
+- Job seekers who want answers they can say out loud, not just write
+- Bilingual candidates practicing English and/or Chinese interviews
+- Anyone preparing from a real resume + role posting
+
+## Links
+
+- App: https://linecheck-ai.vercel.app/
+- Sitemap: https://linecheck-ai.vercel.app/sitemap.xml
+
+## Notes
+
+- Settings (`/settings`) is a utility page — not for indexing
+- Pricing: free

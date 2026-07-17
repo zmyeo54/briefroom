@@ -1,1 +1,0 @@
-Vercel serverless functions (Node.js runtime); upstream LLMs are OpenAI-compatible Gemini (`generativelanguage.googleapis.com/v1beta/openai`) and DeepSeek (`api.deepseek.com`); TTS uses the `msedge-tts` npm package against Microsoft Edge's WebSocket synthesis service; URL scraping chains Jina Reader, Google Web Cache, and Playwright Chromium.

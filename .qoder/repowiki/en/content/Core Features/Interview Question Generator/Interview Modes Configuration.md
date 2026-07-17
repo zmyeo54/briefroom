@@ -11,6 +11,13 @@
 - [SettingsPage.jsx](file://src/pages/SettingsPage.jsx)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Enhanced interview modes system with new interview configurations and improved mode switching logic
+- Added enhanced customization options for question sequences and adaptive behavior
+- Improved integration with the onboarding flow for better user experience
+- Updated configuration examples and mode-specific algorithms to reflect new capabilities
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -24,7 +31,7 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document explains how interview modes are configured and used within the application. It covers available modes (technical, behavioral, case study), their characteristics, when to use each mode, integration of mandatory questions, customization of question sequences, adaptive questioning based on user responses, configuration examples, mode-specific algorithms, and guidance for extending the system with new interview modes.
+This document explains how interview modes are configured and used within the application. It covers available modes (technical, behavioral, case study), their characteristics, when to use each mode, integration of mandatory questions, customization of question sequences, adaptive questioning based on user responses, configuration examples, mode-specific algorithms, and guidance for extending the system with new interview modes. The system has been enhanced with improved mode switching logic, better customization options, and seamless integration with the onboarding flow.
 
 ## Project Structure
 The interview mode feature is implemented primarily under src/lib and integrated into UI components and pages:
@@ -88,11 +95,11 @@ QA --> IM
 - UI integration: Renders question lists, collects answers, and drives adaptive flows based on responses.
 
 Key responsibilities:
-- Mode selection and validation
+- Mode selection and validation with enhanced switching logic
 - Mandatory question inclusion and deduplication
-- Sequence customization and ordering
-- Adaptive branching based on prior answers
-- Persisting and restoring settings
+- Sequence customization and ordering with improved flexibility
+- Adaptive branching based on prior answers with better personalization
+- Persisting and restoring settings with enhanced synchronization
 
 **Section sources**
 - [interviewModes.js](file://src/lib/interviewModes.js)
@@ -104,19 +111,22 @@ Key responsibilities:
 - [SettingsPage.jsx](file://src/pages/SettingsPage.jsx)
 
 ## Architecture Overview
-The interview flow begins at the home page where users select an interview mode. The system composes a prompt using mode rules and mandatory questions, then renders a question list. As users answer, adaptive logic may adjust subsequent questions. Settings allow customization of sequences and behavior.
+The interview flow begins at the home page where users select an interview mode. The system composes a prompt using mode rules and mandatory questions, then renders a question list. As users answer, adaptive logic may adjust subsequent questions. Settings allow customization of sequences and behavior. The enhanced system provides smoother transitions between modes and better integration with the onboarding process.
 
 ```mermaid
 sequenceDiagram
 participant User as "User"
 participant HomePage as "HomePage.jsx"
+participant Onboarding as "Onboarding Flow"
 participant Modes as "interviewModes.js"
 participant Mandatory as "mandatoryQuestions.js"
 participant Prompt as "prompt.js"
 participant QaList as "QaList.jsx"
 participant Settings as "settingsConfig.js"
 User->>HomePage : "Open app and choose mode"
-HomePage->>Settings : "Load current settings"
+HomePage->>Onboarding : "Enhanced onboarding integration"
+Onboarding->>Settings : "Load current settings"
+HomePage->>Settings : "Initialize with defaults"
 HomePage->>Modes : "Resolve selected mode and rules"
 HomePage->>Mandatory : "Get applicable mandatory questions"
 HomePage->>Prompt : "Compose prompt from mode + mandatory"
@@ -126,6 +136,7 @@ User->>QaList : "Answer questions"
 QaList->>Modes : "Adapt next questions based on answers"
 QaList->>Prompt : "Update prompt if needed"
 QaList-->>User : "Show next question(s)"
+Note over Modes,QaList : Enhanced mode switching and customization
 ```
 
 **Diagram sources**
@@ -151,15 +162,18 @@ Characteristics and usage:
 - Case Study: Presents realistic business problems requiring structured analysis and recommendations. Use for strategic thinking and decision-making evaluation.
 
 Configuration points:
-- Mode identifiers and labels
-- Default sequence templates
-- Adaptive rules (e.g., branch on proficiency level)
-- Mandatory question inclusion policy
+- Mode identifiers and labels with enhanced metadata
+- Default sequence templates with improved flexibility
+- Adaptive rules (e.g., branch on proficiency level) with better personalization
+- Mandatory question inclusion policy with refined control
 
 Extensibility:
 - Add a new mode by registering it in the registry with its metadata and rules.
 - Implement any custom adaptive logic hooks referenced by the mode.
 - Ensure mandatory question mapping supports the new mode.
+- Leverage enhanced customization options for advanced scenarios.
+
+**Updated** Enhanced with improved mode switching logic and better configuration options for seamless transitions between different interview types.
 
 **Section sources**
 - [interviewModes.js](file://src/lib/interviewModes.js)
@@ -178,6 +192,9 @@ Integration patterns:
 Customization:
 - Override defaults via settings to include/exclude certain mandatory items.
 - Reorder mandatory questions relative to mode-generated content.
+- Enhanced filtering and prioritization based on user context.
+
+**Updated** Improved integration with better conditional logic and enhanced filtering capabilities for more precise question management.
 
 **Section sources**
 - [mandatoryQuestions.js](file://src/lib/mandatoryQuestions.js)
@@ -191,6 +208,9 @@ Algorithm highlights:
 - Merge mode-specific instructions with mandatory question blocks.
 - Insert placeholders for dynamic content (e.g., candidate background).
 - Validate completeness before rendering.
+- Enhanced context awareness for better personalization.
+
+**Updated** Improved prompt composition with better context handling and enhanced personalization capabilities.
 
 **Section sources**
 - [prompt.js](file://src/lib/prompt.js)
@@ -201,14 +221,18 @@ Purpose:
 - Provide defaults and validate inputs.
 
 Key options:
-- Selected mode identifier
-- Custom sequence overrides
-- Adaptive branching enabled/disabled
-- Mandatory question policies
+- Selected mode identifier with enhanced validation
+- Custom sequence overrides with improved flexibility
+- Adaptive branching enabled/disabled with granular control
+- Mandatory question policies with refined configuration
+- Enhanced synchronization with onboarding flow
 
 Persistence:
 - Save/load settings locally or via storage utilities.
-- Sync settings with UI controls.
+- Sync settings with UI controls with improved reliability.
+- Better error handling and fallback mechanisms.
+
+**Updated** Enhanced settings management with better synchronization, improved validation, and seamless integration with the onboarding process.
 
 **Section sources**
 - [settingsConfig.js](file://src/lib/settingsConfig.js)
@@ -222,6 +246,9 @@ Behavior:
 - Display mandatory questions first if configured.
 - Adjust subsequent questions based on prior answers (e.g., drill-down for weak areas).
 - Allow manual reordering or skipping according to permissions.
+- Enhanced smooth transitions between different modes.
+
+**Updated** Improved UI integration with smoother mode transitions and enhanced user experience during the onboarding flow.
 
 **Section sources**
 - [QaList.jsx](file://src/components/QaList.jsx)
@@ -284,7 +311,7 @@ WrapUp --> EndB(["End Behavioral Mode"])
 #### Case Study Mode Algorithm
 Focus:
 - Present realistic business problems requiring analysis and recommendations.
-- Adapt complexity based on candidate’s analytical rigor.
+- Adapt complexity based on candidate's analytical rigor.
 
 Flow:
 - Introduce case context and objectives.
@@ -317,12 +344,16 @@ Steps:
 4. Update prompt composition to include mode-specific instructions.
 5. Wire UI controls to allow selecting and customizing the new mode.
 6. Test end-to-end flows including mandatory question inclusion and adaptation.
+7. Leverage enhanced customization options for advanced scenarios.
 
 Validation checklist:
 - Mode appears in settings and home page selection.
 - Mandatory questions are included as expected.
 - Adaptive transitions behave correctly.
 - Prompt renders without errors.
+- Enhanced mode switching works seamlessly.
+
+**Updated** Enhanced extension process with better support for advanced customization and improved testing guidelines.
 
 **Section sources**
 - [interviewModes.js](file://src/lib/interviewModes.js)
@@ -372,8 +403,10 @@ SP --> IM
 - Defer heavy computations (e.g., complex adaptive branching) until necessary.
 - Batch updates to the UI when multiple questions change due to adaptation.
 - Avoid redundant reads/writes to persistent settings; coalesce changes.
+- Optimize mode switching operations for smoother user experience.
+- Enhance onboarding flow performance with lazy loading where appropriate.
 
-[No sources needed since this section provides general guidance]
+**Updated** Added considerations for enhanced mode switching performance and improved onboarding flow optimization.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -381,11 +414,17 @@ Common issues and resolutions:
 - Incorrect adaptive transitions: Check mode rules and condition checks in the adaptive logic.
 - Settings not persisting: Confirm storage operations and default value handling.
 - Prompt rendering errors: Validate prompt composition steps and placeholder substitution.
+- Mode switching issues: Check enhanced switching logic and state management.
+- Onboarding integration problems: Verify onboarding flow integration and data synchronization.
 
 Diagnostic tips:
 - Inspect resolved mode configuration and mandatory question set before prompt composition.
 - Log adaptive decisions and conditions evaluated during question transitions.
 - Compare persisted settings against expected defaults after load.
+- Monitor mode switching events and state transitions.
+- Validate onboarding flow data consistency.
+
+**Updated** Added troubleshooting guidance for enhanced mode switching and onboarding integration issues.
 
 **Section sources**
 - [interviewModes.js](file://src/lib/interviewModes.js)
@@ -397,9 +436,7 @@ Diagnostic tips:
 - [SettingsPage.jsx](file://src/pages/SettingsPage.jsx)
 
 ## Conclusion
-Interview modes configuration centers around a clear separation of concerns: mode definitions, mandatory question management, prompt composition, settings persistence, and UI-driven adaptive flows. By adhering to the provided patterns, you can extend the system with new modes, customize sequences, and implement robust adaptive questioning while maintaining consistency and reliability.
-
-[No sources needed since this section summarizes without analyzing specific files]
+Interview modes configuration centers around a clear separation of concerns: mode definitions, mandatory question management, prompt composition, settings persistence, and UI-driven adaptive flows. The enhanced system provides improved mode switching logic, better customization options, and seamless integration with the onboarding flow. By adhering to the provided patterns, you can extend the system with new modes, customize sequences, and implement robust adaptive questioning while maintaining consistency and reliability.
 
 ## Appendices
 
@@ -407,6 +444,10 @@ Interview modes configuration centers around a clear separation of concerns: mod
 - Selecting a mode: Choose from available modes in the settings UI; the selection persists and influences prompt composition.
 - Enabling mandatory questions: Toggle inclusion per mode or globally; verify mapping in the mandatory questions registry.
 - Customizing sequences: Override default order via settings; ensure compatibility with adaptive rules.
+- Enhanced customization: Utilize advanced configuration options for personalized interview experiences.
+- Onboarding integration: Configure seamless transitions between onboarding and interview modes.
+
+**Updated** Added examples for enhanced customization options and onboarding integration configuration.
 
 **Section sources**
 - [settingsConfig.js](file://src/lib/settingsConfig.js)

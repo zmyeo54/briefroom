@@ -1,1 +1,0 @@
-Vercel serverless entry points that proxy chat to Gemini/DeepSeek, synthesize speech via Edge TTS, and scrape job URLs with a multi-strategy fallback pipeline.

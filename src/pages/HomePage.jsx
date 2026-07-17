@@ -84,11 +84,11 @@ export default function HomePage() {
   const [jd, setJd] = useState(() => loadJson("draft", {}).jd || "");
   const [jobTitle, setJobTitle] = useState(() => {
     const draft = loadJson("draft", {});
-    return draft.jobTitle || extractJobTitle(draft.jd || "");
+    return cleanJobTitle(draft.jobTitle) || extractJobTitle(draft.jd || "");
   });
   const [jobCompany, setJobCompany] = useState(() => {
     const draft = loadJson("draft", {});
-    return draft.jobCompany || extractJobCompany(draft.jd || "");
+    return cleanJobTitle(draft.jobCompany) || extractJobCompany(draft.jd || "");
   });
   const [questionsRaw, setQuestionsRaw] = useState(
     () => loadJson("draft", {}).questions || ""
@@ -732,7 +732,9 @@ export default function HomePage() {
         return;
       }
       setJd(body);
-      setJobTitle(cleanJobTitle(meta.title || text));
+      setJobTitle(
+        cleanJobTitle(meta.title || text) || extractJobTitle(body)
+      );
       setJobCompany(
         cleanJobTitle(meta.company) || extractJobCompany(body)
       );

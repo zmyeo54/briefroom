@@ -1,11 +1,14 @@
 /** Job title / company heuristics from JD text (upload, OCR, URL, paste). */
 
 export function cleanJobTitle(raw) {
-  return String(raw || "")
+  const t = String(raw || "")
     .replace(/^[\s\-–—:：|]+/, "")
     .replace(/[\s\-–—|]+$/, "")
     .replace(/\s+/g, " ")
     .trim();
+  // Reject JD blobs that slipped in as a "title" (LinkedIn scrape bug, paste, etc.)
+  if (!t || t.length > 100) return "";
+  return t;
 }
 
 function looksLikeJdBody(line) {

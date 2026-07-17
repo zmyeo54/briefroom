@@ -56,13 +56,18 @@ async function fetchLinkedIn(url) {
   });
   if (!res.ok) throw new Error(`LinkedIn fetch failed (${res.status})`);
   const html = await res.text();
+  // LinkedIn uses h1.topcard__title now; old </h2> pattern ate the whole card.
   let title = firstMatch(html, [
-    /class="[^"]*top-card-layout__title[^"]*"[^>]*>([\s\S]*?)<\/h2>/i,
     /class="[^"]*topcard__title[^"]*"[^>]*>([\s\S]*?)<\//i,
+    /class="[^"]*top-card-layout__title[^"]*"[^>]*>([\s\S]*?)<\/h[1-6]>/i,
+    /property="og:title"\s+content="([^"]+)"/i,
+    /content="([^"]+)"\s+property="og:title"/i,
     /<title>([\s\S]*?)<\/title>/i,
   ]);
   const hiring = title.match(/(.+?)\s+hiring\s+(.+?)\s+in\s+/i);
   if (hiring) title = hiring[2].trim();
+  // ponytail: hard cap — bad scrapes must not become Role titles
+  if (title.length > 120) title = title.slice(0, 120).replace(/\s+\S*$/, "").trim();
 
   const company = firstMatch(html, [
     /class="[^"]*topcard__org-name-link[^"]*"[^>]*>([\s\S]*?)<\/a>/i,

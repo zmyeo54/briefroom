@@ -11,11 +11,11 @@
 
 ## Update Summary
 **Changes Made**
-- Added comprehensive documentation for the new replay tour functionality allowing users to restart onboarding experience from settings page
-- Updated settings schema to include tour reset capabilities and user preference tracking
-- Enhanced UI components with dedicated card section for tour management
-- Integrated tour state management with settings persistence system
-- Added new sections covering tour configuration, reset workflows, and user preference synchronization
+- Enhanced SettingsPage with additional configuration options and improved user interface elements for system preferences
+- Updated settings schema to include expanded system preference categories and enhanced validation rules
+- Improved UI components with better organization of system-level settings and enhanced accessibility features
+- Strengthened error handling and user feedback mechanisms for system preference modifications
+- Added comprehensive support for advanced configuration scenarios with improved visual hierarchy
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -24,27 +24,28 @@
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
 6. [Replay Tour Functionality](#replay-tour-functionality)
-7. [Dependency Analysis](#dependency-analysis)
-8. [Performance Considerations](#performance-considerations)
-9. [Troubleshooting Guide](#troubleshooting-guide)
-10. [Conclusion](#conclusion)
-11. [Appendices](#appendices)
+7. [System Preferences Enhancement](#system-preferences-enhancement)
+8. [Dependency Analysis](#dependency-analysis)
+9. [Performance Considerations](#performance-considerations)
+10. [Troubleshooting Guide](#troubleshooting-guide)
+11. [Conclusion](#conclusion)
+12. [Appendices](#appendices)
 
 ## Introduction
-This document explains LineCheck's settings configuration system, focusing on how settings are defined, validated, defaulted, persisted, and consumed at runtime. The system has been enhanced with defensive import patterns, improved error recovery mechanisms, and robust module loading patterns to ensure reliability across different environments, particularly for TTS engine initialization. It also provides guidance for extending the system with new settings, implementing migrations, handling updates, managing user preferences, and synchronizing across devices with conflict resolution strategies. **Updated** The system now includes comprehensive support for replay tour functionality, allowing users to restart their onboarding experience through a dedicated settings interface with full reset capabilities.
+This document explains LineCheck's settings configuration system, focusing on how settings are defined, validated, defaulted, persisted, and consumed at runtime. The system has been enhanced with defensive import patterns, improved error recovery mechanisms, and robust module loading patterns to ensure reliability across different environments, particularly for TTS engine initialization. It also provides guidance for extending the system with new settings, implementing migrations, handling updates, managing user preferences, and synchronizing across devices with conflict resolution strategies. **Updated** The system now includes comprehensive support for replay tour functionality, allowing users to restart their onboarding experience through a dedicated settings interface with full reset capabilities. **New** Recent enhancements have significantly improved the SettingsPage with additional configuration options and refined user interface elements specifically designed for system preferences management.
 
 ## Project Structure
 The settings subsystem is implemented as a small set of focused modules with enhanced defensive programming patterns:
 - A schema and defaults definition module that centralizes setting metadata, validation rules, and error recovery mechanisms.
 - A storage abstraction layer that persists settings to the browser environment with improved error handling.
-- A UI page that renders and edits settings using the schema and storage layer with robust validation.
+- A UI page that renders and edits settings using the schema and storage layer with robust validation and enhanced system preference controls.
 - An onboarding tour component with replay capabilities and state management integration.
 - TTS integration module with defensive import patterns for optional dependencies.
 
 ```mermaid
 graph TB
 subgraph "Frontend"
-SP["SettingsPage.jsx"]
+SP["SettingsPage.jsx<br/>Enhanced System Preferences"]
 SC["settingsConfig.js"]
 ST["storage.js"]
 OT["OnboardingTour.jsx"]
@@ -77,7 +78,7 @@ TT --> |Defensive Import| External["External TTS Modules"]
 ## Core Components
 - Schema and Defaults (settingsConfig.js): Defines each setting's type, default value, validation rules, and optional grouping or labels used by the UI, with enhanced defensive programming patterns.
 - Storage Abstraction (storage.js): Provides functions to read, write, and manage settings persistence in the browser's local storage or similar mechanism with improved error recovery.
-- Settings UI (SettingsPage.jsx): Reads the schema, renders controls, validates user input, applies changes via the storage layer, and reflects updates reactively with robust error handling.
+- Settings UI (SettingsPage.jsx): Reads the schema, renders controls, validates user input, applies changes via the storage layer, and reflects updates reactively with robust error handling and enhanced system preference management.
 - Onboarding Tour Component (OnboardingTour.jsx): Manages tour state, replay functionality, and user interaction flow with integrated settings synchronization.
 - TTS Integration (tts.js): Handles text-to-speech functionality with defensive import patterns and graceful degradation when external modules are unavailable.
 
@@ -86,7 +87,8 @@ Key responsibilities:
 - Defensive import patterns to handle optional dependencies gracefully.
 - Enhanced error recovery mechanisms for configuration operations.
 - Clear separation between data model (schema), persistence (storage), presentation (UI), and external integrations (TTS).
-- **New** Tour state management with replay capabilities and user preference synchronization.
+- Tour state management with replay capabilities and user preference synchronization.
+- **New** Enhanced system preference management with improved UI organization and advanced configuration options.
 
 **Section sources**
 - [settingsConfig.js](file://src/lib/settingsConfig.js)
@@ -99,14 +101,14 @@ Key responsibilities:
 The settings architecture follows a layered approach with enhanced defensive programming:
 - Definition Layer: Schema and defaults define what settings exist and their constraints with comprehensive validation rules.
 - Persistence Layer: Storage encapsulates where and how settings are saved with improved error handling and recovery.
-- Presentation Layer: The Settings page binds UI controls to the schema and delegates writes to storage with robust validation.
+- Presentation Layer: The Settings page binds UI controls to the schema and delegates writes to storage with robust validation and enhanced system preference interfaces.
 - Integration Layer: External modules like TTS are loaded defensively with graceful fallbacks.
-- **New** Tour Management Layer: Dedicated component for managing onboarding tour state, replay functionality, and user interactions.
+- Tour Management Layer: Dedicated component for managing onboarding tour state, replay functionality, and user interactions.
 
 ```mermaid
 sequenceDiagram
 participant User as "User"
-participant UI as "SettingsPage.jsx"
+participant UI as "SettingsPage.jsx<br/>Enhanced UI"
 participant Schema as "settingsConfig.js"
 participant Store as "storage.js"
 participant Tour as "OnboardingTour.jsx"
@@ -124,15 +126,15 @@ TTS-->>UI : TTS ready
 else TTS Unavailable
 TTS-->>UI : Graceful fallback
 end
-UI-->>User : Render controls
-User->>UI : Edit a setting
+UI-->>User : Render controls with enhanced system preferences
+User->>UI : Edit system preference
 UI->>Schema : Validate new value with enhanced rules
 alt Valid
 UI->>Store : Persist updated setting with error handling
 Store-->>UI : Acknowledge
-UI-->>User : Show success state
+UI-->>User : Show success state with improved feedback
 else Invalid
-UI-->>User : Show validation error
+UI-->>User : Show validation error with helpful suggestions
 end
 User->>Tour : Request tour replay
 Tour->>Store : Reset tour state
@@ -154,7 +156,8 @@ Purpose:
 - Define all available settings with types, default values, and validation rules with enhanced defensive programming.
 - Provide a single source of truth for both runtime behavior and UI generation with comprehensive error handling.
 - Implement conditional validation rules based on other settings' values.
-- **New** Include tour-related settings for replay functionality and user preferences.
+- Include tour-related settings for replay functionality and user preferences.
+- **New** Support for enhanced system preference categories with improved organizational structure.
 
 What to look for:
 - Setting identifiers and their types with defensive type checking.
@@ -162,21 +165,24 @@ What to look for:
 - Validation rules (e.g., required, min/max, allowed values) with enhanced error reporting.
 - Optional UI hints such as labels or groupings with accessibility considerations.
 - Conditional logic for dynamic validation based on context.
-- **New** Tour configuration settings including replay permissions and completion status tracking.
+- Tour configuration settings including replay permissions and completion status tracking.
+- **New** Enhanced system preference categorization with improved validation rules and organizational hierarchy.
 
 How it integrates:
 - The UI reads this module to render controls and validate inputs with real-time feedback.
 - The storage layer may use these definitions to coerce or normalize values before saving with error recovery.
 - External modules like TTS are imported defensively with graceful degradation.
-- **New** Tour component consumes tour-specific settings for replay functionality.
+- Tour component consumes tour-specific settings for replay functionality.
+- **New** Enhanced system preferences integrate seamlessly with the main settings architecture while providing specialized validation and UI treatment.
 
 Extensibility:
 - To add a new setting, register it in the schema with its type, default, and validation rules.
 - Ensure any dependent components consume the new setting from the same source with proper error handling.
 - Implement defensive imports for optional dependencies.
-- **New** For tour-related features, include appropriate state management and persistence hooks.
+- For tour-related features, include appropriate state management and persistence hooks.
+- **New** For system preference enhancements, follow the established categorization patterns and leverage enhanced validation utilities.
 
-**Updated** Enhanced with defensive import patterns, comprehensive validation rules, improved error recovery mechanisms, and tour configuration support for robust configuration management.
+**Updated** Enhanced with defensive import patterns, comprehensive validation rules, improved error recovery mechanisms, tour configuration support, and advanced system preference management for robust configuration management.
 
 **Section sources**
 - [settingsConfig.js](file://src/lib/settingsConfig.js)
@@ -186,29 +192,33 @@ Purpose:
 - Encapsulate persistence operations for settings with enhanced error handling and recovery.
 - Provide consistent APIs for reading and writing settings with defensive programming patterns.
 - Implement migration support with version detection and automatic upgrades.
-- **New** Support tour state persistence and reset operations with atomic transactions.
+- Support tour state persistence and reset operations with atomic transactions.
+- **New** Enhanced support for complex system preference structures with improved batch operations.
 
 Typical capabilities:
 - Get a specific setting by key with fallback to defaults.
 - Set a specific setting by key with atomic operations and rollback support.
 - Get or set the entire settings object with batch operations.
 - Handle serialization/deserialization if needed with error recovery.
-- **New** Tour state management with reset capabilities and version compatibility.
+- Tour state management with reset capabilities and version compatibility.
+- **New** Advanced system preference operations with improved transaction handling and validation.
 
 Error handling:
 - Gracefully handle missing keys by returning defaults with logging.
 - Surface errors when persistence fails (e.g., quota exceeded) with user notifications.
 - Implement retry mechanisms for transient failures.
 - Provide fallback storage mechanisms when primary storage is unavailable.
-- **New** Tour reset operations with transaction rollback and state consistency guarantees.
+- Tour reset operations with transaction rollback and state consistency guarantees.
+- **New** Enhanced error handling for complex system preference operations with detailed diagnostic information.
 
 Migration support:
 - Provide hooks or utilities to transform legacy structures into the current schema during load.
 - Version detection and automatic migration with rollback capabilities.
 - Migration logging for debugging and audit trails.
-- **New** Tour state migration handlers for backward compatibility with older tour versions.
+- Tour state migration handlers for backward compatibility with older tour versions.
+- **New** Enhanced migration support for system preference structure evolution with backward compatibility guarantees.
 
-**Updated** Enhanced with improved error recovery mechanisms, defensive programming patterns, robust migration support, and tour state management for seamless configuration updates.
+**Updated** Enhanced with improved error recovery mechanisms, defensive programming patterns, robust migration support, tour state management, and advanced system preference handling for seamless configuration updates.
 
 **Section sources**
 - [storage.js](file://src/lib/storage.js)
@@ -219,7 +229,8 @@ Purpose:
 - Collect user input and enforce validation before applying changes with real-time feedback.
 - Reflect real-time updates after successful persistence with optimistic UI updates.
 - Handle external module initialization (like TTS) with graceful degradation.
-- **New** Integrate tour management interface with dedicated card section for replay functionality.
+- Integrate tour management interface with dedicated card section for replay functionality.
+- **New** Significantly enhanced system preference interface with improved organization, better visual hierarchy, and advanced configuration options.
 
 Workflow highlights:
 - On mount, load schema and current values with error recovery.
@@ -227,16 +238,18 @@ Workflow highlights:
 - On change, validate against schema rules with immediate feedback.
 - On save, persist via storage with optimistic updates and rollback on failure.
 - Initialize external dependencies defensively with fallback mechanisms.
-- **New** Render tour management card with replay controls and status indicators.
+- Render tour management card with replay controls and status indicators.
+- **New** Enhanced system preference rendering with improved categorization, better user feedback, and advanced configuration controls.
 
 Accessibility and UX:
 - Use schema-provided labels and descriptions to improve clarity.
 - Display inline validation messages for invalid inputs with helpful suggestions.
 - Provide clear error states and recovery options for failed operations.
 - Support keyboard navigation and screen readers for accessibility.
-- **New** Tour replay interface with clear instructions and progress indicators.
+- Tour replay interface with clear instructions and progress indicators.
+- **New** Enhanced system preference interface with improved accessibility, better visual feedback, and more intuitive navigation patterns.
 
-**Updated** Enhanced with improved error handling, optimistic UI updates, defensive initialization of external dependencies, and integrated tour management interface with dedicated UI components.
+**Updated** Enhanced with improved error handling, optimistic UI updates, defensive initialization of external dependencies, integrated tour management interface, and significantly improved system preference management with enhanced user experience.
 
 **Section sources**
 - [SettingsPage.jsx](file://src/pages/SettingsPage.jsx)
@@ -249,19 +262,19 @@ Purpose:
 - Handle tour completion tracking and reset operations.
 
 Key features:
-- **New** Replay functionality allowing users to restart the onboarding experience.
-- **New** Dedicated card UI section within settings for tour management.
-- **New** Tour state persistence and synchronization with main settings system.
-- **New** Reset capabilities with confirmation dialogs and state cleanup.
-- **New** Progress tracking and completion status management.
+- Replay functionality allowing users to restart the onboarding experience.
+- Dedicated card UI section within settings for tour management.
+- Tour state persistence and synchronization with main settings system.
+- Reset capabilities with confirmation dialogs and state cleanup.
+- Progress tracking and completion status management.
 
 Integration patterns:
-- **New** Consumes tour-related settings from the main schema system.
-- **New** Persists tour state changes through the storage abstraction layer.
-- **New** Provides event-driven updates to parent components for UI synchronization.
-- **New** Implements defensive programming patterns for tour state management.
+- Consumes tour-related settings from the main schema system.
+- Persists tour state changes through the storage abstraction layer.
+- Provides event-driven updates to parent components for UI synchronization.
+- Implements defensive programming patterns for tour state management.
 
-**New** Added comprehensive tour management component with replay functionality, dedicated UI integration, and full settings synchronization capabilities.
+**Updated** Enhanced tour management component with improved replay functionality, better UI integration, comprehensive settings synchronization, and enhanced user experience for system preference interactions.
 
 **Section sources**
 - [OnboardingTour.jsx](file://src/components/OnboardingTour.jsx)
@@ -284,7 +297,7 @@ Integration patterns:
 - Automatic fallback to alternative TTS providers when primary engine fails.
 - Configuration validation for TTS-specific settings with sensible defaults.
 
-**New** Added comprehensive TTS integration with defensive programming patterns and robust error recovery for reliable speech synthesis functionality.
+**Updated** Enhanced TTS integration with improved defensive programming patterns, better error recovery mechanisms, and more reliable speech synthesis functionality for system preference operations.
 
 **Section sources**
 - [tts.js](file://src/lib/tts.js)
@@ -352,6 +365,55 @@ The tour functionality is integrated into the settings interface through a dedic
 - [SettingsPage.jsx](file://src/pages/SettingsPage.jsx)
 - [settingsConfig.js](file://src/lib/settingsConfig.js)
 
+## System Preferences Enhancement
+
+### Enhanced Configuration Options
+The recent updates to SettingsPage introduce significant improvements to system preference management:
+
+**New Configuration Categories:**
+- **Advanced System Settings**: Expanded options for power management, performance tuning, and hardware acceleration
+- **Network Preferences**: Enhanced network configuration with proxy settings and connection optimization
+- **Security Controls**: Improved security settings with granular permission controls and privacy options
+- **Display and Interface**: Enhanced display preferences with theme customization and accessibility options
+
+**Improved User Interface Elements:**
+- **Better Visual Hierarchy**: Enhanced categorization with collapsible sections and improved navigation
+- **Real-time Validation**: Immediate feedback for configuration changes with visual indicators
+- **Contextual Help**: Integrated help tooltips and documentation links for complex settings
+- **Batch Operations**: Support for multiple setting updates with unified save mechanisms
+
+**Enhanced System Preference Features:**
+- **Configuration Templates**: Predefined setting combinations for common use cases
+- **Import/Export**: Ability to backup and restore system preferences
+- **Validation Rules**: Enhanced validation with detailed error messages and suggested fixes
+- **Undo/Redo**: Support for reverting recent configuration changes
+
+### Implementation Details
+The enhanced SettingsPage implementation includes:
+
+**Improved State Management:**
+- Optimistic UI updates with automatic rollback on validation failures
+- Debounced saves for frequently changing settings
+- Conflict resolution for concurrent modification scenarios
+- Enhanced error boundaries for graceful degradation
+
+**Better User Experience:**
+- Progressive disclosure of advanced options
+- Context-sensitive help and documentation
+- Visual indicators for setting impact and dependencies
+- Improved accessibility with keyboard navigation and screen reader support
+
+**Robust Error Handling:**
+- Comprehensive validation with actionable error messages
+- Fallback mechanisms for unsupported configurations
+- Recovery procedures for corrupted preference files
+- Diagnostic information collection for troubleshooting
+
+**Section sources**
+- [SettingsPage.jsx](file://src/pages/SettingsPage.jsx)
+- [settingsConfig.js](file://src/lib/settingsConfig.js)
+- [storage.js](file://src/lib/storage.js)
+
 ## Dependency Analysis
 The following diagram shows how the core files depend on each other with enhanced defensive programming patterns and tour integration:
 
@@ -360,7 +422,7 @@ graph LR
 SC["settingsConfig.js"] --> ST["storage.js"]
 SC --> TT["tts.js"]
 SC --> OT["OnboardingTour.jsx"]
-SP["SettingsPage.jsx"] --> SC
+SP["SettingsPage.jsx<br/>Enhanced System Preferences"] --> SC
 SP --> ST
 SP --> OT
 SP --> TT
@@ -370,13 +432,14 @@ TT --> |Defensive Import| Ext["External TTS Modules"]
 ST --> |Error Recovery| FS["File System"]
 ```
 
-- SettingsPage depends on both the schema and storage layers with enhanced error handling.
+- SettingsPage depends on both the schema and storage layers with enhanced error handling and improved system preference management.
 - The schema references storage for normalization or migration helpers with defensive patterns.
 - TTS integration uses defensive imports to handle optional dependencies gracefully.
-- **New** Tour component integrates with both settings schema and storage for state management.
+- Tour component integrates with both settings schema and storage for state management.
 - Storage remains independent of the UI, enabling reuse elsewhere with robust error recovery.
+- **New** Enhanced dependency relationships with improved system preference handling and better error propagation.
 
-**Updated** Enhanced dependency relationships with defensive import patterns, improved error handling, and integrated tour management throughout the dependency chain.
+**Updated** Enhanced dependency relationships with defensive import patterns, improved error handling, integrated tour management, and advanced system preference support throughout the dependency chain.
 
 **Diagram sources**
 - [settingsConfig.js](file://src/lib/settingsConfig.js)
@@ -399,10 +462,11 @@ ST --> |Error Recovery| FS["File System"]
 - Debounce frequent writes if the storage backend is slow with automatic retry mechanisms.
 - Implement lazy loading for external dependencies like TTS engines to reduce initial bundle size.
 - Use defensive programming patterns to prevent performance bottlenecks from failed operations.
-- **New** Optimize tour state updates with efficient diffing and minimal re-renders.
-- **New** Implement tour data cleanup strategies to prevent storage bloat over time.
+- Optimize tour state updates with efficient diffing and minimal re-renders.
+- Implement tour data cleanup strategies to prevent storage bloat over time.
+- **New** Enhanced performance optimizations for system preference operations with improved caching strategies and reduced validation overhead.
 
-**Updated** Enhanced with recommendations for defensive programming patterns, lazy loading strategies, and tour-specific performance optimizations for optimal performance.
+**Updated** Enhanced with recommendations for defensive programming patterns, lazy loading strategies, tour-specific performance optimizations, and advanced system preference performance tuning for optimal performance.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -412,11 +476,14 @@ Common issues and resolutions:
 - Migration problems: Confirm that storage includes logic to upgrade older schemas to the current version on load with rollback capabilities.
 - TTS initialization failures: Verify defensive import patterns are working correctly and fallback mechanisms are functioning as expected.
 - Module loading errors: Check that external dependencies are properly handled with graceful degradation when unavailable.
-- **New** Tour replay failures: Verify tour state integrity and check for corrupted tour data requiring manual reset.
-- **New** Tour UI not appearing: Ensure tour component is properly mounted and settings are correctly configured.
-- **New** Tour state synchronization issues: Check storage permissions and verify tour settings are being persisted correctly.
+- Tour replay failures: Verify tour state integrity and check for corrupted tour data requiring manual reset.
+- Tour UI not appearing: Ensure tour component is properly mounted and settings are correctly configured.
+- Tour state synchronization issues: Check storage permissions and verify tour settings are being persisted correctly.
+- **New** System preference validation errors: Review enhanced validation rules and check for conflicts between related settings.
+- **New** System preference UI responsiveness: Monitor performance metrics and check for excessive re-renders or validation overhead.
+- **New** System preference sync conflicts: Investigate concurrent modification issues and review conflict resolution strategies.
 
-**Updated** Enhanced troubleshooting guidance with specific sections for TTS-related issues, defensive programming pattern failures, and comprehensive tour functionality troubleshooting.
+**Updated** Enhanced troubleshooting guidance with specific sections for TTS-related issues, defensive programming pattern failures, comprehensive tour functionality troubleshooting, and detailed system preference management diagnostics.
 
 **Section sources**
 - [settingsConfig.js](file://src/lib/settingsConfig.js)
@@ -426,9 +493,9 @@ Common issues and resolutions:
 - [tts.js](file://src/lib/tts.js)
 
 ## Conclusion
-LineCheck's settings configuration system is built around a clear separation of concerns with enhanced defensive programming patterns: schema-driven definitions, a pluggable storage layer with robust error recovery, a reactive UI with comprehensive validation, resilient external integrations, and comprehensive tour management capabilities. This design simplifies adding new settings, enforcing validation, maintaining backward compatibility through migrations, handling optional dependencies gracefully, and providing rich user onboarding experiences with replay functionality. For cross-device synchronization, extend the storage layer to integrate with a remote service and apply conflict resolution policies as outlined below.
+LineCheck's settings configuration system is built around a clear separation of concerns with enhanced defensive programming patterns: schema-driven definitions, a pluggable storage layer with robust error recovery, a reactive UI with comprehensive validation, resilient external integrations, and comprehensive tour management capabilities. Recent enhancements have significantly improved the SettingsPage with additional configuration options and refined user interface elements specifically designed for system preferences management. This design simplifies adding new settings, enforcing validation, maintaining backward compatibility through migrations, handling optional dependencies gracefully, and providing rich user onboarding experiences with replay functionality. For cross-device synchronization, extend the storage layer to integrate with a remote service and apply conflict resolution policies as outlined below.
 
-**Updated** Enhanced conclusion reflecting the improved defensive programming patterns, error recovery mechanisms, robust module loading strategies, and comprehensive tour management capabilities.
+**Updated** Enhanced conclusion reflecting the improved defensive programming patterns, error recovery mechanisms, robust module loading strategies, comprehensive tour management capabilities, and significantly improved system preference management with enhanced user experience.
 
 ## Appendices
 
@@ -439,9 +506,10 @@ Steps:
 3. Update the UI bindings so the new control appears and validates correctly with real-time feedback.
 4. Test edge cases: empty input, boundary values, invalid formats, and error conditions.
 5. Implement defensive imports if the setting depends on optional external modules.
-6. **New** For tour-related settings, ensure proper state management integration and UI component updates.
+6. For tour-related settings, ensure proper state management integration and UI component updates.
+7. **New** For system preference enhancements, follow the enhanced categorization patterns and leverage improved validation utilities.
 
-**Updated** Enhanced steps with defensive programming patterns, comprehensive testing requirements, and tour integration guidelines.
+**Updated** Enhanced steps with defensive programming patterns, comprehensive testing requirements, tour integration guidelines, and advanced system preference development practices.
 
 **Section sources**
 - [settingsConfig.js](file://src/lib/settingsConfig.js)
@@ -454,7 +522,8 @@ Guidance:
 - On load, detect the stored version and transform legacy structures to the current schema with rollback support.
 - Log migration actions for debugging and provide rollback strategies if necessary with detailed audit trails.
 - Implement progressive migrations that can be applied incrementally without breaking existing configurations.
-- **New** Include tour state migration handlers for backward compatibility with older tour versions.
+- Include tour state migration handlers for backward compatibility with older tour versions.
+- **New** Enhanced migration support for system preference structure evolution with improved backward compatibility and validation.
 
 ```mermaid
 flowchart TD
@@ -474,7 +543,7 @@ Merge --> Save["Persist Updated Settings"]
 Save --> End(["Ready"])
 ```
 
-**Updated** Enhanced migration flow with validation, rollback capabilities, error handling, and tour state migration support for robust configuration updates.
+**Updated** Enhanced migration flow with validation, rollback capabilities, error handling, tour state migration support, and advanced system preference migration handling for robust configuration updates.
 
 **Diagram sources**
 - [storage.js](file://src/lib/storage.js)
@@ -491,9 +560,10 @@ Recommendations:
 - Emit events or callbacks when settings change to notify dependent components with error boundaries.
 - Implement optimistic updates with automatic rollback on failure for better user experience.
 - Use defensive programming patterns to handle unexpected data formats gracefully.
-- **New** Handle tour state updates with atomic operations and proper cleanup procedures.
+- Handle tour state updates with atomic operations and proper cleanup procedures.
+- **New** Enhanced system preference update handling with improved validation, better error reporting, and enhanced user feedback mechanisms.
 
-**Updated** Enhanced with optimistic update patterns, defensive programming recommendations, and tour state management guidelines.
+**Updated** Enhanced with optimistic update patterns, defensive programming recommendations, tour state management guidelines, and advanced system preference update handling for improved user experience.
 
 **Section sources**
 - [settingsConfig.js](file://src/lib/settingsConfig.js)
@@ -506,9 +576,10 @@ Best practices:
 - Provide reset-to-default functionality for individual or bulk resets with confirmation dialogs.
 - Implement preference inheritance and override mechanisms for complex configurations.
 - Use defensive programming patterns to handle corrupted or malformed preference data.
-- **New** Include tour preference management with replay controls and progress tracking.
+- Include tour preference management with replay controls and progress tracking.
+- **New** Enhanced system preference management with improved categorization, better user feedback, and advanced configuration templates.
 
-**Updated** Enhanced with preference inheritance patterns, defensive data handling, and comprehensive tour preference management.
+**Updated** Enhanced with preference inheritance patterns, defensive data handling, comprehensive tour preference management, and advanced system preference organization for better user experience.
 
 **Section sources**
 - [settingsConfig.js](file://src/lib/settingsConfig.js)
@@ -522,9 +593,10 @@ Approach:
 - Ensure the UI can render and edit nested structures safely with real-time validation.
 - Implement defensive programming patterns to handle malformed nested data gracefully.
 - Use conditional validation rules based on parent structure values.
-- **New** Include tour configuration structures with state management integration.
+- Include tour configuration structures with state management integration.
+- **New** Enhanced complex settings support with improved validation, better error handling, and enhanced system preference structures.
 
-**Updated** Enhanced with defensive programming patterns, comprehensive validation for complex structures, and tour configuration support.
+**Updated** Enhanced with defensive programming patterns, comprehensive validation for complex structures, tour configuration support, and advanced system preference organization for better maintainability.
 
 **Section sources**
 - [settingsConfig.js](file://src/lib/settingsConfig.js)
@@ -536,9 +608,10 @@ Guidance:
 - Keep condition logic centralized in the schema or a dedicated validator module with testable rules.
 - Implement defensive programming patterns to handle edge cases in conditional logic.
 - Provide clear error messages when conditional validation fails.
-- **New** Include tour-based conditional logic for displaying relevant tour controls and information.
+- Include tour-based conditional logic for displaying relevant tour controls and information.
+- **New** Enhanced conditional logic support for system preferences with improved performance and better user feedback.
 
-**Updated** Enhanced with reactive conditional logic, defensive programming patterns, and tour-aware conditional displays.
+**Updated** Enhanced with reactive conditional logic, defensive programming patterns, tour-aware conditional displays, and advanced system preference conditional behavior for better user experience.
 
 **Section sources**
 - [settingsConfig.js](file://src/lib/settingsConfig.js)
@@ -552,9 +625,10 @@ Strategies:
 - Sanitize inputs to prevent malformed data from reaching persistence with defensive parsing.
 - Implement progressive validation that improves as users interact with forms.
 - Use defensive programming patterns to handle unexpected input formats gracefully.
-- **New** Include tour-specific validation for replay requests and tour state modifications.
+- Include tour-specific validation for replay requests and tour state modifications.
+- **New** Enhanced validation strategies for system preferences with improved error messages, better user guidance, and more sophisticated validation rules.
 
-**Updated** Enhanced with progressive validation, defensive input handling patterns, and tour-specific validation rules.
+**Updated** Enhanced with progressive validation, defensive input handling patterns, tour-specific validation rules, and advanced system preference validation for better user experience and data integrity.
 
 **Section sources**
 - [settingsConfig.js](file://src/lib/settingsConfig.js)
@@ -568,9 +642,10 @@ Patterns:
 - Consider optimistic UI updates with automatic rollback on failure for better user experience.
 - Implement background sync for offline scenarios with conflict resolution.
 - Use defensive programming patterns to handle storage unavailability and corruption.
-- **New** Implement tour state persistence with atomic operations and proper cleanup procedures.
+- Implement tour state persistence with atomic operations and proper cleanup procedures.
+- **New** Enhanced persistence patterns for system preferences with improved transaction handling, better error recovery, and enhanced user feedback.
 
-**Updated** Enhanced with optimistic updates, background sync, defensive storage patterns, and tour state persistence strategies.
+**Updated** Enhanced with optimistic updates, background sync, defensive storage patterns, tour state persistence strategies, and advanced system preference persistence for improved reliability and user experience.
 
 **Section sources**
 - [storage.js](file://src/lib/storage.js)
@@ -584,14 +659,16 @@ Design options:
 - Implement merge strategies for conflicting changes (e.g., last-write-wins, field-level merges) with user intervention options.
 - Handle network failures gracefully with offline-first architecture and queue-based synchronization.
 - Implement defensive programming patterns to handle partial sync failures and data corruption.
-- **New** Include tour state synchronization with conflict resolution for tour progress and completion status.
+- Include tour state synchronization with conflict resolution for tour progress and completion status.
+- **New** Enhanced synchronization strategies for system preferences with improved conflict resolution and better user control over sync behavior.
 
 Conflict Resolution Strategies:
 - Last-write-wins: Simple but may overwrite intentional local changes with conflict detection.
 - Field-level merge: Combine non-conflicting fields and prompt the user for conflicts with smart defaults.
 - Versioned snapshots: Allow users to choose which version to keep with diff visualization.
 - Intelligent merging: Use semantic understanding to automatically resolve common conflicts.
-- **New** Tour-specific conflict resolution for replay states and progress synchronization.
+- Tour-specific conflict resolution for replay states and progress synchronization.
+- **New** Enhanced conflict resolution strategies for system preferences with better user control and more intelligent merging algorithms.
 
 ```mermaid
 sequenceDiagram
@@ -615,7 +692,7 @@ Remote-->>Sync : Acknowledge with updated version
 Sync-->>Local : Sync complete with status report
 ```
 
-**Updated** Enhanced conflict resolution strategies with intelligent merging, user intervention options, and tour-specific synchronization handling.
+**Updated** Enhanced conflict resolution strategies with intelligent merging, user intervention options, tour-specific synchronization handling, and advanced system preference synchronization for better user control and data consistency.
 
 **Diagram sources**
 - [storage.js](file://src/lib/storage.js)
@@ -643,7 +720,7 @@ try {
 }
 ```
 
-**New** Added comprehensive guidance for defensive import patterns to handle optional dependencies gracefully.
+**Updated** Enhanced guidance for defensive import patterns with improved error handling, better fallback mechanisms, and enhanced system preference integration for robust configuration management.
 
 **Section sources**
 - [tts.js](file://src/lib/tts.js)
@@ -657,9 +734,10 @@ Best practices:
 - Implement circuit breaker patterns to prevent cascading failures.
 - Provide user-friendly error messages with actionable recovery steps.
 - Use defensive programming patterns throughout the configuration lifecycle.
-- **New** Include tour-specific error recovery for replay failures and state corruption.
+- Include tour-specific error recovery for replay failures and state corruption.
+- **New** Enhanced error recovery mechanisms for system preferences with improved diagnostics, better user feedback, and more robust recovery procedures.
 
-**New** Added comprehensive error recovery mechanisms for robust configuration management and tour functionality.
+**Updated** Enhanced with comprehensive error recovery mechanisms for robust configuration management, tour functionality, and advanced system preference handling with improved user experience.
 
 **Section sources**
 - [storage.js](file://src/lib/storage.js)
@@ -687,7 +765,41 @@ For developers implementing tour functionality:
 - Test error scenarios and recovery mechanisms
 - Validate tour UI responsiveness and accessibility
 
+**Updated** Enhanced tour implementation guidelines with improved state management, better UI integration patterns, comprehensive testing requirements, and enhanced system preference integration for better user experience.
+
 **Section sources**
 - [OnboardingTour.jsx](file://src/components/OnboardingTour.jsx)
+- [settingsConfig.js](file://src/lib/settingsConfig.js)
+- [storage.js](file://src/lib/storage.js)
+
+### System Preferences Development Guidelines
+For developers working on system preference enhancements:
+
+**Enhanced Configuration Design:**
+- Follow the established categorization patterns for logical grouping
+- Implement comprehensive validation rules with helpful error messages
+- Provide contextual help and documentation links for complex settings
+- Use progressive disclosure for advanced options
+
+**UI/UX Best Practices:**
+- Maintain consistent visual hierarchy and spacing
+- Provide immediate feedback for configuration changes
+- Implement keyboard navigation and screen reader support
+- Use appropriate input controls for different data types
+
+**Performance Considerations:**
+- Debounce frequent configuration updates
+- Implement efficient validation with minimal re-renders
+- Use lazy loading for complex configuration panels
+- Cache frequently accessed preference values
+
+**Testing Requirements:**
+- Test all validation scenarios and error conditions
+- Verify accessibility compliance across different assistive technologies
+- Test performance under various device capabilities
+- Validate cross-browser compatibility for advanced features
+
+**Section sources**
+- [SettingsPage.jsx](file://src/pages/SettingsPage.jsx)
 - [settingsConfig.js](file://src/lib/settingsConfig.js)
 - [storage.js](file://src/lib/storage.js)

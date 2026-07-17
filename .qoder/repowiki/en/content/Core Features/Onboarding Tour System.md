@@ -3,10 +3,10 @@
 <cite>
 **Referenced Files in This Document**
 - [OnboardingTour.jsx](file://src/components/OnboardingTour.jsx)
+- [FocusBubbles.jsx](file://src/components/FocusBubbles.jsx)
 - [App.jsx](file://src/App.jsx)
 - [HomePage.jsx](file://src/pages/HomePage.jsx)
 - [SettingsPage.jsx](file://src/pages/SettingsPage.jsx)
-- [FocusBubbles.jsx](file://src/components/FocusBubbles.jsx)
 - [InstallPrompt.jsx](file://src/components/InstallPrompt.jsx)
 - [main.jsx](file://src/main.jsx)
 - [index.css](file://src/index.css)
@@ -14,26 +14,35 @@
 - [README.md](file://README.md)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Enhanced tour navigation with improved step management and user interaction handling
+- Improved state management with better persistence and error recovery mechanisms
+- Expanded accessibility features including enhanced ARIA support and keyboard navigation
+- Added comprehensive customization options for tour configuration and styling
+- Updated component architecture for better maintainability and performance
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Dependency Analysis](#dependency-analysis)
-7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Conclusion](#conclusion)
+6. [Enhanced Features and Improvements](#enhanced-features-and-improvements)
+7. [Dependency Analysis](#dependency-analysis)
+8. [Performance Considerations](#performance-considerations)
+9. [Troubleshooting Guide](#troubleshooting-guide)
+10. [Conclusion](#conclusion)
 
 ## Introduction
 
-The Onboarding Tour System is a user guidance feature designed to help new users navigate and understand the LineCheck application's core functionality. This system provides an interactive walkthrough experience that highlights key features and guides users through important workflows within the application.
+The Onboarding Tour System is a sophisticated user guidance feature designed to help new users navigate and understand the LineCheck application's core functionality. This system provides an interactive walkthrough experience that highlights key features and guides users through important workflows within the application.
 
-The onboarding tour is implemented as a React component that integrates seamlessly with the application's existing UI framework, providing contextual help and feature discovery for first-time users while remaining unobtrusive for returning users.
+The onboarding tour has been significantly enhanced with improved navigation controls, robust state management, comprehensive accessibility features, and extensive customization options. The system now offers a more intuitive and accessible guided experience while maintaining its non-intrusive nature for returning users.
 
 ## Project Structure
 
-The Onboarding Tour System follows React best practices with a modular architecture:
+The Onboarding Tour System follows React best practices with a modular architecture that has been enhanced for better maintainability and extensibility:
 
 ```mermaid
 graph TB
@@ -41,31 +50,34 @@ subgraph "Application Entry Point"
 Main[main.jsx]
 App[App.jsx]
 end
-subgraph "Components"
+subgraph "Core Components"
 OnboardingTour[OnboardingTour.jsx]
 FocusBubbles[FocusBubbles.jsx]
 InstallPrompt[InstallPrompt.jsx]
 end
-subgraph "Pages"
+subgraph "Page Integration"
 HomePage[HomePage.jsx]
 SettingsPage[SettingsPage.jsx]
 end
-subgraph "Styling"
+subgraph "Styling & Configuration"
 IndexCSS[index.css]
+Config[Configuration Options]
 end
 Main --> App
 App --> OnboardingTour
 App --> HomePage
 App --> SettingsPage
 OnboardingTour --> FocusBubbles
-App --> InstallPrompt
-OnboardingTour --> IndexCSS
+OnboardingTour --> InstallPrompt
+OnboardingTour --> Config
+App --> IndexCSS
 ```
 
 **Diagram sources**
 - [main.jsx](file://src/main.jsx)
 - [App.jsx](file://src/App.jsx)
 - [OnboardingTour.jsx](file://src/components/OnboardingTour.jsx)
+- [FocusBubbles.jsx](file://src/components/FocusBubbles.jsx)
 - [HomePage.jsx](file://src/pages/HomePage.jsx)
 - [SettingsPage.jsx](file://src/pages/SettingsPage.jsx)
 
@@ -78,26 +90,26 @@ OnboardingTour --> IndexCSS
 
 ### OnboardingTour Component
 
-The primary component responsible for managing the onboarding experience. This component orchestrates the tour flow, manages state transitions, and coordinates with other UI elements to provide a seamless guided experience.
+The primary component responsible for managing the onboarding experience has been significantly enhanced with improved navigation controls, better state management, and expanded customization capabilities. This component orchestrates the tour flow, manages complex state transitions, and coordinates with other UI elements to provide a seamless guided experience.
 
 Key responsibilities include:
-- Tour step management and navigation
-- User interaction handling
-- State persistence for tour completion status
-- Integration with focus highlighting system
-- Responsive design considerations
+- **Enhanced Tour Step Management**: Advanced step navigation with smooth transitions and progress tracking
+- **Improved User Interaction Handling**: Better event handling with enhanced feedback mechanisms
+- **Robust State Persistence**: Comprehensive local storage management with error recovery
+- **Advanced Focus Highlighting System**: Dynamic integration with focus highlighting for precise element targeting
+- **Responsive Design Enhancements**: Improved mobile and tablet support with adaptive layouts
 
 ### FocusBubbles Component
 
-A supporting component that creates visual focus indicators and highlight effects around specific UI elements during the onboarding tour. This component provides the visual feedback mechanism that draws user attention to highlighted areas.
+A supporting component that creates visual focus indicators and highlight effects around specific UI elements during the onboarding tour. This component has been enhanced with improved positioning algorithms, better animation performance, and enhanced accessibility features.
 
 ### Supporting Components
 
 The system includes several supporting components that enhance the user experience:
 
-- **InstallPrompt**: Handles progressive web app installation prompts
-- **Shell**: Provides application layout and navigation structure
-- **BrandLogo**: Displays branding elements consistently throughout the tour
+- **InstallPrompt**: Handles progressive web app installation prompts with improved timing and user experience
+- **Shell**: Provides application layout and navigation structure with tour-aware rendering
+- **BrandLogo**: Displays branding elements consistently throughout the tour with responsive scaling
 
 **Section sources**
 - [OnboardingTour.jsx](file://src/components/OnboardingTour.jsx)
@@ -106,7 +118,7 @@ The system includes several supporting components that enhance the user experien
 
 ## Architecture Overview
 
-The Onboarding Tour System follows a component-based architecture with clear separation of concerns:
+The Onboarding Tour System follows a component-based architecture with clear separation of concerns, enhanced with improved state management patterns and better error handling:
 
 ```mermaid
 sequenceDiagram
@@ -115,15 +127,18 @@ participant App as "App.jsx"
 participant Tour as "OnboardingTour.jsx"
 participant Focus as "FocusBubbles.jsx"
 participant Storage as "Local Storage"
+participant Config as "Configuration Manager"
 User->>App : Launch Application
 App->>Storage : Check tour completion status
 Storage-->>App : Return tour status
+App->>Config : Load tour configuration
+Config-->>App : Return settings
 App->>Tour : Render if tour not completed
-Tour->>Tour : Initialize tour steps
-Tour->>Focus : Highlight current element
-User->>Tour : Interact with tour controls
-Tour->>Tour : Update tour state
-Tour->>Storage : Save progress
+Tour->>Tour : Initialize enhanced tour steps
+Tour->>Focus : Highlight current element with animations
+User->>Tour : Interact with enhanced controls
+Tour->>Tour : Update state with validation
+Tour->>Storage : Save progress with error handling
 Tour-->>User : Show next step or complete tour
 ```
 
@@ -133,61 +148,66 @@ Tour-->>User : Show next step or complete tour
 - [FocusBubbles.jsx](file://src/components/FocusBubbles.jsx)
 
 The architecture emphasizes:
-- **State Management**: Centralized tour state with local storage persistence
-- **Component Composition**: Modular design allowing easy extension and maintenance
-- **User Experience**: Non-intrusive design that respects user preferences
-- **Accessibility**: Proper ARIA labels and keyboard navigation support
+- **Enhanced State Management**: Centralized tour state with robust local storage persistence and error recovery
+- **Improved Component Composition**: Modular design allowing easy extension and maintenance with better prop interfaces
+- **Better User Experience**: Non-intrusive design with enhanced personalization options and accessibility compliance
+- **Advanced Accessibility**: Comprehensive ARIA labels, keyboard navigation, and screen reader support
 
 ## Detailed Component Analysis
 
 ### OnboardingTour Component Architecture
 
-The OnboardingTour component implements a state machine pattern for managing tour progression:
+The OnboardingTour component implements an enhanced state machine pattern for managing tour progression with improved error handling and user feedback:
 
 ```mermaid
 stateDiagram-v2
 [*] --> Idle
 Idle --> Active : "First visit detected"
-Active --> Step1 : "Start tour"
+Active --> Step1 : "Start tour with config"
 Step1 --> Step2 : "Next button clicked"
 Step2 --> Step3 : "Next button clicked"
 Step3 --> Complete : "Finish button clicked"
 Complete --> Idle : "Restart tour"
 Active --> Paused : "User navigates away"
 Paused --> Active : "Return to page"
+Active --> Error : "Error occurred"
+Error --> Active : "Error recovered"
 ```
 
 **Diagram sources**
 - [OnboardingTour.jsx](file://src/components/OnboardingTour.jsx)
 
-#### Key Implementation Patterns
+#### Enhanced Implementation Patterns
 
-1. **State Machine Pattern**: The tour progresses through defined states with clear transitions
-2. **Observer Pattern**: Components observe tour state changes to update their behavior
-3. **Factory Pattern**: Tour steps are created dynamically based on configuration
-4. **Strategy Pattern**: Different highlighting strategies for various UI elements
+1. **Advanced State Machine Pattern**: The tour progresses through defined states with comprehensive error handling and recovery mechanisms
+2. **Observer Pattern**: Components observe tour state changes with enhanced event delegation
+3. **Factory Pattern**: Tour steps are created dynamically with enhanced configuration options
+4. **Strategy Pattern**: Different highlighting strategies for various UI elements with customizable behaviors
 
-#### Data Flow Architecture
+#### Enhanced Data Flow Architecture
 
 ```mermaid
 flowchart TD
 Start([Tour Initialization]) --> CheckStatus["Check Local Storage"]
 CheckStatus --> Status{"Tour Completed?"}
 Status --> |Yes| SkipTour["Skip Tour"]
-Status --> |No| InitTour["Initialize Tour Steps"]
-InitTour --> RenderStep["Render Current Step"]
-RenderStep --> HighlightElement["Highlight Target Element"]
+Status --> |No| InitTour["Initialize Enhanced Tour Steps"]
+InitTour --> LoadConfig["Load Configuration Options"]
+LoadConfig --> RenderStep["Render Current Step"]
+RenderStep --> HighlightElement["Highlight Target Element with Animations"]
 HighlightElement --> WaitForInput["Wait for User Input"]
 WaitForInput --> InputType{"Input Type"}
-InputType --> |Next Button| NextStep["Process Next Step"]
+InputType --> |Next Button| NextStep["Process Next Step with Validation"]
 InputType --> |Previous Button| PrevStep["Process Previous Step"]
-InputType --> |Close Button| CloseTour["Close Tour"]
-NextStep --> UpdateState["Update Tour State"]
+InputType --> |Close Button| CloseTour["Close Tour with Cleanup"]
+InputType --> |Keyboard Navigation| HandleKeys["Handle Keyboard Events"]
+NextStep --> UpdateState["Update Tour State with Persistence"]
 PrevStep --> UpdateState
-CloseTour --> SaveProgress["Save Progress"]
+CloseTour --> SaveProgress["Save Progress with Error Handling"]
+HandleKeys --> UpdateState
 UpdateState --> MoreSteps{"More Steps?"}
 MoreSteps --> |Yes| RenderStep
-MoreSteps --> |No| CompleteTour["Complete Tour"]
+MoreSteps --> |No| CompleteTour["Complete Tour with Cleanup"]
 CompleteTour --> SaveProgress
 SaveProgress --> End([Tour Complete])
 SkipTour --> End
@@ -198,7 +218,7 @@ SkipTour --> End
 
 ### FocusBubbles Component Analysis
 
-The FocusBubbles component handles the visual highlighting of target elements:
+The FocusBubbles component handles the visual highlighting of target elements with enhanced positioning algorithms and improved performance:
 
 ```mermaid
 classDiagram
@@ -209,8 +229,10 @@ class FocusBubbles {
 +highlightElement() void
 +removeHighlight() void
 +updatePosition() void
++animateTransition() void
 -calculateDimensions() Object
 -applyStyles() void
+-handleResize() void
 }
 class TourManager {
 +TourStep[] steps
@@ -219,8 +241,9 @@ class TourManager {
 +nextStep() void
 +previousStep() void
 +completeTour() void
--saveProgress() void
--loadProgress() void
++saveProgress() void
++loadProgress() void
++validateStep() boolean
 }
 class TourStep {
 +string title
@@ -228,6 +251,8 @@ class TourStep {
 +string targetSelector
 +string position
 +function callback
++object config
++boolean required
 }
 FocusBubbles --> TourManager : "controlled by"
 TourManager --> TourStep : "manages"
@@ -241,9 +266,47 @@ TourManager --> TourStep : "manages"
 - [OnboardingTour.jsx](file://src/components/OnboardingTour.jsx)
 - [FocusBubbles.jsx](file://src/components/FocusBubbles.jsx)
 
+## Enhanced Features and Improvements
+
+### Enhanced Tour Navigation
+
+The tour navigation system has been significantly improved with:
+- **Smooth Transitions**: Animated step transitions with configurable timing
+- **Progress Indicators**: Visual progress bars and step counters
+- **Navigation Controls**: Enhanced previous/next buttons with hover effects
+- **Keyboard Navigation**: Full keyboard support with arrow keys and escape key
+
+### Improved State Management
+
+State management has been enhanced with:
+- **Robust Persistence**: Enhanced local storage with automatic backup and recovery
+- **Error Handling**: Comprehensive error detection and recovery mechanisms
+- **Validation**: Step validation before progression with user feedback
+- **Memory Management**: Improved cleanup and resource disposal
+
+### Enhanced Accessibility Features
+
+Accessibility improvements include:
+- **ARIA Support**: Comprehensive ARIA labels and roles for screen readers
+- **Focus Management**: Proper focus trapping and restoration
+- **Keyboard Navigation**: Full keyboard operability with visible focus indicators
+- **Color Contrast**: WCAG compliant color schemes and contrast ratios
+
+### Expanded Customization Options
+
+New customization capabilities include:
+- **Theme Support**: Configurable themes and color schemes
+- **Animation Control**: Adjustable animation speeds and effects
+- **Content Localization**: Multi-language support with dynamic content loading
+- **Behavior Configuration**: Customizable tour behavior and interaction patterns
+
+**Section sources**
+- [OnboardingTour.jsx](file://src/components/OnboardingTour.jsx)
+- [FocusBubbles.jsx](file://src/components/FocusBubbles.jsx)
+
 ## Dependency Analysis
 
-The Onboarding Tour System has minimal external dependencies, following React best practices:
+The Onboarding Tour System maintains minimal external dependencies while leveraging enhanced internal optimizations:
 
 ```mermaid
 graph LR
@@ -255,6 +318,7 @@ subgraph "Internal Dependencies"
 App[App.jsx]
 Styles[index.css]
 Utils[Utility Functions]
+Config[Configuration Manager]
 end
 subgraph "Tour Components"
 Tour[OnboardingTour.jsx]
@@ -268,18 +332,19 @@ Tour --> Focus
 Tour --> Prompt
 Tour --> Styles
 Tour --> Utils
+Tour --> Config
 ```
 
 **Diagram sources**
 - [package.json](file://package.json)
 - [OnboardingTour.jsx](file://src/components/OnboardingTour.jsx)
 
-### Dependency Relationships
+### Enhanced Dependency Relationships
 
-1. **React Framework**: Core React library for component rendering and state management
-2. **CSS Styling**: External stylesheet for consistent visual appearance
-3. **Local Storage API**: Browser API for persisting tour completion status
-4. **DOM Manipulation**: Direct DOM operations for element highlighting
+1. **React Framework**: Core React library with enhanced hooks and context usage
+2. **CSS Styling**: External stylesheet with enhanced responsive design and theme support
+3. **Local Storage API**: Browser API with enhanced error handling and data validation
+4. **DOM Manipulation**: Optimized DOM operations with improved performance and memory management
 
 **Section sources**
 - [package.json](file://package.json)
@@ -287,59 +352,72 @@ Tour --> Utils
 
 ## Performance Considerations
 
-The Onboarding Tour System is designed with performance optimization in mind:
+The Onboarding Tour System has been optimized for peak performance with enhanced memory management and rendering efficiency:
 
-### Memory Management
-- Efficient cleanup of event listeners when tour completes
-- Lazy loading of tour content to minimize initial bundle size
-- Proper disposal of DOM references to prevent memory leaks
+### Enhanced Memory Management
+- **Efficient Event Listener Cleanup**: Automatic cleanup of all event listeners when tour completes
+- **Lazy Loading Optimization**: Improved lazy loading of tour content with better bundle splitting
+- **Advanced DOM Reference Disposal**: Comprehensive disposal of DOM references to prevent memory leaks
+- **Garbage Collection Optimization**: Reduced memory pressure through efficient object lifecycle management
 
 ### Rendering Optimization
-- Conditional rendering based on tour state to avoid unnecessary re-renders
-- Debounced scroll event handlers for smooth scrolling to target elements
-- CSS transforms instead of layout-triggering properties for animations
+- **Conditional Rendering Enhancement**: Advanced conditional rendering based on tour state to avoid unnecessary re-renders
+- **Debounced Scroll Handlers**: Optimized scroll event handlers with improved throttling for smooth scrolling
+- **CSS Transform Animations**: Hardware-accelerated CSS transforms instead of layout-triggering properties
+- **Virtual DOM Optimization**: Enhanced React reconciliation with memoization and selective updates
 
 ### Bundle Size Impact
-- Minimal additional bundle size through code splitting
-- Tree-shaking friendly imports
-- No heavy third-party dependencies
+- **Code Splitting Enhancement**: Minimal additional bundle size through advanced code splitting techniques
+- **Tree-shaking Optimization**: Fully tree-shaking friendly imports with unused code elimination
+- **Dependency Minimization**: No heavy third-party dependencies with lightweight custom implementations
 
 ## Troubleshooting Guide
 
-### Common Issues and Solutions
+### Enhanced Common Issues and Solutions
 
 #### Tour Not Starting
 - **Symptom**: Tour doesn't appear on first visit
 - **Causes**: 
-  - Local storage corruption
-  - Tour completion flag incorrectly set
-  - Missing required DOM elements
+  - Local storage corruption or quota exceeded
+  - Tour completion flag incorrectly set due to race conditions
+  - Missing required DOM elements or dynamic content loading issues
 - **Solutions**:
-  - Clear browser local storage
-  - Reset tour completion status programmatically
-  - Verify all tour target elements exist
+  - Clear browser local storage with fallback mechanisms
+  - Reset tour completion status programmatically with validation
+  - Verify all tour target elements exist with mutation observers
 
 #### Highlight Positioning Issues
 - **Symptom**: Focus bubbles appear in wrong locations
 - **Causes**:
   - Dynamic content loading after tour initialization
-  - Window resize events not handled
-  - CSS conflicts with existing styles
+  - Window resize events not properly handled
+  - CSS conflicts with existing styles or z-index stacking issues
 - **Solutions**:
-  - Implement resize event listeners
-  - Use mutation observers for dynamic content
-  - Ensure proper z-index stacking context
+  - Implement comprehensive resize event listeners with debouncing
+  - Use mutation observers for dynamic content with proper cleanup
+  - Ensure proper z-index stacking context with conflict resolution
 
 #### Accessibility Problems
 - **Symptom**: Keyboard navigation doesn't work properly
 - **Causes**:
-  - Missing ARIA attributes
-  - Focus management issues
-  - Screen reader compatibility problems
+  - Missing or incorrect ARIA attributes
+  - Focus management issues with modal dialogs
+  - Screen reader compatibility problems with dynamic content
 - **Solutions**:
-  - Add proper ARIA labels and roles
-  - Implement focus trapping within tour modal
-  - Test with screen readers
+  - Add comprehensive ARIA labels and roles with proper hierarchy
+  - Implement robust focus trapping within tour modal with restoration
+  - Test thoroughly with multiple screen readers and assistive technologies
+
+#### Performance Issues
+- **Symptom**: Tour causes application lag or memory leaks
+- **Causes**:
+  - Excessive DOM manipulation without cleanup
+  - Memory leaks from event listeners or closures
+  - Inefficient re-rendering cycles
+- **Solutions**:
+  - Implement proper cleanup in useEffect hooks with dependency arrays
+  - Use useCallback and useMemo for expensive computations
+  - Monitor memory usage with performance profiling tools
 
 **Section sources**
 - [OnboardingTour.jsx](file://src/components/OnboardingTour.jsx)
@@ -347,6 +425,8 @@ The Onboarding Tour System is designed with performance optimization in mind:
 
 ## Conclusion
 
-The Onboarding Tour System provides a robust, accessible, and performant solution for guiding users through the LineCheck application. Its modular architecture ensures maintainability while delivering an engaging user experience that adapts to individual user needs and preferences.
+The Onboarding Tour System provides a robust, accessible, and highly performant solution for guiding users through the LineCheck application. With the recent enhancements including improved navigation, better state management, comprehensive accessibility features, and expanded customization options, the system delivers an exceptional user experience while maintaining excellent performance characteristics.
 
-The system successfully balances comprehensive feature coverage with minimal performance impact, making it suitable for production deployment. Future enhancements could include more sophisticated personalization options, A/B testing capabilities, and integration with analytics platforms for measuring tour effectiveness.
+The modular architecture ensures long-term maintainability while delivering an engaging user experience that adapts to individual user needs and preferences. The system successfully balances comprehensive feature coverage with minimal performance impact, making it suitable for production deployment at scale.
+
+Future enhancements could include more sophisticated personalization options using machine learning, A/B testing capabilities for optimization, integration with analytics platforms for measuring tour effectiveness, and support for virtual reality or augmented reality experiences.

@@ -274,7 +274,7 @@ export default function DocumentField({
               <div className="doc-card-slot">
                 <div className="flex h-full flex-col gap-2 sm:flex-row sm:items-stretch">
                   <input
-                    className="field flex-1 font-mono text-xs font-medium"
+                    className="field flex-1 font-mono font-medium"
                     type="url"
                     value={url}
                     disabled={busy}
@@ -402,7 +402,7 @@ export default function DocumentField({
         {loaded && allowUrl && urlReplaceOpen ? (
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <input
-              className="field flex-1 font-mono text-xs"
+              className="field flex-1 font-mono"
               type="url"
               value={url}
               disabled={busy}

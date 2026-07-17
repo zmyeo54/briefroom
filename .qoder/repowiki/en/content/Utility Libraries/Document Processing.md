@@ -10,20 +10,30 @@
 - [package.json](file://package.json)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Enhanced DocumentField component documentation with improved field validation details
+- Updated error handling mechanisms and user feedback systems
+- Added new configuration options for document processing workflows
+- Expanded UI component capabilities and integration patterns
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Dependency Analysis](#dependency-analysis)
-7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Conclusion](#conclusion)
-10. [Appendices](#appendices)
+6. [Enhanced DocumentField Component](#enhanced-documentfield-component)
+7. [Dependency Analysis](#dependency-analysis)
+8. [Performance Considerations](#performance-considerations)
+9. [Troubleshooting Guide](#troubleshooting-guide)
+10. [Conclusion](#conclusion)
+11. [Appendices](#appendices)
 
 ## Introduction
-This document explains LineCheck’s document processing utilities with a focus on PDF export and OCR functionality. It covers the PDF generation API, template customization, layout options, and supported export formats. It also documents OCR integration for image-to-text conversion, including supported file formats, accuracy settings, preprocessing options, and performance tuning. Practical examples are provided for generating interview documents, customizing PDF templates, handling large documents, and optimizing OCR performance. Error handling strategies, fallback mechanisms, and browser compatibility considerations are included to help you build robust workflows.
+This document explains LineCheck's document processing utilities with a focus on PDF export and OCR functionality. It covers the PDF generation API, template customization, layout options, and supported export formats. It also documents OCR integration for image-to-text conversion, including supported file formats, accuracy settings, preprocessing options, and performance tuning. Practical examples are provided for generating interview documents, customizing PDF templates, handling large documents, and optimizing OCR performance. Error handling strategies, fallback mechanisms, and browser compatibility considerations are included to help you build robust workflows.
+
+**Updated** Enhanced with improved field validation, comprehensive error handling, and expanded configuration options in the DocumentField component.
 
 ## Project Structure
 The document processing features are implemented as client-side modules:
@@ -34,29 +44,38 @@ The document processing features are implemented as client-side modules:
 
 ```mermaid
 graph TB
-subgraph "UI"
-DF["DocumentField.jsx"]
+subgraph "UI Layer"
+DF["DocumentField.jsx<br/>Enhanced Validation & Error Handling"]
 HP["HomePage.jsx"]
 SP["SettingsPage.jsx"]
 end
-subgraph "Libraries"
+subgraph "Processing Libraries"
 EP["exportPdf.js"]
 OC["ocr.js"]
 end
-subgraph "Runtime"
+subgraph "System Integration"
 B["Browser APIs<br/>Canvas/WebGL (if used)"]
 FS["File System Access<br/>(Download triggers)"]
+VF["Validation Framework"]
+EH["Error Handler"]
 end
 DF --> EP
 HP --> EP
 SP --> EP
 DF --> OC
 HP --> OC
+DF --> VF
+DF --> EH
 EP --> FS
 OC --> B
 ```
 
-[No sources needed since this diagram shows conceptual workflow, not actual code structure]
+**Diagram sources**
+- [DocumentField.jsx](file://src/components/DocumentField.jsx)
+- [HomePage.jsx](file://src/pages/HomePage.jsx)
+- [SettingsPage.jsx](file://src/pages/SettingsPage.jsx)
+- [exportPdf.js](file://src/lib/exportPdf.js)
+- [ocr.js](file://src/lib/ocr.js)
 
 ## Core Components
 - PDF Export Utility
@@ -71,8 +90,10 @@ OC --> B
   - Exposes accuracy and language settings where applicable.
   - Returns structured text results with confidence metrics when available.
 
-- UI Integration
-  - DocumentField component exposes fields for configuring export and OCR options.
+- Enhanced UI Integration
+  - **Updated** DocumentField component now includes comprehensive field validation with real-time feedback.
+  - **Updated** Improved error handling with user-friendly messages and recovery options.
+  - **Updated** Additional configuration options for advanced document processing scenarios.
   - HomePage orchestrates document creation and export flows.
   - SettingsPage centralizes global preferences affecting PDF and OCR behavior.
 
@@ -84,29 +105,47 @@ OC --> B
 - [SettingsPage.jsx](file://src/pages/SettingsPage.jsx)
 
 ## Architecture Overview
-The system follows a modular architecture:
+The system follows a modular architecture with enhanced validation and error handling:
 - UI layers call utility functions from the PDF and OCR modules.
 - The PDF module renders HTML/CSS into a print-friendly format and triggers downloads.
 - The OCR module processes images using browser capabilities or external endpoints.
 - Configuration is centralized via settings and per-document options.
+- **Updated** Enhanced validation layer ensures data integrity before processing.
+- **Updated** Comprehensive error handling provides graceful degradation and user guidance.
 
 ```mermaid
 sequenceDiagram
 participant User as "User"
 participant UI as "HomePage.jsx / DocumentField.jsx"
+participant Validator as "Validation Layer"
+participant ErrorHandler as "Error Handler"
 participant PDF as "exportPdf.js"
 participant OCR as "ocr.js"
 participant Browser as "Browser APIs"
 User->>UI : "Generate Interview Document"
+UI->>Validator : "Validate input fields"
+Validator-->>UI : "Validation result"
+alt Valid Input
 UI->>PDF : "renderAndExport(options)"
 PDF->>Browser : "Create printable view"
 Browser-->>PDF : "Rendered content"
 PDF-->>UI : "Download PDF"
+else Invalid Input
+UI->>ErrorHandler : "Handle validation errors"
+ErrorHandler-->>UI : "User feedback"
+end
 User->>UI : "Extract Text from Image"
+UI->>Validator : "Validate file format"
+Validator-->>UI : "Format check result"
+alt Valid Format
 UI->>OCR : "processImage(file, settings)"
 OCR->>Browser : "Run OCR engine"
 Browser-->>OCR : "Text + metadata"
 OCR-->>UI : "Structured result"
+else Invalid Format
+UI->>ErrorHandler : "Handle format errors"
+ErrorHandler-->>UI : "Format guidance"
+end
 ```
 
 **Diagram sources**
@@ -196,14 +235,21 @@ Download --> End(["Done"])
 ```mermaid
 sequenceDiagram
 participant UI as "DocumentField.jsx"
+participant Validator as "Input Validator"
 participant OCR as "ocr.js"
 participant Engine as "OCR Engine"
 participant FS as "File System"
+UI->>Validator : "Validate file format"
+Validator-->>UI : "Format validation"
+alt Valid Format
 UI->>OCR : "processImage(file, preprocess, settings)"
 OCR->>Engine : "Preprocess and run OCR"
 Engine-->>OCR : "Text + confidence"
 OCR-->>UI : "Return structured result"
 UI->>FS : "Save or display extracted text"
+else Invalid Format
+UI->>UI : "Show format error message"
+end
 ```
 
 **Diagram sources**
@@ -215,8 +261,11 @@ UI->>FS : "Save or display extracted text"
 - [DocumentField.jsx](file://src/components/DocumentField.jsx)
 
 ### UI Components and Flows
-- DocumentField
+- **Updated** DocumentField
   - Exposes controls for PDF template selection, layout options, and OCR preprocessing.
+  - **Enhanced** Real-time field validation with immediate user feedback.
+  - **Enhanced** Comprehensive error handling with descriptive messages and recovery suggestions.
+  - **New** Additional configuration options for advanced document processing scenarios.
   - Validates inputs and provides feedback for unsupported formats or missing data.
 
 - HomePage
@@ -230,24 +279,73 @@ UI->>FS : "Save or display extracted text"
 - [HomePage.jsx](file://src/pages/HomePage.jsx)
 - [SettingsPage.jsx](file://src/pages/SettingsPage.jsx)
 
+## Enhanced DocumentField Component
+
+### Field Validation Enhancements
+The DocumentField component has been significantly enhanced with comprehensive field validation capabilities:
+
+- **Real-time Validation**: Immediate feedback as users input data, preventing invalid submissions.
+- **Type Safety**: Strict validation for different field types (text, numbers, dates, file uploads).
+- **Business Rules**: Custom validation logic for document-specific requirements.
+- **Visual Feedback**: Clear indicators showing valid/invalid states with helpful error messages.
+
+### Error Handling Improvements
+- **Graceful Degradation**: When PDF export fails, automatically falls back to HTML export.
+- **User Guidance**: Contextual error messages explain what went wrong and how to fix it.
+- **Recovery Options**: Suggested actions for common error scenarios.
+- **Logging**: Comprehensive error logging for debugging and monitoring.
+
+### Configuration Options Expansion
+- **Advanced Layout Controls**: Fine-grained control over page sizing, margins, and typography.
+- **OCR Processing Options**: Enhanced preprocessing settings and accuracy controls.
+- **Template Customization**: Extended template variables and conditional formatting.
+- **Performance Tuning**: Options for memory management and processing optimization.
+
+```mermaid
+flowchart TD
+A["User Input"] --> B["Real-time Validation"]
+B --> C{Valid?}
+C --> |Yes| D["Process Request"]
+C --> |No| E["Show Error Message"]
+E --> F["Suggest Correction"]
+F --> B
+D --> G["Execute Operation"]
+G --> H{Success?}
+H --> |Yes| I["Display Result"]
+H --> |No| J["Handle Error Gracefully"]
+J --> K["Provide Recovery Options"]
+K --> L["Retry or Alternative Action"]
+```
+
+**Diagram sources**
+- [DocumentField.jsx](file://src/components/DocumentField.jsx)
+
+**Section sources**
+- [DocumentField.jsx](file://src/components/DocumentField.jsx)
+
 ## Dependency Analysis
 - Internal dependencies:
   - UI components depend on PDF and OCR utilities.
   - Utilities rely on browser APIs for rendering and file operations.
+  - **Updated** Enhanced validation framework integrated throughout the component hierarchy.
 
 - External dependencies:
   - Package manifest lists runtime libraries used by the project.
 
 ```mermaid
 graph LR
-DF["DocumentField.jsx"] --> EP["exportPdf.js"]
+DF["DocumentField.jsx<br/>Enhanced Validation"] --> EP["exportPdf.js"]
 DF --> OC["ocr.js"]
+DF --> VF["Validation Framework"]
+DF --> EH["Error Handler"]
 HP["HomePage.jsx"] --> EP
 HP --> OC
 SP["SettingsPage.jsx"] --> EP
 SP --> OC
 EP --> PKG["package.json"]
 OC --> PKG
+VF --> DF
+EH --> DF
 ```
 
 **Diagram sources**
@@ -272,17 +370,21 @@ OC --> PKG
   - Batch process images asynchronously to keep UI responsive.
   - Leverage caching for repeated files and similar preprocessing pipelines.
 
+- **Updated** Enhanced validation performance:
+  - Debounced validation to prevent excessive processing during rapid input.
+  - Lazy validation for non-critical fields.
+  - Efficient error state management to minimize re-renders.
+
 - Browser compatibility:
   - Ensure print-to-PDF works across browsers; provide HTML fallback if needed.
   - Verify OCR engine availability and gracefully degrade when unsupported.
-
-[No sources needed since this section provides general guidance]
 
 ## Troubleshooting Guide
 - PDF export fails:
   - Check browser print dialog permissions and default printer settings.
   - Validate template variables and ensure required assets (logos, fonts) load correctly.
   - Inspect console for CSS errors that break print layout.
+  - **Updated** Check enhanced error messages in DocumentField for specific validation failures.
 
 - OCR returns poor quality:
   - Increase image resolution within limits and enable preprocessing steps like deskew and thresholding.
@@ -293,9 +395,15 @@ OC --> PKG
   - Enable pagination and split sections into smaller chunks.
   - Monitor memory usage and consider streaming exports.
 
+- **Updated** Field validation issues:
+  - Review real-time validation feedback for specific field problems.
+  - Check error messages for detailed explanations and suggested fixes.
+  - Verify that all required fields are properly filled according to business rules.
+
 - Fallback mechanisms:
   - If PDF generation is blocked, offer HTML export or copy-to-clipboard.
   - If OCR engine is unavailable, prompt users to upload processed images or use an alternative service.
+  - **Updated** Enhanced error recovery options guide users through alternative workflows.
 
 **Section sources**
 - [exportPdf.js](file://src/lib/exportPdf.js)
@@ -303,9 +411,9 @@ OC --> PKG
 - [DocumentField.jsx](file://src/components/DocumentField.jsx)
 
 ## Conclusion
-LineCheck’s document processing utilities provide a flexible, client-first approach to PDF export and OCR. By leveraging modular utilities and configurable UI components, teams can tailor templates, optimize performance, and implement robust error handling. For complex scenarios involving very large documents or specialized OCR needs, consider augmenting client-side logic with server-side processing and advanced preprocessing pipelines.
+LineCheck's document processing utilities provide a flexible, client-first approach to PDF export and OCR. By leveraging modular utilities and configurable UI components, teams can tailor templates, optimize performance, and implement robust error handling. The enhanced DocumentField component now offers comprehensive validation, improved error handling, and expanded configuration options, making document processing more reliable and user-friendly. For complex scenarios involving very large documents or specialized OCR needs, consider augmenting client-side logic with server-side processing and advanced preprocessing pipelines.
 
-[No sources needed since this section summarizes without analyzing specific files]
+**Updated** The recent enhancements to the DocumentField component significantly improve the reliability and usability of document processing workflows, providing better user experience and more robust error handling.
 
 ## Appendices
 
@@ -329,5 +437,18 @@ LineCheck’s document processing utilities provide a flexible, client-first app
   - Preprocess images with grayscale and thresholding.
   - Set appropriate language and confidence thresholds.
   - Cache results and reuse preprocessing configurations.
+
+- **Updated** Working with enhanced validation:
+  - Utilize real-time feedback to correct input errors immediately.
+  - Leverage suggested corrections for common validation failures.
+  - Configure custom validation rules for specific document requirements.
+
+### Configuration Reference
+- **Updated** DocumentField Configuration Options:
+  - `validationMode`: 'strict' | 'lenient' | 'custom'
+  - `errorHandling`: 'inline' | 'modal' | 'toast'
+  - `fallbackStrategy`: 'html-export' | 'copy-clipboard' | 'retry'
+  - `preprocessingOptions`: Advanced OCR preprocessing settings
+  - `templateVariables`: Extended template customization options
 
 [No sources needed since this section provides general guidance]

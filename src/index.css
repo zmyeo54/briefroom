@@ -1043,15 +1043,17 @@ html[lang="zh-CN"] .app-dialog-body {
   flex-shrink: 0;
 }
 .toolbar-lang-btn {
-  min-height: 2.35rem;
-  padding: 0.4rem 0.6rem !important;
+  min-width: 2.75rem; /* 44pt touch target */
+  min-height: 2.75rem;
+  padding: 0.45rem 0.65rem !important;
   font-size: 0.72rem !important;
   line-height: 1 !important;
 }
 @media (min-width: 640px) {
   .toolbar-lang-btn {
-    min-height: 2.5rem;
-    padding: 0.45rem 0.7rem !important;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.75rem !important;
     font-size: 0.78rem !important;
   }
 }
@@ -1306,6 +1308,10 @@ html[lang="zh-CN"] .app-dialog-body {
   color: #1a1a2e;
   line-height: 1.35;
   letter-spacing: -0.01em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .doc-role-value--sub {
@@ -2084,14 +2090,15 @@ html[lang="zh-CN"] .app-dialog-body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 2.1rem;
-  height: 1.85rem;
-  padding: 0 0.55rem;
+  min-width: 2.75rem; /* 44pt touch target */
+  min-height: 2.75rem;
+  height: 2.75rem;
+  padding: 0 0.65rem;
   border: 0;
   border-radius: 999px;
   background: transparent;
   color: #6b6862;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
@@ -2753,10 +2760,17 @@ html[lang="zh-CN"] .app-dialog-body {
 
 .settings-field-wrap .field {
   border-radius: 14px;
-  padding: 0.55rem 0.8rem;
-  font-size: 0.9rem;
+  padding: 0.65rem 0.85rem;
+  /* keep ≥16px — do not override .field mobile font-size (iOS zoom) */
+  font-size: 1rem;
+  min-height: 2.75rem;
   background: rgba(255, 255, 255, 0.85);
   border-color: rgba(32, 32, 32, 0.08);
+}
+@media (min-width: 768px) {
+  .settings-field-wrap .field {
+    font-size: 0.95rem;
+  }
 }
 
 .settings-field-wrap .field:focus {
