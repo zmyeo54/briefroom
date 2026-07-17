@@ -2,6 +2,7 @@ const KEYS = {
   settings: "briefroom_settings_v2",
   draft: "briefroom_draft_v2",
   qa: "briefroom_qa_v2",
+  genMeta: "briefroom_gen_meta_v1",
 };
 
 const LEGACY = {

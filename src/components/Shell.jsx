@@ -3,8 +3,13 @@ import { Link, useLocation } from "react-router-dom";
 import { GearSix, House } from "@phosphor-icons/react";
 import { useI18n } from "../lib/I18nContext";
 import { UI_LANGS } from "../lib/i18n";
-import { loadJson } from "../lib/storage";
-import { getSavedApiKey, normalizeSettings, resolveApiKey } from "../lib/settingsConfig";
+import { loadJson, saveJson } from "../lib/storage";
+import {
+  aiRegionForGeo,
+  getSavedApiKey,
+  normalizeSettings,
+  resolveApiKey,
+} from "../lib/settingsConfig";
 import BrandLogo from "./BrandLogo";
 import InstallPrompt from "./InstallPrompt";
 
@@ -34,7 +39,17 @@ export default function Shell({ children }) {
     fetch("/api/chat")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (!cancelled) setServerKey(Boolean(data?.hasKey));
+        if (cancelled) return;
+        setServerKey(Boolean(data?.hasKey));
+        const country = data?.country;
+        if (!country) return;
+        const current = normalizeSettings(loadJson("settings", {}));
+        const nextRegion = aiRegionForGeo(country, current);
+        if (nextRegion === current.aiRegion) return;
+        saveJson(
+          "settings",
+          normalizeSettings({ ...current, aiRegion: nextRegion })
+        );
       })
       .catch(() => {
         if (!cancelled) setServerKey(false);
@@ -51,16 +66,16 @@ export default function Shell({ children }) {
     <div className="relative min-h-[100dvh] overflow-x-clip">
       <span
         className="mesh-orb"
-        style={{ width: 340, height: 340, top: -90, right: -80 }}
+        style={{ width: 300, height: 300, top: -70, right: -30 }}
         aria-hidden
       />
       <span
         className="mesh-orb mesh-orb--sm"
-        style={{ width: 220, height: 220, bottom: 80, left: -70 }}
+        style={{ width: 200, height: 200, bottom: 90, left: -30 }}
         aria-hidden
       />
 
-      <div className="shell-pad relative z-10 mx-auto max-w-[1100px] pt-0">
+      <div className="shell-pad relative z-10 mx-auto max-w-5xl pt-0">
         <header className="shell-banner">
           <div className="toolbar-glass">
             <Link

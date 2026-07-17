@@ -19,6 +19,8 @@ export default function DocumentField({
   onChange,
   placeholder,
   allowUrl = false,
+  displayTitle = "",
+  displaySubtitle = "",
 }) {
   const { t } = useI18n();
   const reduce = useReducedMotion();
@@ -34,6 +36,10 @@ export default function DocumentField({
   const [urlReplaceOpen, setUrlReplaceOpen] = useState(false);
 
   const loaded = Boolean(value?.trim());
+
+  function applyValue(text, meta) {
+    onChange(text, meta);
+  }
 
   function clearAll() {
     onChange("");
@@ -76,12 +82,12 @@ export default function DocumentField({
       if (!parts.length) {
         throw new Error("No text extracted. Try a clearer scan or paste manually.");
       }
-      onChange(parts.join("\n\n"));
+      applyValue(parts.join("\n\n"));
       setStatus("Ready");
     } catch (e) {
       setError(e.message || "Upload failed");
       setStatus("");
-      onChange("");
+      applyValue("");
     } finally {
       setBusy(false);
     }
@@ -94,11 +100,15 @@ export default function DocumentField({
     setPasteOpen(false);
     setStatus(t("doc.fetching"));
     try {
-      const text = await extractTextFromUrl(url, setStatus);
-      if (!text?.trim()) {
+      const result = await extractTextFromUrl(url, setStatus);
+      const text = String(result?.text ?? result ?? "").trim();
+      if (!text) {
         throw new Error("No text found at that URL.");
       }
-      onChange(text.trim());
+      applyValue(text, {
+        title: result?.title || "",
+        company: result?.company || "",
+      });
       setSourceUrl(url.trim());
       setStatus("Ready");
       setUrlReplaceOpen(false);
@@ -108,7 +118,7 @@ export default function DocumentField({
           "Could not fetch that URL. Some sites block extraction — paste the text instead."
       );
       setStatus("");
-      onChange("");
+      applyValue("");
       setSourceUrl("");
     } finally {
       setBusy(false);
@@ -121,7 +131,7 @@ export default function DocumentField({
       setError("Paste some text first.");
       return;
     }
-    onChange(text);
+    applyValue(text);
     setFileName("");
     setSourceUrl("");
     setStatus("Ready");
@@ -177,11 +187,19 @@ export default function DocumentField({
                 className="mt-0.5 shrink-0 text-[#4a7ff8]"
               />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold title">
-                  {t("doc.ready", { title })}
+                <p className="text-sm font-semibold title leading-snug">
+                  {displayTitle?.trim() || t("doc.ready", { title })}
                 </p>
-                {sourceFriendly ? (
+                {displayTitle?.trim() ? (
+                  <p className="mute mt-1 text-xs">{t("doc.roleReady")}</p>
+                ) : null}
+                {displaySubtitle?.trim() ? (
+                  <p className="mute mt-0.5 text-xs">{displaySubtitle}</p>
+                ) : sourceFriendly ? (
                   <p className="mute mt-1 text-xs">{sourceFriendly}</p>
+                ) : null}
+                {displayTitle?.trim() && sourceFriendly ? (
+                  <p className="mute mt-0.5 text-[11px] opacity-80">{sourceFriendly}</p>
                 ) : null}
               </div>
             </div>

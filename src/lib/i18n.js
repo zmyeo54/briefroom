@@ -109,13 +109,24 @@ const en = {
   "home.paused": "Paused",
   "home.playbackControls": "Playback controls",
   "home.saveAudio": "Export Audio ({n})",
+  "home.exportLine1": "Export",
+  "home.exportAudioLine2": "Audio ({n})",
+  "home.exportPdfLine2": "PDF ({n})",
   "home.saveAudioHint":
     "Download one MP3 with every selected Q&A merged in order — replay anywhere outside the app.",
+  "home.savePdf": "Export PDF ({n})",
+  "home.savePdfHint":
+    "Download a formatted PDF of your selected Q&A — great for offline review or sharing.",
+  "home.exportingPdf": "Building your PDF export…",
+  "home.exportingPdfShort": "Exporting…",
   "home.exportingAudio": "Building your audio export…",
   "home.exportingAudioShort": "Exporting…",
   "home.flash.audioSaved":
     "Exported — one MP3 with {n} Q&A is in Downloads. Replay it anywhere outside the app.",
   "home.flash.audioFailed": "Couldn’t export the audio. {detail}",
+  "home.flash.pdfSaved":
+    "Exported — PDF with {n} Q&A is in Downloads.",
+  "home.flash.pdfFailed": "Couldn’t export the PDF. {detail}",
 
   "home.flash.lang":
     "Language set to {lang}. Foundation questions updated — regenerate when you’re ready for full answers in this language.",
@@ -137,6 +148,7 @@ const en = {
   "home.flash.copied": "Copied — keep going.",
 
   "doc.ready": "{title} locked in",
+  "doc.roleReady": "Job description locked in",
   "doc.fromUpload": "From your upload",
   "doc.fromLink": "From the job link",
   "doc.fromPaste": "From your paste",
@@ -193,6 +205,11 @@ const en = {
     "Filled from your resume when we spot a name. Edit anytime — your edit wins.",
   "settings.keyLoaded": "Key ready ({preview}… · {n} chars). Paste a new one anytime to replace it.",
   "settings.noKey": "No key yet — paste a Gemini API key, or set GEMINI_API_KEY on Vercel.",
+  "settings.aiRegion": "Region",
+  "settings.aiRegion.global": "Global",
+  "settings.aiRegion.greaterChina": "Greater China",
+  "settings.aiRegionHint":
+    "Greater China is selected automatically when you're in mainland China or Hong Kong.",
   "settings.interviewLang": "Practice language",
   "settings.interviewLangHint":
     "Questions and answers will be written in this language.",
@@ -369,12 +386,21 @@ const zh = {
   "home.paused": "已暂停",
   "home.playbackControls": "播放控制",
   "home.saveAudio": "导出音频（{n}）",
+  "home.exportLine1": "导出",
+  "home.exportAudioLine2": "音频（{n}）",
+  "home.exportPdfLine2": "PDF（{n}）",
   "home.saveAudioHint": "下载一个合并 MP3：所选问答按顺序串成一条，可在应用外随时回放练习。",
+  "home.savePdf": "导出 PDF（{n}）",
+  "home.savePdfHint": "下载所选问答的排版 PDF，方便离线复习或分享。",
+  "home.exportingPdf": "正在生成 PDF…",
+  "home.exportingPdfShort": "导出中…",
   "home.exportingAudio": "正在生成导出音频…",
   "home.exportingAudioShort": "导出中…",
   "home.flash.audioSaved":
     "已导出——含 {n} 组问答的 MP3 在下载文件夹，可在应用外随时回放。",
   "home.flash.audioFailed": "音频导出失败。{detail}",
+  "home.flash.pdfSaved": "已导出——含 {n} 组问答的 PDF 在下载文件夹。",
+  "home.flash.pdfFailed": "PDF 导出失败。{detail}",
 
   "home.flash.lang":
     "已切到 {lang}。基础题标题已更新——准备好后重新生成，拿到完整口语回答。",
@@ -396,6 +422,7 @@ const zh = {
   "home.flash.copied": "已复制——继续练。",
 
   "doc.ready": "{title} 已就绪",
+  "doc.roleReady": "职位描述已就绪",
   "doc.fromUpload": "来自你的上传",
   "doc.fromLink": "来自职位链接",
   "doc.fromPaste": "来自粘贴",
@@ -452,6 +479,11 @@ const zh = {
     "放进简历后会自动识别姓名。可随时改——你改的优先。",
   "settings.keyLoaded": "密钥已就绪（{preview}… · {n} 字符）。随时可粘贴新密钥覆盖。",
   "settings.noKey": "还没有密钥——粘贴 Gemini 密钥，或在 Vercel 设置 GEMINI_API_KEY。",
+  "settings.aiRegion": "地区",
+  "settings.aiRegion.global": "全球",
+  "settings.aiRegion.greaterChina": "大中华区",
+  "settings.aiRegionHint":
+    "在中国大陆或香港访问时，会自动选择大中华区。",
   "settings.interviewLang": "练习语言",
   "settings.interviewLangHint": "问题与回答都会按此语言生成。",
   "settings.gender": "你的性别",

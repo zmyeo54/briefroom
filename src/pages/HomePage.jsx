@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
@@ -6,6 +6,7 @@ import {
   SpeakerHigh,
   Stop,
   DownloadSimple,
+  FilePdf,
   SpinnerGap,
   ArrowCounterClockwise,
   Trash,
@@ -38,6 +39,8 @@ import {
   extractCandidateName,
   applyCandidateNameToItems,
 } from "../lib/candidate";
+import { extractJobTitle, extractJobCompany } from "../lib/jobMeta";
+import { exportQaPdf } from "../lib/exportPdf";
 import {
   INTERVIEW_LANGS,
   interviewLangLabel,
@@ -75,6 +78,14 @@ export default function HomePage() {
   const [settings, setSettings] = useState(readSettings);
   const [resume, setResume] = useState(() => loadJson("draft", {}).resume || "");
   const [jd, setJd] = useState(() => loadJson("draft", {}).jd || "");
+  const [jobTitle, setJobTitle] = useState(() => {
+    const draft = loadJson("draft", {});
+    return draft.jobTitle || extractJobTitle(draft.jd || "");
+  });
+  const [jobCompany, setJobCompany] = useState(() => {
+    const draft = loadJson("draft", {});
+    return draft.jobCompany || extractJobCompany(draft.jd || "");
+  });
   const [questionsRaw, setQuestionsRaw] = useState(
     () => loadJson("draft", {}).questions || ""
   );
@@ -91,6 +102,8 @@ export default function HomePage() {
     const payload = {
       resume,
       jd,
+      jobTitle,
+      jobCompany,
       questions: questionsRaw,
       autoQuestions,
       inventCount,
@@ -100,7 +113,7 @@ export default function HomePage() {
       clearTimeout(id);
       saveJson("draft", payload);
     };
-  }, [resume, jd, questionsRaw, autoQuestions, inventCount]);
+  }, [resume, jd, jobTitle, jobCompany, questionsRaw, autoQuestions, inventCount]);
 
   const [qa, setQa] = useState(() => {
     const stored = loadJson("qa", []);
@@ -122,7 +135,11 @@ export default function HomePage() {
   const [audioPaused, setAudioPaused] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
   const [exportingAudio, setExportingAudio] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [audioNote, setAudioNote] = useState({ text: "", kind: "" });
+  const [genMeta, setGenMeta] = useState(() => loadJson("genMeta", null));
+  const [showGenSecret, setShowGenSecret] = useState(false);
+  const practiceSetTaps = useRef({ n: 0, timer: null });
 
   const endPlayback = () => {
     setPlayingIndex(-1);
@@ -216,6 +233,8 @@ export default function HomePage() {
     setResetConfirmOpen(false);
     haltPlayback();
     setJd("");
+    setJobTitle("");
+    setJobCompany("");
     setQuestionsRaw("");
     setAutoQuestions(true);
     setInventCount(DEFAULT_INVENT_COUNT);
@@ -225,11 +244,16 @@ export default function HomePage() {
     saveJson("draft", {
       resume,
       jd: "",
+      jobTitle: "",
+      jobCompany: "",
       questions: "",
       autoQuestions: true,
       inventCount: DEFAULT_INVENT_COUNT,
     });
     saveJson("qa", []);
+    saveJson("genMeta", null);
+    setGenMeta(null);
+    setShowGenSecret(false);
     patchSettings({ focuses: [...DEFAULT_FOCUSES], interviewerRole: DEFAULT_INTERVIEWER_ROLE });
     flash(t("home.flash.resetAll"), "ok");
   };
@@ -240,8 +264,33 @@ export default function HomePage() {
     setSelected(new Set());
     setQaEpoch((n) => n + 1);
     saveJson("qa", []);
+    saveJson("genMeta", null);
+    setGenMeta(null);
+    setShowGenSecret(false);
     flash(t("home.flash.cleared"), "ok");
   };
+
+  const onPracticeSetSecretTap = () => {
+    const taps = practiceSetTaps.current;
+    taps.n += 1;
+    clearTimeout(taps.timer);
+    taps.timer = setTimeout(() => {
+      taps.n = 0;
+    }, 2500);
+    if (taps.n >= 5) {
+      taps.n = 0;
+      setShowGenSecret((on) => !on);
+    }
+  };
+
+  const genSecretLabel = useMemo(() => {
+    if (!genMeta?.model) return "";
+    const region =
+      settings.aiRegion === "greater-china"
+        ? t("settings.aiRegion.greaterChina")
+        : t("settings.aiRegion.global");
+    return `${region} · ${genMeta.model}`;
+  }, [genMeta, settings.aiRegion, t]);
 
   /** Fill Settings → Your name from resume when the field is still empty. */
   const catchNameFromResume = useCallback(
@@ -377,7 +426,10 @@ export default function HomePage() {
       // Prefer /api/chat (user key + Vercel keys rotate there). Local Vite has no
       // chat proxy — fall back to direct Gemini with the pasted key only.
       async function callChat(payload) {
-        const headers = { "Content-Type": "application/json" };
+        const headers = {
+          "Content-Type": "application/json",
+          "X-Linecheck-AI-Region": latest.aiRegion || "global",
+        };
         if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
         try {
           const res = await fetch("/api/chat", {
@@ -494,6 +546,12 @@ export default function HomePage() {
 
       const named = applyCandidateNameToItems(raw, nameForAnswers);
       const items = pinMandatoryFirst(named, latest.lang, questions);
+      const modelUsed = String(data.model || latest.model || "").trim();
+      if (modelUsed) {
+        const meta = { model: modelUsed, at: new Date().toISOString() };
+        saveJson("genMeta", meta);
+        setGenMeta(meta);
+      }
       setQa(items);
       setQaEpoch((n) => n + 1);
       setSelected(new Set());
@@ -593,6 +651,59 @@ export default function HomePage() {
     }
   };
 
+  const handleJdChange = (text, meta) => {
+    const next = String(text || "");
+    setJd(next);
+    if (!next.trim()) {
+      setJobTitle("");
+      setJobCompany("");
+      return;
+    }
+    setJobTitle(meta?.title?.trim() || extractJobTitle(next));
+    setJobCompany(meta?.company?.trim() || extractJobCompany(next));
+  };
+
+  const exportPdf = async (indices) => {
+    const list = (indices?.length
+      ? indices
+      : selected.size
+        ? [...selected]
+        : qa.map((_, i) => i)
+    )
+      .sort((a, b) => a - b)
+      .filter((i) => qa[i]?.a?.trim() || qa[i]?.q?.trim())
+      .map((i) => qa[i]);
+
+    if (!list.length) {
+      setAudioNote({ text: t("home.flash.selectAnswer"), kind: "error" });
+      return;
+    }
+
+    const latest = readSettings();
+    setExportingPdf(true);
+    setAudioNote({ text: t("home.exportingPdf"), kind: "" });
+    try {
+      const n = await exportQaPdf(list, {
+        jobTitle,
+        company: jobCompany,
+        candidateName: latest.name,
+      });
+      setAudioNote({
+        text: t("home.flash.pdfSaved", { n }),
+        kind: "ok",
+      });
+    } catch (e) {
+      setAudioNote({
+        text: t("home.flash.pdfFailed", {
+          detail: e.message || "PDF export failed.",
+        }),
+        kind: "error",
+      });
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
   const exportAudio = async (indices) => {
     const list = (indices?.length
       ? indices
@@ -637,17 +748,17 @@ export default function HomePage() {
 
   return (
     <Shell>
-      <header className="mb-5 md:mb-8">
+      <header className="page-hero mb-6 md:mb-10">
         <p className="label mb-2 md:mb-3">{t("home.eyebrow")}</p>
         <h1 className="display text-[1.75rem] title sm:text-3xl md:text-4xl">
           {t("brand.name")}
         </h1>
-        <p className="line-responsive mt-2 max-w-[36ch] text-sm leading-snug mute md:mt-3 md:max-w-none md:text-base md:leading-relaxed">
+        <p className="line-responsive mt-2 max-w-[36ch] text-sm leading-relaxed mute md:mt-3 md:max-w-[48ch] md:text-base">
           {t("home.tagline")}
         </p>
       </header>
 
-      <section className="panel mb-4 space-y-5 p-3.5 md:mb-5 md:space-y-6 md:p-6">
+      <section className="panel mb-4 space-y-5 p-4 sm:p-5 md:mb-5 md:space-y-6 md:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p className="label mb-1.5">{t("home.prepLabel")}</p>
@@ -764,13 +875,15 @@ export default function HomePage() {
           title={t("home.jd")}
           hint={t("home.jdHint")}
           value={jd}
-          onChange={setJd}
+          onChange={handleJdChange}
+          displayTitle={jobTitle}
+          displaySubtitle={jobCompany}
           placeholder={t("home.jdPlaceholder")}
           allowUrl
         />
       </div>
 
-      <section className="panel mb-4 space-y-3 p-3.5 md:mb-5 md:space-y-4 md:p-6">
+      <section className="panel mb-4 space-y-3 p-4 sm:p-5 md:mb-5 md:space-y-4 md:p-6">
         <div className="focus-head">
           <div className="focus-head-top">
             <h2 className="display text-lg font-semibold title md:text-xl">
@@ -838,7 +951,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="panel mb-4 p-3.5 md:mb-5 md:p-6">
+      <section className="panel mb-4 p-4 sm:p-5 md:mb-5 md:p-6">
         <h2 className="line-responsive display text-lg font-semibold title md:text-xl">
           {t("home.targetQs")}
         </h2>
@@ -958,28 +1071,41 @@ export default function HomePage() {
         </AnimatePresence>
       </section>
 
-      <section className="panel p-3.5 md:p-6">
+      <section className="panel p-4 sm:p-5 md:p-6">
         <div className="mb-3 flex flex-wrap items-start justify-between gap-3 md:mb-4">
           <div className="min-w-0 flex-1">
-            <h2 className="display text-lg font-semibold title md:text-xl">
+            <h2
+              className="display text-lg font-semibold title md:text-xl"
+              onClick={onPracticeSetSecretTap}
+            >
               {t("home.questions")}
             </h2>
             <p className="mt-1 text-xs leading-relaxed mute md:mt-1.5 md:text-sm">
               {t("home.questionsHint")}
             </p>
           </div>
-          {qa.length ? (
-            <button
-              type="button"
-              className="btn btn-clear shrink-0"
-              onClick={clearAnswers}
-              title={t("home.clearAnswersHint")}
-              disabled={speaking || loading}
-            >
-              <Trash size={16} weight="bold" />
-              {t("home.clearAnswers")}
-            </button>
-          ) : null}
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            {showGenSecret && genSecretLabel ? (
+              <span
+                className="max-w-[14rem] truncate font-mono text-[10px] leading-tight tracking-tight text-[#c5cad1] sm:max-w-none sm:text-[11px]"
+                title={genSecretLabel}
+              >
+                {genSecretLabel}
+              </span>
+            ) : null}
+            {qa.length ? (
+              <button
+                type="button"
+                className="btn btn-clear shrink-0"
+                onClick={clearAnswers}
+                title={t("home.clearAnswersHint")}
+                disabled={speaking || loading}
+              >
+                <Trash size={16} weight="bold" />
+                {t("home.clearAnswers")}
+              </button>
+            ) : null}
+          </div>
         </div>
         <QaList
           key={qaEpoch}
@@ -994,7 +1120,7 @@ export default function HomePage() {
           }}
           playingIndex={playingIndex}
           loading={loading}
-          exportingAudio={exportingAudio}
+          exportingAudio={exportingAudio || exportingPdf}
         />
       </section>
 
@@ -1022,16 +1148,44 @@ export default function HomePage() {
           <button
             type="button"
             className="action-dock-save"
-            disabled={!qa.length || exportingAudio || speaking}
+            disabled={!qa.length || exportingAudio || exportingPdf || speaking}
             onClick={() => exportAudio()}
             title={t("home.saveAudioHint")}
           >
             <DownloadSimple size={15} weight="bold" />
-            {exportingAudio
-              ? t("home.exportingAudioShort")
-              : t("home.saveAudio", {
-                  n: selected.size || qa.length,
-                })}
+            {exportingAudio ? (
+              t("home.exportingAudioShort")
+            ) : (
+              <span className="action-dock-export-label">
+                <span>{t("home.exportLine1")}</span>
+                <span>
+                  {t("home.exportAudioLine2", {
+                    n: selected.size || qa.length,
+                  })}
+                </span>
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            className="action-dock-pdf"
+            disabled={!qa.length || exportingAudio || exportingPdf || speaking}
+            onClick={() => exportPdf()}
+            title={t("home.savePdfHint")}
+          >
+            <FilePdf size={15} weight="bold" />
+            {exportingPdf ? (
+              t("home.exportingPdfShort")
+            ) : (
+              <span className="action-dock-export-label">
+                <span>{t("home.exportLine1")}</span>
+                <span>
+                  {t("home.exportPdfLine2", {
+                    n: selected.size || qa.length,
+                  })}
+                </span>
+              </span>
+            )}
           </button>
         </motion.div>
         <AnimatePresence mode="wait" initial={false}>

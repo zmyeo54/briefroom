@@ -124,14 +124,14 @@ export default function SettingsPage() {
 
   return (
     <Shell>
-      <header className="mb-5 md:mb-8">
+      <header className="page-hero mb-6 md:mb-10">
         <p className="label mb-2 md:mb-3">{t("settings.eyebrow")}</p>
         <h1 className="display text-[1.75rem] title sm:text-3xl md:text-4xl">
           {t("settings.title")}
         </h1>
       </header>
 
-      <section className="panel p-3.5 md:p-6">
+      <section className="panel p-4 sm:p-5 md:p-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
           <div className="space-y-3">
             <Field label={t("settings.name")}>
@@ -206,6 +206,21 @@ export default function SettingsPage() {
             ) : (
               <p className="warn text-xs font-bold">{t("settings.noKey")}</p>
             )}
+            <Field label={t("settings.aiRegion")}>
+              <select
+                className="field"
+                value={settings.aiRegion}
+                onChange={(e) =>
+                  patch({ aiRegion: e.target.value, aiRegionManual: true })
+                }
+              >
+                <option value="global">{t("settings.aiRegion.global")}</option>
+                <option value="greater-china">
+                  {t("settings.aiRegion.greaterChina")}
+                </option>
+              </select>
+            </Field>
+            <p className="text-xs mute">{t("settings.aiRegionHint")}</p>
           </div>
 
           <div className="space-y-3">

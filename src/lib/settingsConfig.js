@@ -97,51 +97,56 @@ export function voiceForInterviewLang(lang, currentVoice) {
 }
 
 /**
- * Cheapest / highest free-tier headroom first, then older models
- * (kept for when their quota resets). Drop only deprecated IDs.
+ * Pinned versioned ID — do not use `-latest` aliases; Google hot-swaps those
+ * to newer (often pricier) models without your code changing.
  */
-export const GEMINI_MODELS = [
-  {
-    id: "gemini-flash-lite-latest",
-    label: "Flash-Lite latest (default · cheapest)",
-  },
-  {
-    id: "gemini-3.1-flash-lite",
-    label: "3.1 Flash-Lite",
-  },
-  {
-    id: "gemini-flash-latest",
-    label: "Flash latest",
-  },
-  {
-    id: "gemini-3.5-flash",
-    label: "3.5 Flash",
-  },
-  {
-    id: "gemini-2.5-flash-lite",
-    label: "2.5 Flash-Lite",
-  },
-  {
-    id: "gemini-2.0-flash-lite",
-    label: "2.0 Flash-Lite",
-  },
-  {
-    id: "gemini-2.0-flash",
-    label: "2.0 Flash",
-  },
+export const PINNED_GEMINI_MODEL = "gemini-2.5-flash-lite";
+
+/** @deprecated use PINNED_GEMINI_MODEL */
+export const GEMINI_MODELS = [{ id: PINNED_GEMINI_MODEL, label: "2.5 Flash-Lite" }];
+
+export const DEFAULT_MODEL = PINNED_GEMINI_MODEL;
+
+/** Which server-side LLM to prefer (sent on each /api/chat request). */
+export const AI_REGIONS = [
+  { id: "global" },
+  { id: "greater-china" },
 ];
+export const DEFAULT_AI_REGION = "global";
+const GREATER_CHINA_COUNTRIES = new Set(["CN", "HK"]);
 
-export const DEFAULT_MODEL = GEMINI_MODELS[0].id;
+export function isGreaterChinaCountry(country) {
+  return GREATER_CHINA_COUNTRIES.has(String(country || "").toUpperCase());
+}
 
-/**
- * Preferred + one fallback only.
- * Cascading every model on failure burns free-tier RPD (each try = 1 request).
- */
+export function normalizeAiRegion(raw) {
+  const id = String(raw || "").toLowerCase();
+  if (
+    id === "greater-china" ||
+    id === "greaterchina" ||
+    id === "china" ||
+    id === "cn" ||
+    id === "hk"
+  ) {
+    return "greater-china";
+  }
+  return "global";
+}
+
+/** Auto-pick Greater China for CN/HK unless the user chose manually. */
+export function aiRegionForGeo(country, settings = {}) {
+  if (settings.aiRegionManual) {
+    return normalizeAiRegion(settings.aiRegion);
+  }
+  if (isGreaterChinaCountry(country)) return "greater-china";
+  return normalizeAiRegion(settings.aiRegion || DEFAULT_AI_REGION);
+}
+
+/** Single pinned model — no silent fallback to a costlier tier. */
 export function geminiModelsToTry(preferred = DEFAULT_MODEL) {
-  const ids = GEMINI_MODELS.map((m) => m.id);
-  const first = ids.includes(preferred) ? preferred : DEFAULT_MODEL;
-  const fallback = ids.find((id) => id !== first);
-  return fallback ? [first, fallback] : [first];
+  const model =
+    preferred === PINNED_GEMINI_MODEL ? PINNED_GEMINI_MODEL : DEFAULT_MODEL;
+  return [model];
 }
 
 /**
@@ -188,13 +193,15 @@ export const defaultSettings = {
   interviewerRole: DEFAULT_INTERVIEWER_ROLE,
   focuses: [...DEFAULT_FOCUSES],
   systemPrompt: DEFAULT_SYSTEM,
+  aiRegion: DEFAULT_AI_REGION,
+  aiRegionManual: false,
 };
 
 export function normalizeSettings(raw) {
   const merged = { ...defaultSettings, ...(raw || {}) };
   merged.baseUrl = GEMINI_BASE;
-  // Always lock to the default free model — no picker in UI
-  merged.model = DEFAULT_MODEL;
+  // Always lock to pinned cheapest model — no picker, no `-latest` drift
+  merged.model = PINNED_GEMINI_MODEL;
   if (!INTERVIEW_LANGS.some((l) => l.id === merged.lang)) {
     merged.lang = "en";
   }
@@ -231,6 +238,8 @@ export function normalizeSettings(raw) {
   }
   merged.interviewerRole = normalizeInterviewerRole(merged.interviewerRole);
   merged.focuses = normalizeFocuses(merged.focuses);
+  merged.aiRegion = normalizeAiRegion(merged.aiRegion);
+  merged.aiRegionManual = Boolean(merged.aiRegionManual);
 
   // Keep apiKey as the user override only — empty means "use env / server key".
   // (Previously we refilled from VITE_ here, which made Clear impossible.)

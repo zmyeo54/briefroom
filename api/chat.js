@@ -7,6 +7,30 @@ export const config = {
 
 const GEMINI_BASE =
   "https://generativelanguage.googleapis.com/v1beta/openai";
+const DEEPSEEK_BASE = "https://api.deepseek.com";
+export const DEEPSEEK_MODEL = "deepseek-v4-flash";
+export const AI_REGION_HEADER = "x-linecheck-ai-region";
+
+/** User setting: global → Gemini, greater-china → DeepSeek. */
+export function parseAiRegion(req) {
+  const raw = String(req.headers?.[AI_REGION_HEADER] || "").toLowerCase();
+  if (
+    raw === "greater-china" ||
+    raw === "greaterchina" ||
+    raw === "china" ||
+    raw === "cn" ||
+    raw === "hk"
+  ) {
+    return "greater-china";
+  }
+  if (raw === "global") return "global";
+  return "";
+}
+
+function isGreaterChinaCountry(country) {
+  const c = String(country || "").toUpperCase();
+  return c === "CN" || c === "HK";
+}
 
 /** Comma/space-separated + GEMINI_API_KEY_2..10. Deduped. */
 export function collectServerKeys(env = process.env) {
@@ -24,6 +48,11 @@ export function collectServerKeys(env = process.env) {
   return out;
 }
 
+export function collectDeepSeekKeys(env = process.env) {
+  const k = String(env.DEEPSEEK_API_KEY || "").trim();
+  return k ? [k] : [];
+}
+
 /** User key (request) first, then server pool — used for this call only. */
 export function keysForRequest(userKey, env = process.env) {
   const out = [];
@@ -33,6 +62,69 @@ export function keysForRequest(userKey, env = process.env) {
     if (!out.includes(k)) out.push(k);
   }
   return out;
+}
+
+export function keysForProvider(provider, userKey, env = process.env) {
+  const out = [];
+  const u = String(userKey || "").trim();
+  if (u) out.push(u);
+  const pool =
+    provider === "deepseek" ? collectDeepSeekKeys(env) : collectServerKeys(env);
+  for (const k of pool) {
+    if (!out.includes(k)) out.push(k);
+  }
+  return out;
+}
+
+/** Settings override first; legacy fallback uses Vercel geo when header omitted. */
+export function pickProvider(req, env = process.env) {
+  const hasGemini = collectServerKeys(env).length > 0;
+  const hasDeepseek = collectDeepSeekKeys(env).length > 0;
+  const region = parseAiRegion(req);
+
+  if (region === "greater-china") {
+    if (hasDeepseek) return "deepseek";
+    if (hasGemini) return "gemini";
+    return null;
+  }
+  if (region === "global") {
+    if (hasGemini) return "gemini";
+    if (hasDeepseek) return "deepseek";
+    return null;
+  }
+
+  const country = String(
+    req.headers?.["x-vercel-ip-country"] || ""
+  ).toUpperCase();
+  if (isGreaterChinaCountry(country) && hasDeepseek) return "deepseek";
+  if (hasGemini) return "gemini";
+  if (hasDeepseek) return "deepseek";
+  return null;
+}
+
+export function otherProvider(provider, env = process.env) {
+  const alt = provider === "deepseek" ? "gemini" : "deepseek";
+  const has =
+    alt === "deepseek"
+      ? collectDeepSeekKeys(env).length > 0
+      : collectServerKeys(env).length > 0;
+  return has ? alt : null;
+}
+
+export function providersToTry(req, env = process.env) {
+  const primary = pickProvider(req, env);
+  if (!primary) return [];
+  const out = [primary];
+  const alt = otherProvider(primary, env);
+  if (alt && alt !== primary) out.push(alt);
+  return out;
+}
+
+export function bodyForProvider(body, provider) {
+  if (provider === "deepseek") {
+    return { ...body, model: DEEPSEEK_MODEL };
+  }
+  return body;
 }
 
 export function shouldTryNextKey(status, data) {
@@ -48,14 +140,31 @@ export function shouldTryNextKey(status, data) {
   );
 }
 
+export function shouldTryOtherProvider(status, data) {
+  // Same client body would fail on the other provider too.
+  if (status === 400) return false;
+  if (status === 402 || status === 429) return true;
+  if (status === 401 || status === 403 || status === 404) return true;
+  if (status >= 500) return true;
+  const msg = String(
+    data?.error?.message ||
+      data?.error?.status ||
+      (typeof data?.error === "string" ? data.error : "") ||
+      ""
+  );
+  return /quota|rate.?limit|not found|not available|no longer available|invalid.?key|RESOURCE_EXHAUSTED|timeout|timed out|ECONNREFUSED|fetch failed/i.test(
+    msg
+  );
+}
+
 function bearerFromReq(req) {
   const h = String(req.headers?.authorization || "");
   const m = /^Bearer\s+(.+)$/i.exec(h);
   return m ? m[1].trim() : "";
 }
 
-async function callGemini(key, body) {
-  const upstream = await fetch(`${GEMINI_BASE}/chat/completions`, {
+async function callChat(baseUrl, key, body) {
+  const upstream = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -67,6 +176,23 @@ async function callGemini(key, body) {
   return { upstream, data };
 }
 
+async function callProvider(provider, key, body) {
+  const base = provider === "deepseek" ? DEEPSEEK_BASE : GEMINI_BASE;
+  const payload = bodyForProvider(body, provider);
+  let { upstream, data } = await callChat(base, key, payload);
+
+  if (
+    !upstream.ok &&
+    body.response_format &&
+    /response_format|json_object|unknown/i.test(data?.error?.message || "")
+  ) {
+    const { response_format: _, ...rest } = payload;
+    ({ upstream, data } = await callChat(base, key, rest));
+  }
+
+  return { upstream, data };
+}
+
 export default async function handler(req, res) {
   cors(res);
   if (req.method === "OPTIONS") {
@@ -74,10 +200,20 @@ export default async function handler(req, res) {
     return;
   }
 
-  const serverKeys = collectServerKeys();
+  const geminiKeys = collectServerKeys();
+  const deepseekKeys = collectDeepSeekKeys();
+  const hasKey = geminiKeys.length > 0 || deepseekKeys.length > 0;
 
   if (req.method === "GET") {
-    res.status(200).json({ hasKey: serverKeys.length > 0 });
+    const country = String(
+      req.headers?.["x-vercel-ip-country"] || ""
+    ).toUpperCase();
+    res.status(200).json({
+      hasKey,
+      hasGemini: geminiKeys.length > 0,
+      hasDeepseek: deepseekKeys.length > 0,
+      country: country || null,
+    });
     return;
   }
 
@@ -86,12 +222,13 @@ export default async function handler(req, res) {
     return;
   }
 
-  const keys = keysForRequest(bearerFromReq(req));
-  if (!keys.length) {
+  const userKey = bearerFromReq(req);
+  const order = providersToTry(req);
+  if (!order.length) {
     res.status(503).json({
       error: {
         message:
-          "No GEMINI_API_KEY on the server. Set it in Vercel env (no VITE_ needed) and redeploy, or paste a key in Settings.",
+          "No API key on the server. Set GEMINI_API_KEY and/or DEEPSEEK_API_KEY in Vercel env, or paste a key in Settings.",
       },
     });
     return;
@@ -106,21 +243,26 @@ export default async function handler(req, res) {
   try {
     let upstream;
     let data;
-    for (let i = 0; i < keys.length; i++) {
-      ({ upstream, data } = await callGemini(keys[i], body));
 
-      // Retry without response_format if the model rejects it
-      if (
-        !upstream.ok &&
-        body.response_format &&
-        /response_format|json_object|unknown/i.test(data?.error?.message || "")
-      ) {
-        const { response_format: _, ...rest } = body;
-        ({ upstream, data } = await callGemini(keys[i], rest));
+    for (let p = 0; p < order.length; p++) {
+      const provider = order[p];
+      const keys = keysForProvider(provider, userKey);
+      if (!keys.length) continue;
+
+      for (let i = 0; i < keys.length; i++) {
+        ({ upstream, data } = await callProvider(provider, keys[i], body));
+        if (upstream.ok) break;
+        if (shouldTryNextKey(upstream.status, data) && i < keys.length - 1) {
+          continue;
+        }
+        break;
       }
 
       if (upstream.ok) break;
-      if (shouldTryNextKey(upstream.status, data) && i < keys.length - 1) {
+      if (
+        p < order.length - 1 &&
+        shouldTryOtherProvider(upstream.status, data)
+      ) {
         continue;
       }
       break;
@@ -129,7 +271,7 @@ export default async function handler(req, res) {
     res.status(upstream.status).json(data);
   } catch (e) {
     res.status(502).json({
-      error: { message: e.message || "Upstream Gemini request failed" },
+      error: { message: e.message || "Upstream chat request failed" },
     });
   }
 }
@@ -140,6 +282,7 @@ if (typeof process !== "undefined" && process.argv?.[1]?.endsWith("chat.js")) {
     GEMINI_API_KEY: "a,b",
     GEMINI_API_KEY_2: "c",
     VITE_GEMINI_API_KEY: "a",
+    DEEPSEEK_API_KEY: "ds",
   };
   console.assert(
     JSON.stringify(collectServerKeys(env)) === JSON.stringify(["a", "b", "c"]),
@@ -152,5 +295,38 @@ if (typeof process !== "undefined" && process.argv?.[1]?.endsWith("chat.js")) {
   );
   console.assert(shouldTryNextKey(429, {}), "429 rotates");
   console.assert(!shouldTryNextKey(400, { error: { message: "bad" } }), "400 stays");
+  console.assert(
+    pickProvider({ headers: { "x-vercel-ip-country": "CN" } }, env) ===
+      "deepseek",
+    "CN geo → deepseek"
+  );
+  console.assert(
+    pickProvider(
+      { headers: { [AI_REGION_HEADER]: "global", "x-vercel-ip-country": "CN" } },
+      env
+    ) === "gemini",
+    "global setting beats CN geo"
+  );
+  console.assert(
+    pickProvider({ headers: { [AI_REGION_HEADER]: "greater-china" } }, env) ===
+      "deepseek",
+    "greater-china → deepseek"
+  );
+  console.assert(
+    isGreaterChinaCountry("HK") && isGreaterChinaCountry("CN"),
+    "greater china countries"
+  );
+  console.assert(
+    pickProvider({ headers: { "x-vercel-ip-country": "US" } }, env) ===
+      "gemini",
+    "US → gemini"
+  );
+  console.assert(shouldTryOtherProvider(404, { error: { message: "not found" } }), "404 falls back");
+  console.assert(!shouldTryOtherProvider(400, {}), "400 stays");
+  console.assert(
+    bodyForProvider({ model: "gemini-2.5-flash-lite", messages: [] }, "deepseek")
+      .model === DEEPSEEK_MODEL,
+    "deepseek model swap"
+  );
   console.log("ok");
 }

@@ -1,14 +1,14 @@
 import { motion, useReducedMotion } from "framer-motion";
 
 const BUBBLE_META = [
-  { size: 128, delay: 0, dur: 3.4 },
-  { size: 144, delay: 0.45, dur: 4.1 },
-  { size: 120, delay: 0.9, dur: 3.7 },
-  { size: 136, delay: 0.2, dur: 4.4 },
-  { size: 124, delay: 1.1, dur: 3.9 },
-  { size: 140, delay: 0.65, dur: 4.2 },
-  { size: 116, delay: 0.35, dur: 3.5 },
-  { size: 132, delay: 0.8, dur: 4.6 },
+  { size: 128, delay: 0, dur: 3.4, driftDur: 8.4, driftX: 11, driftY: -13, driftRot: 4.5 },
+  { size: 144, delay: 0.45, dur: 4.1, driftDur: 9.6, driftX: -10, driftY: -11, driftRot: -3.5 },
+  { size: 120, delay: 0.9, dur: 3.7, driftDur: 7.8, driftX: 9, driftY: 12, driftRot: 5 },
+  { size: 136, delay: 0.2, dur: 4.4, driftDur: 10.2, driftX: -12, driftY: 10, driftRot: -4 },
+  { size: 124, delay: 1.1, dur: 3.9, driftDur: 8.8, driftX: 8, driftY: -14, driftRot: 3.5 },
+  { size: 140, delay: 0.65, dur: 4.2, driftDur: 9.4, driftX: -9, driftY: -9, driftRot: -5.5 },
+  { size: 116, delay: 0.35, dur: 3.5, driftDur: 7.4, driftX: 13, driftY: 11, driftRot: 4 },
+  { size: 132, delay: 0.8, dur: 4.6, driftDur: 10.8, driftX: -11, driftY: 13, driftRot: -3 },
 ];
 
 export default function FocusBubbles({
@@ -40,7 +40,11 @@ export default function FocusBubbles({
             style={{
               "--float-delay": `${meta.delay}s`,
               "--float-dur": `${meta.dur}s`,
+              "--drift-dur": `${meta.driftDur}s`,
               "--float-amp": `${10 + (i % 4) * 3}px`,
+              "--drift-x": `${meta.driftX}px`,
+              "--drift-y": `${meta.driftY}px`,
+              "--drift-rot": `${meta.driftRot}deg`,
             }}
           >
             <motion.button

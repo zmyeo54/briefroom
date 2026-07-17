@@ -4,6 +4,8 @@
  * Other sites: local helper first, then browser Jina / AllOrigins fallbacks.
  */
 
+import { extractJobTitle, parseJinaMeta } from "./jobMeta.js";
+
 function normalizeUrl(input) {
   const raw = (input || "").trim();
   if (!raw) throw new Error("Paste a URL first.");
@@ -67,7 +69,11 @@ async function viaLocalHelper(url) {
   if (looksLikeLoginWall(text)) {
     throw new Error("Got a LinkedIn login page instead of the job description");
   }
-  return text;
+  return {
+    text,
+    title: String(data.title || "").trim() || extractJobTitle(text),
+    company: String(data.company || "").trim(),
+  };
 }
 
 async function viaJina(url) {
@@ -84,7 +90,7 @@ async function viaJina(url) {
   if (looksLikeLoginWall(text)) {
     throw new Error("Reader hit a login wall");
   }
-  return text;
+  return { text, ...parseJinaMeta(text) };
 }
 
 async function viaAllOrigins(url) {
@@ -97,7 +103,7 @@ async function viaAllOrigins(url) {
   if (looksLikeLoginWall(text)) {
     throw new Error("Proxy hit a login wall");
   }
-  return text;
+  return { text, title: extractJobTitle(text), company: "" };
 }
 
 export async function extractTextFromUrl(input, _onProgress) {
