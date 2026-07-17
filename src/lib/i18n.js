@@ -245,8 +245,11 @@ const en = {
   "settings.cancel": "Back",
   "settings.saved": "Saved.",
   "settings.playingSample": "Playing sample question, then answer…",
-  "settings.testDone": "Sounds good — you’re set.",
+  "settings.testDone": "Sounds good — you're set.",
   "settings.keySaved": "Key saved on this device only.",
+  "settings.replayTour": "Welcome tour",
+  "settings.replayTourHint": "Replay the quick-start guide to relearn the app features.",
+  "settings.replayTourBtn": "Replay Tour",
 
   "lang.en.eyebrow": "Default",
   "lang.en.label": "English",
@@ -594,6 +597,9 @@ const zh = {
   "settings.playingSample": "正在播放示例问题，再播放回答…",
   "settings.testDone": "听感不错——可以开始了。",
   "settings.keySaved": "密钥仅保存在本机。",
+  "settings.replayTour": "新手引导",
+  "settings.replayTourHint": "重新播放快速引导，重新了解应用功能。",
+  "settings.replayTourBtn": "重新播放",
 
   "lang.en.eyebrow": "默认",
   "lang.en.label": "English",

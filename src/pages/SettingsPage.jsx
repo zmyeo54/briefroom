@@ -13,6 +13,7 @@ import {
   Trash,
   CheckCircle,
   WarningCircle,
+  Question,
 } from "@phosphor-icons/react";
 import {
   INTERVIEW_LANGS,
@@ -25,6 +26,7 @@ import { loadJson, saveJson } from "../lib/storage";
 import { speakQa, voicesForLang } from "../lib/tts";
 import { useI18n } from "../lib/I18nContext";
 import Shell from "../components/Shell";
+import { resetOnboarding } from "../components/OnboardingTour";
 
 const SECTION_DELAY = 0.08;
 
@@ -496,6 +498,36 @@ export default function SettingsPage() {
                     </>
                   )}
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Replay welcome tour */}
+          <div className="settings-card">
+            <div className="settings-card-header">
+              <span className="settings-card-icon">
+                <Question size={16} weight="bold" />
+              </span>
+              <span className="settings-card-label">
+                {t("settings.replayTour")}
+              </span>
+            </div>
+            <div className="settings-card-body">
+              <div className="settings-row">
+                <p className="settings-row-hint" style={{ marginBottom: 8 }}>
+                  {t("settings.replayTourHint")}
+                </p>
+                <button
+                  type="button"
+                  className="settings-btn-test"
+                  onClick={() => {
+                    resetOnboarding();
+                    navigate("/");
+                  }}
+                >
+                  <Play size={16} weight="fill" />
+                  {t("settings.replayTourBtn")}
+                </button>
               </div>
             </div>
           </div>
