@@ -1,4 +1,4 @@
-const CACHE = "linecheck-v2";
+const CACHE = "linecheck-v3";
 const ASSETS = [
   "/",
   "/index.html",

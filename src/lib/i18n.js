@@ -543,6 +543,23 @@ export function normalizeUiLang(id) {
   return id === "zh" ? "zh" : "en";
 }
 
+/** Phone/browser UI language → app uiLang. zh-* (incl. TW/HK) → 中文. */
+export function deviceUiLang() {
+  try {
+    const tags = [
+      ...(typeof navigator !== "undefined" && Array.isArray(navigator.languages)
+        ? navigator.languages
+        : []),
+      typeof navigator !== "undefined" ? navigator.language : "",
+    ];
+    return tags.some((t) => /^zh\b/i.test(String(t || "")))
+      ? "zh"
+      : DEFAULT_UI_LANG;
+  } catch {
+    return DEFAULT_UI_LANG;
+  }
+}
+
 export function translate(uiLang, key, vars = {}) {
   const lang = normalizeUiLang(uiLang);
   const table = TABLES[lang] || en;
