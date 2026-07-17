@@ -173,8 +173,8 @@ export default function HomePage() {
     const top = fabDragState.current.startTop + dy;
     const minX = 8;
     const minY = 8;
-    const maxX = window.innerWidth - 8 - 240;
-    const maxY = window.innerHeight - 8 - 72;
+    const maxX = window.innerWidth - 8 - fabDragState.current.width;
+    const maxY = window.innerHeight - 8 - fabDragState.current.height;
     setFabPos({
       dragged: true,
       left: clamp(left, minX, maxX),
@@ -204,6 +204,8 @@ export default function HomePage() {
       startY: event.clientY,
       startLeft: fabPos.dragged ? fabPos.left : fabRect.left,
       startTop: fabPos.dragged ? fabPos.top : fabRect.top,
+      width: fabRect.width,
+      height: fabRect.height,
     };
     setFabDragging(true);
     event.currentTarget.setPointerCapture(event.pointerId);

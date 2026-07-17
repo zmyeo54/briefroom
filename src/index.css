@@ -95,7 +95,7 @@ html[lang="zh-CN"] .focus-bubble-label {
 .shell-pad {
   padding-left: max(1.25rem, env(safe-area-inset-left, 0px));
   padding-right: max(1.25rem, env(safe-area-inset-right, 0px));
-  padding-bottom: max(4rem, calc(env(safe-area-inset-bottom, 0px) + 3.75rem));
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
 }
 @media (min-width: 480px) {
   .shell-pad {
@@ -113,7 +113,7 @@ html[lang="zh-CN"] .focus-bubble-label {
   .shell-pad {
     padding-left: max(2.75rem, env(safe-area-inset-left, 0px));
     padding-right: max(2.75rem, env(safe-area-inset-right, 0px));
-    padding-bottom: max(4.5rem, calc(env(safe-area-inset-bottom, 0px) + 4rem));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
   }
 }
 @media (min-width: 1024px) {
