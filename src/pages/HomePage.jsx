@@ -142,6 +142,7 @@ export default function HomePage() {
   const [audioReady, setAudioReady] = useState(false);
   const [fabPos, setFabPos] = useState({ dragged: false, left: 0, top: 0 });
   const [fabDragging, setFabDragging] = useState(false);
+  const fabElementRef = useRef(null);
   const fabDragState = useRef({ active: false, startX: 0, startY: 0, startLeft: 0, startTop: 0 });
   const [exportingAudio, setExportingAudio] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -194,7 +195,9 @@ export default function HomePage() {
     if (event.button !== 0) return;
     const target = event.target;
     if (target.closest("button")) return;
-    const fabRect = event.currentTarget.getBoundingClientRect();
+    const fabRect = fabElementRef.current
+      ? fabElementRef.current.getBoundingClientRect()
+      : event.currentTarget.getBoundingClientRect();
     fabDragState.current = {
       active: true,
       startX: event.clientX,
@@ -1312,10 +1315,10 @@ export default function HomePage() {
       </div>
 
       <AnimatePresence>
-        {speaking && (audioReady || audioPaused) ? (
+        {speaking ? (
           <motion.div
             key="playback-fab"
-            ref={fabDragState}
+            ref={fabElementRef}
             className={`playback-fab ${fabDragging ? "dragging" : ""}`}
             role="group"
             aria-label={t("home.playbackControls")}
@@ -1336,7 +1339,16 @@ export default function HomePage() {
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
           >
             <span className="playback-fab-label">
-              {audioPaused ? t("home.paused") : t("home.playingAudio")}
+              {!audioReady && !audioPaused ? (
+                <>
+                  <SpinnerGap size={16} className="animate-spin" />
+                  {t("home.preparingAudio")}
+                </>
+              ) : audioPaused ? (
+                t("home.paused")
+              ) : (
+                t("home.playingAudio")
+              )}
             </span>
             <button
               type="button"
