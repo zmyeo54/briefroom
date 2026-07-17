@@ -163,6 +163,9 @@ export default function HomePage() {
     setSpeaking(false);
     setAudioPaused(false);
     setAudioReady(false);
+    setAudioNote((prev) =>
+      prev.kind === "error" || prev.kind === "ok" ? prev : { text: "", kind: "" }
+    );
   };
 
   const haltPlayback = () => {
@@ -759,6 +762,7 @@ export default function HomePage() {
       setSpeaking(true);
       setAudioPaused(false);
       setAudioReady(false);
+      setStatus({ text: "", kind: "" });
       setAudioNote({ text: t("home.preparingAudio"), kind: "" });
       setPlayingIndex(i);
       try {
@@ -794,6 +798,7 @@ export default function HomePage() {
     setSpeaking(true);
     setAudioPaused(false);
     setAudioReady(false);
+    setStatus({ text: "", kind: "" });
     setAudioNote({ text: t("home.preparingAudio"), kind: "" });
     try {
       const entries = indices.map((i) => {

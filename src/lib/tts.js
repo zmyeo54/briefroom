@@ -8,6 +8,27 @@ let playToken = 0;
 const audioCache = new Map();
 const CACHE_MAX = 100;
 const FETCH_CONCURRENCY = 3;
+/** Edge drops WS mid-synthesis when many turns run at once (no turn.end). */
+const TTS_INFLIGHT_LIMIT = 2;
+let ttsInflight = 0;
+const ttsWaiters = [];
+
+function withTtsSlot(fn) {
+  return new Promise((resolve, reject) => {
+    const run = () => {
+      ttsInflight += 1;
+      Promise.resolve()
+        .then(fn)
+        .then(resolve, reject)
+        .finally(() => {
+          ttsInflight -= 1;
+          ttsWaiters.shift()?.();
+        });
+    };
+    if (ttsInflight < TTS_INFLIGHT_LIMIT) run();
+    else ttsWaiters.push(run);
+  });
+}
 
 export const TTS_VOICES = [
   {
@@ -320,12 +341,14 @@ async function fetchAudio(text, voice, rate) {
   };
 
   let lastMsg = "TTS failed";
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const res = await fetch("/api/tts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const res = await withTtsSlot(() =>
+      fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+    );
 
     if (res.ok) {
       const blob = await res.blob();
@@ -340,15 +363,24 @@ async function fetchAudio(text, voice, rate) {
     } catch {
       /* ignore */
     }
+    const transient =
+      res.status === 502 ||
+      res.status === 504 ||
+      isTransientTtsError(res.status, msg);
     if (res.status === 502 || res.status === 504) {
       msg = "Practice voice isn’t ready yet. Give it a moment and try again.";
+    } else if (transient) {
+      msg =
+        attempt < 3
+          ? "Voice cut out mid-line. Trying again…"
+          : "Voice cut out mid-line. Tap play once more.";
     }
     lastMsg = msg;
-    if (attempt === 0 && isTransientTtsError(res.status, msg)) {
-      await new Promise((r) => setTimeout(r, 500));
+    if (attempt < 3 && transient) {
+      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
       continue;
     }
-    throw new Error(msg);
+    throw new Error(lastMsg);
   }
   throw new Error(lastMsg);
 }

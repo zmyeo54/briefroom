@@ -368,6 +368,55 @@ async function longTextChunkPath() {
   ok("long text chunk path", `${buf.length}B ~${estSeconds(buf.length).toFixed(1)}s`);
 }
 
+async function concurrencyCap() {
+  // Mix × parallel items used to open 12–18 Edge WS at once → turn.end drops.
+  let inFlight = 0;
+  let peak = 0;
+  const orig = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    const u = String(url);
+    const isTts =
+      (u.startsWith("/api/tts") || u.includes("/api/tts")) && !u.includes("health");
+    if (isTts) {
+      inFlight += 1;
+      peak = Math.max(peak, inFlight);
+    }
+    try {
+      if (u.startsWith("/api/") || u.includes("/api/")) {
+        const path = u.startsWith("http") ? new URL(u).pathname : u;
+        return orig(`${BASE}${path.startsWith("/") ? path : `/${path}`}`, init);
+      }
+      return orig(url, init);
+    } finally {
+      if (isTts) inFlight -= 1;
+    }
+  };
+  try {
+    const { synthesizeQaAudio } = await import(resolve(ROOT, "src/lib/tts.js"));
+    const stamp = Date.now();
+    const items = Array.from({ length: 3 }, (_, i) => ({
+      q: "Why us? / 为什么是我们？",
+      a: `Ownership ${stamp}-${i}.\n\n权责 ${stamp}-${i}。`,
+      preface: `Question ${i + 1}. / 第${i + 1}题。`,
+    }));
+    await Promise.all(
+      items.map((e) =>
+        synthesizeQaAudio(e.q, e.a, {
+          lang: "both",
+          voiceQ: "en-aria-news",
+          voiceA: "en-guy-news",
+          preface: e.preface,
+          rate: 1,
+        })
+      )
+    );
+    assert(peak <= 2, `TTS inflight peak ${peak} > 2`);
+    ok("concurrency cap", `peak=${peak}`);
+  } finally {
+    globalThis.fetch = orig;
+  }
+}
+
 async function main() {
   console.log(`\nTTS regression @ ${BASE}\n`);
   try {
@@ -379,6 +428,7 @@ async function main() {
 
   const steps = [
     ["unit", unitPlumbing],
+    ["concurrency", concurrencyCap],
     ["each clip", eachClipPlays],
     ["combined", combinedAllClips],
     ["sequence play", speakSequenceOrder],
