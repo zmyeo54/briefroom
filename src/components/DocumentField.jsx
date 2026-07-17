@@ -166,7 +166,7 @@ export default function DocumentField({
 
   return (
     <motion.section
-      layout={!reduce}
+      layout={!reduce ? "position" : false}
       initial={reduce ? false : { opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={
