@@ -135,6 +135,8 @@ export default function HomePage() {
   const [qaEpoch, setQaEpoch] = useState(0);
   const [selected, setSelected] = useState(() => new Set());
   const [loading, setLoading] = useState(false);
+  // Global region: after first Build failure, next attempt forces DeepSeek
+  const [useDeepseekRetry, setUseDeepseekRetry] = useState(false);
   const [status, setStatus] = useState({ text: "", kind: "" });
   const [playingIndex, setPlayingIndex] = useState(-1);
   const [speaking, setSpeaking] = useState(false);
@@ -469,6 +471,9 @@ export default function HomePage() {
     });
 
     try {
+      const region = latest.aiRegion || "global";
+      const forceDeepseek =
+        useDeepseekRetry || region === "greater-china";
       const body = {
         temperature: 0.6,
         max_tokens: estimateMaxTokens({
@@ -489,7 +494,8 @@ export default function HomePage() {
       async function callChat(payload) {
         const headers = {
           "Content-Type": "application/json",
-          "X-Linecheck-AI-Region": latest.aiRegion || "global",
+          // Retry after a global failure, or Greater China setting → DeepSeek
+          "X-Linecheck-AI-Region": forceDeepseek ? "greater-china" : region,
         };
         if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
         try {
@@ -542,6 +548,16 @@ export default function HomePage() {
         return { res, data };
       }
 
+      const offerDeepseekRetry = () => {
+        // Only for Global first failure — next Build switches to DeepSeek
+        if (region === "global" && !useDeepseekRetry) {
+          setUseDeepseekRetry(true);
+          flash(t("home.flash.retryDeepseek"), "error");
+          return true;
+        }
+        return false;
+      };
+
       const models = geminiModelsToTry(latest.model);
       let res;
       let data;
@@ -551,6 +567,7 @@ export default function HomePage() {
         lastStatus = res.status;
         if (res.ok) break;
         if (res.status === 503) {
+          if (offerDeepseekRetry()) return;
           const msg =
             data?.error?.message ||
             t("home.flash.needKey");
@@ -564,15 +581,16 @@ export default function HomePage() {
         break;
       }
 
-      if (lastStatus === 429) {
-        flash(t("home.flash.rateLimited"), "error");
-        return;
-      }
-      if (lastStatus === 404) {
-        flash(t("home.flash.modelUnavailable"), "error");
-        return;
-      }
       if (!res.ok) {
+        if (offerDeepseekRetry()) return;
+        if (lastStatus === 429) {
+          flash(t("home.flash.rateLimited"), "error");
+          return;
+        }
+        if (lastStatus === 404) {
+          flash(t("home.flash.modelUnavailable"), "error");
+          return;
+        }
         const detail =
           data?.error?.message ||
           data?.error?.status ||
@@ -622,6 +640,7 @@ export default function HomePage() {
       const aiCompany = cleanJobTitle(parsed.company || "");
       if (aiTitle) setJobTitle(aiTitle);
       if (aiCompany) setJobCompany(aiCompany);
+      setUseDeepseekRetry(false);
       setQa(items);
       setQaEpoch((n) => n + 1);
       setSelected(new Set());
@@ -636,7 +655,13 @@ export default function HomePage() {
         "ok"
       );
     } catch (e) {
-      flash(`Generate failed: ${e.message}`, "error");
+      const region = latest.aiRegion || "global";
+      if (region === "global" && !useDeepseekRetry) {
+        setUseDeepseekRetry(true);
+        flash(t("home.flash.retryDeepseek"), "error");
+      } else {
+        flash(`Generate failed: ${e.message}`, "error");
+      }
     } finally {
       setLoading(false);
     }

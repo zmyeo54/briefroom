@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html as html_lib
+import json
 import re
 import urllib.error
 import urllib.parse
@@ -19,11 +20,52 @@ LINKEDIN_JOB_RE = re.compile(
     r"linkedin\.com/jobs/view/(?:[^/?#]*-)?(\d+)",
     re.I,
 )
+SEEK_HOST_RE = re.compile(r"(?:jobsdb|jobstreet|seek)\.", re.I)
+SEEK_JOB_RE = re.compile(r"/job/(\d+)", re.I)
+SEEK_JOB_QUERY = """
+query($id: ID!) {
+  jobDetails(id: $id) {
+    job {
+      id
+      title
+      content
+      advertiser { name }
+      location { label }
+    }
+  }
+}
+""".strip()
 
 
 def linkedin_job_id(url: str) -> str | None:
     m = LINKEDIN_JOB_RE.search(url or "")
     return m.group(1) if m else None
+
+
+def seek_job_id(url: str) -> str | None:
+    u = url or ""
+    if not SEEK_HOST_RE.search(u):
+        return None
+    m = SEEK_JOB_RE.search(u)
+    return m.group(1) if m else None
+
+
+def _seek_graphql_hosts(url: str) -> list[str]:
+    hosts: list[str] = []
+    try:
+        p = urlparse(url)
+        if p.scheme and p.hostname:
+            hosts.append(f"{p.scheme}://{p.hostname}")
+    except Exception:
+        pass
+    for h in (
+        "https://hk.jobsdb.com",
+        "https://www.seek.com.au",
+        "https://sg.jobstreet.com",
+    ):
+        if h not in hosts:
+            hosts.append(h)
+    return hosts
 
 
 def _http_get(url: str, timeout: int = 25) -> str:
@@ -204,6 +246,67 @@ def _fetch_google_cache(url: str) -> str | None:
     return None
 
 
+def _http_json(url: str, payload: dict, headers: dict | None = None, timeout: int = 25) -> dict:
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "User-Agent": UA,
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            **(headers or {}),
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as res:
+        return json.loads(res.read().decode("utf-8", errors="replace"))
+
+
+def fetch_seek_job(url: str) -> dict[str, str]:
+    """JobsDB / JobStreet / SEEK — GraphQL jobDetails (HTML is Cloudflare-walled)."""
+    job_id = seek_job_id(url)
+    if not job_id:
+        raise ValueError("Not a SEEK / JobsDB job URL")
+
+    last_err: Exception | None = None
+    for host in _seek_graphql_hosts(url):
+        try:
+            data = _http_json(
+                f"{host}/graphql",
+                {"query": SEEK_JOB_QUERY, "variables": {"id": job_id}},
+                headers={"Origin": host, "Referer": url or f"{host}/job/{job_id}"},
+            )
+            job = ((data.get("data") or {}).get("jobDetails") or {}).get("job") or {}
+            title = str(job.get("title") or "").strip()
+            content = str(job.get("content") or "")
+            company = str(((job.get("advertiser") or {}).get("name")) or "").strip()
+            location = str(((job.get("location") or {}).get("label")) or "").strip()
+            description = _strip_tags(content)
+            if not title or len(description) < 80:
+                raise ValueError("SEEK job had too little description")
+            lines = [
+                f"Role: {title}" if title else "",
+                f"Company: {company}" if company else "",
+                f"Location: {location}" if location else "",
+                "",
+                description,
+            ]
+            text = "\n".join(ln for ln in lines if ln is not None).strip()
+            return {
+                "title": title,
+                "company": company,
+                "location": location,
+                "description": description,
+                "text": text,
+                "sourceUrl": url,
+                "jobId": job_id,
+                "source": "seek",
+            }
+        except Exception as e:
+            last_err = e
+    raise ValueError(f"SEEK / JobsDB fetch failed ({last_err})") from last_err
+
+
 def fetch_generic_page(url: str) -> dict[str, str]:
     # 1) Try Jina reader
     jina = f"https://r.jina.ai/{url}"
@@ -215,7 +318,7 @@ def fetch_generic_page(url: str) -> dict[str, str]:
     except Exception:
         pass
 
-    # 2) Try Google cache (works for Cloudflare-protected sites like JobsDB)
+    # 2) Try Google cache (works for some Cloudflare-protected sites)
     cache_text = _fetch_google_cache(url)
     if cache_text:
         return {"text": cache_text, "sourceUrl": url, "title": "", "company": ""}
@@ -245,4 +348,6 @@ def fetch_job_text(url: str) -> dict[str, str]:
 
     if linkedin_job_id(url):
         return fetch_linkedin_job(url)
+    if seek_job_id(url):
+        return fetch_seek_job(url)
     return fetch_generic_page(url)

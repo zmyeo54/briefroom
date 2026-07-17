@@ -140,6 +140,8 @@ const en = {
     "Too many requests right now. Wait a minute and try again — or add your own Gemini key in Settings.",
   "home.flash.modelUnavailable":
     "That AI model isn’t available right now. Wait a moment and try again.",
+  "home.flash.retryDeepseek":
+    "Build didn’t go through. Tap Build My Questions again — we’ll switch routes and retry.",
   "home.flash.needDocs": "Add your resume and the role first — then we’ll coach from your real story.",
   "home.flash.generating": "Crafting answers you can actually say…",
   "home.flash.generated":
@@ -220,7 +222,7 @@ const en = {
   "settings.aiRegion.global": "Global",
   "settings.aiRegion.greaterChina": "Greater China",
   "settings.aiRegionHint":
-    "Greater China is selected automatically when you're in mainland China or Hong Kong.",
+    "Greater China (or a Hong Kong / mainland China IP) uses DeepSeek. Global uses Gemini first; if Build fails once, tap again and we’ll retry on DeepSeek.",
   "settings.interviewLang": "Practice language",
   "settings.interviewLangHint":
     "Questions and answers will be written in this language.",
@@ -498,6 +500,8 @@ const zh = {
     "请求太频繁了。请稍等一分钟再试——或在设置里填入你自己的 Gemini 密钥。",
   "home.flash.modelUnavailable":
     "当前 AI 模型暂不可用。请稍后再试。",
+  "home.flash.retryDeepseek":
+    "这次生成没成功。请再点一次「生成我的题目」——我们会换一条线路重试。",
   "home.flash.needDocs": "先放上简历和岗位——我们要基于你的真实经历来练。",
   "home.flash.generating": "正在写出你能说出口的回答…",
   "home.flash.generated":
@@ -578,7 +582,7 @@ const zh = {
   "settings.aiRegion.global": "全球",
   "settings.aiRegion.greaterChina": "大中华区",
   "settings.aiRegionHint":
-    "在中国大陆或香港访问时，会自动选择大中华区。",
+    "大中华区（或香港／大陆 IP）走 DeepSeek。全球先走 Gemini；若首次生成失败，再点一次会换 DeepSeek 重试。",
   "settings.interviewLang": "练习语言",
   "settings.interviewLangHint": "问题与回答都会按此语言生成。",
   "settings.gender": "你的性别",

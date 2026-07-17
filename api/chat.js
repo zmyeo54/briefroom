@@ -76,27 +76,23 @@ export function keysForProvider(provider, userKey, env = process.env) {
   return out;
 }
 
-/** Settings override first; legacy fallback uses Vercel geo when header omitted. */
+/** Settings Greater China OR Vercel IP CN/HK → DeepSeek. Else Gemini. */
 export function pickProvider(req, env = process.env) {
   const hasGemini = collectServerKeys(env).length > 0;
   const hasDeepseek = collectDeepSeekKeys(env).length > 0;
   const region = parseAiRegion(req);
-
-  if (region === "greater-china") {
-    if (hasDeepseek) return "deepseek";
-    if (hasGemini) return "gemini";
-    return null;
-  }
-  if (region === "global") {
-    if (hasGemini) return "gemini";
-    if (hasDeepseek) return "deepseek";
-    return null;
-  }
-
   const country = String(
     req.headers?.["x-vercel-ip-country"] || ""
   ).toUpperCase();
-  if (isGreaterChinaCountry(country) && hasDeepseek) return "deepseek";
+  const wantDeepseek =
+    region === "greater-china" || isGreaterChinaCountry(country);
+
+  if (wantDeepseek) {
+    if (hasDeepseek) return "deepseek";
+    if (hasGemini) return "gemini";
+    return null;
+  }
+  // global (or unset): Gemini first
   if (hasGemini) return "gemini";
   if (hasDeepseek) return "deepseek";
   return null;
@@ -111,9 +107,14 @@ export function otherProvider(provider, env = process.env) {
   return has ? alt : null;
 }
 
+/**
+ * Greater China / IP: DeepSeek, then Gemini if needed.
+ * Global: Gemini only — client asks user to retry with DeepSeek after a failure.
+ */
 export function providersToTry(req, env = process.env) {
   const primary = pickProvider(req, env);
   if (!primary) return [];
+  if (primary === "gemini") return [primary];
   const out = [primary];
   const alt = otherProvider(primary, env);
   if (alt && alt !== primary) out.push(alt);
@@ -304,8 +305,15 @@ if (typeof process !== "undefined" && process.argv?.[1]?.endsWith("chat.js")) {
     pickProvider(
       { headers: { [AI_REGION_HEADER]: "global", "x-vercel-ip-country": "CN" } },
       env
-    ) === "gemini",
-    "global setting beats CN geo"
+    ) === "deepseek",
+    "CN IP forces deepseek even if setting is global"
+  );
+  console.assert(
+    pickProvider(
+      { headers: { [AI_REGION_HEADER]: "global", "x-vercel-ip-country": "HK" } },
+      env
+    ) === "deepseek",
+    "HK IP → deepseek"
   );
   console.assert(
     pickProvider({ headers: { [AI_REGION_HEADER]: "greater-china" } }, env) ===
@@ -320,6 +328,18 @@ if (typeof process !== "undefined" && process.argv?.[1]?.endsWith("chat.js")) {
     pickProvider({ headers: { "x-vercel-ip-country": "US" } }, env) ===
       "gemini",
     "US → gemini"
+  );
+  console.assert(
+    JSON.stringify(
+      providersToTry({ headers: { [AI_REGION_HEADER]: "global" } }, env)
+    ) === JSON.stringify(["gemini"]),
+    "global tries gemini only"
+  );
+  console.assert(
+    JSON.stringify(
+      providersToTry({ headers: { [AI_REGION_HEADER]: "greater-china" } }, env)
+    ) === JSON.stringify(["deepseek", "gemini"]),
+    "greater-china tries deepseek then gemini"
   );
   console.assert(shouldTryOtherProvider(404, { error: { message: "not found" } }), "404 falls back");
   console.assert(!shouldTryOtherProvider(400, {}), "400 stays");

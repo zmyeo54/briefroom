@@ -13,6 +13,31 @@ function linkedinJobId(url) {
   return m?.[1] || null;
 }
 
+/** JobsDB / JobStreet / SEEK share one GraphQL jobDetails API (bypasses Cloudflare HTML). */
+function seekJobId(url) {
+  const u = String(url || "");
+  if (!/(?:jobsdb|jobstreet|seek)\./i.test(u)) return null;
+  const m = u.match(/\/job\/(\d+)/i);
+  return m?.[1] || null;
+}
+
+function seekGraphqlHosts(url) {
+  try {
+    const origin = new URL(url).origin;
+    const hosts = [origin];
+    for (const h of [
+      "https://hk.jobsdb.com",
+      "https://www.seek.com.au",
+      "https://sg.jobstreet.com",
+    ]) {
+      if (!hosts.includes(h)) hosts.push(h);
+    }
+    return hosts;
+  } catch {
+    return ["https://hk.jobsdb.com", "https://www.seek.com.au"];
+  }
+}
+
 function stripTags(html) {
   return String(html || "")
     .replace(/<br\s*\/?>/gi, "\n")
@@ -110,6 +135,73 @@ async function fetchJina(url) {
   return { text, title: meta.title, company: meta.company, source: "reader" };
 }
 
+const SEEK_JOB_QUERY = `query($id: ID!) {
+  jobDetails(id: $id) {
+    job {
+      id
+      title
+      content
+      advertiser { name }
+      location { label }
+    }
+  }
+}`;
+
+async function fetchSeekGraphql(host, jobId, referer) {
+  const res = await fetch(`${host}/graphql`, {
+    method: "POST",
+    headers: {
+      "User-Agent": UA,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Origin: host,
+      Referer: referer || `${host}/job/${jobId}`,
+    },
+    body: JSON.stringify({
+      query: SEEK_JOB_QUERY,
+      variables: { id: String(jobId) },
+    }),
+  });
+  if (!res.ok) throw new Error(`SEEK GraphQL failed (${res.status})`);
+  const data = await res.json();
+  const job = data?.data?.jobDetails?.job;
+  if (!job?.title || !job?.content) {
+    const msg = data?.errors?.[0]?.message || "No job details";
+    throw new Error(msg);
+  }
+  const title = String(job.title || "").trim();
+  const company = String(job.advertiser?.name || "").trim();
+  const location = String(job.location?.label || "").trim();
+  const description = stripTags(job.content);
+  if (description.length < 80) throw new Error("SEEK job had too little description");
+  const parts = [
+    title && `Role: ${title}`,
+    company && `Company: ${company}`,
+    location && `Location: ${location}`,
+    description,
+  ].filter(Boolean);
+  return {
+    text: parts.join("\n\n").trim(),
+    title,
+    company,
+    source: "seek",
+  };
+}
+
+async function fetchSeekJob(url) {
+  const id = seekJobId(url);
+  if (!id) throw new Error("Not a SEEK / JobsDB job URL");
+  let lastErr;
+  for (const host of seekGraphqlHosts(url)) {
+    try {
+      return await fetchSeekGraphql(host, id, url);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error("SEEK / JobsDB fetch failed");
+}
+
 /** Fetch via Google cache — works for most job boards behind Cloudflare. */
 async function fetchGoogleCache(url) {
   const cacheUrl = `https://webcache.googleusercontent.com/search?q=cache:${encodeURIComponent(url)}`;
@@ -203,10 +295,11 @@ export default async function handler(req, res) {
     let data;
     try {
       if (linkedinJobId(url)) data = await fetchLinkedIn(url);
+      else if (seekJobId(url)) data = await fetchSeekJob(url);
       else data = await fetchGeneric(url);
     } catch (e) {
-      // LinkedIn often blocks serverless IPs — fall back to reader
-      if (linkedinJobId(url)) {
+      // LinkedIn / SEEK often block serverless IPs — fall back to reader chain
+      if (linkedinJobId(url) || seekJobId(url)) {
         try {
           data = await fetchGeneric(url);
         } catch {

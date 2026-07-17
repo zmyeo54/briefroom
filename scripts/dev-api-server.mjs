@@ -63,17 +63,15 @@ function collectDeepSeekKeys(env = process.env) {
   return k ? [k] : [];
 }
 
-function pickProvider(region, env = process.env) {
+function pickProvider(region, country, env = process.env) {
   const hasGemini = collectServerKeys(env).length > 0;
   const hasDeepseek = collectDeepSeekKeys(env).length > 0;
-  if (region === 'greater-china') {
+  const cc = String(country || '').toUpperCase();
+  const wantDeepseek =
+    region === 'greater-china' || cc === 'CN' || cc === 'HK';
+  if (wantDeepseek) {
     if (hasDeepseek) return 'deepseek';
     if (hasGemini) return 'gemini';
-    return null;
-  }
-  if (region === 'global') {
-    if (hasGemini) return 'gemini';
-    if (hasDeepseek) return 'deepseek';
     return null;
   }
   if (hasGemini) return 'gemini';
@@ -143,9 +141,20 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  const region = String(req.headers['x-linecheck-ai-region'] || '').toLowerCase();
+  const regionRaw = String(req.headers['x-linecheck-ai-region'] || '').toLowerCase();
+  const region =
+    regionRaw === 'greater-china' ||
+    regionRaw === 'greaterchina' ||
+    regionRaw === 'china' ||
+    regionRaw === 'cn' ||
+    regionRaw === 'hk'
+      ? 'greater-china'
+      : regionRaw === 'global'
+        ? 'global'
+        : '';
+  const country = String(req.headers['x-vercel-ip-country'] || '').toUpperCase();
   const userKey = bearerFrom(req);
-  const provider = pickProvider(region);
+  const provider = pickProvider(region, country);
 
   if (!provider) {
     json(res, 503, {
