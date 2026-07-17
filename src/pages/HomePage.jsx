@@ -9,6 +9,8 @@ import {
   SpinnerGap,
   ArrowCounterClockwise,
   Trash,
+  Pause,
+  Play,
 } from "@phosphor-icons/react";
 import DocumentField from "../components/DocumentField";
 import FocusBubbles from "../components/FocusBubbles";
@@ -45,6 +47,8 @@ import {
   speakQa,
   speakQaSequence,
   stopSpeech,
+  pauseSpeech,
+  resumeSpeech,
   exportMergedQaAudio,
 } from "../lib/tts";
 
@@ -99,8 +103,32 @@ export default function HomePage() {
   const [status, setStatus] = useState({ text: "", kind: "" });
   const [playingIndex, setPlayingIndex] = useState(-1);
   const [speaking, setSpeaking] = useState(false);
+  const [audioPaused, setAudioPaused] = useState(false);
+  const [audioReady, setAudioReady] = useState(false);
   const [exportingAudio, setExportingAudio] = useState(false);
   const [audioNote, setAudioNote] = useState({ text: "", kind: "" });
+
+  const endPlayback = () => {
+    setPlayingIndex(-1);
+    setSpeaking(false);
+    setAudioPaused(false);
+    setAudioReady(false);
+  };
+
+  const haltPlayback = () => {
+    stopSpeech();
+    endPlayback();
+  };
+
+  const togglePause = async () => {
+    if (!speaking || !audioReady) return;
+    if (audioPaused) {
+      const ok = await resumeSpeech();
+      if (ok) setAudioPaused(false);
+    } else if (pauseSpeech()) {
+      setAudioPaused(true);
+    }
+  };
 
   useEffect(() => {
     if (!status.text) return undefined;
@@ -170,9 +198,7 @@ export default function HomePage() {
 
   const resetAllContent = () => {
     setResetConfirmOpen(false);
-    stopSpeech();
-    setSpeaking(false);
-    setPlayingIndex(-1);
+    haltPlayback();
     setJd("");
     setQuestionsRaw("");
     setAutoQuestions(true);
@@ -191,9 +217,7 @@ export default function HomePage() {
   };
 
   const clearAnswers = () => {
-    stopSpeech();
-    setSpeaking(false);
-    setPlayingIndex(-1);
+    haltPlayback();
     setQa([]);
     setSelected(new Set());
     setQaEpoch((n) => n + 1);
@@ -293,9 +317,7 @@ export default function HomePage() {
     saveJson("draft", { resume, jd, questions: questionsRaw, autoQuestions });
     setLoading(true);
     flash(t("home.flash.generating"));
-    stopSpeech();
-    setSpeaking(false);
-    setPlayingIndex(-1);
+    haltPlayback();
 
     const userContent = buildUserPrompt({
       resume,
@@ -481,6 +503,8 @@ export default function HomePage() {
       const latest = readSettings();
       stopSpeech();
       setSpeaking(true);
+      setAudioPaused(false);
+      setAudioReady(false);
       setPlayingIndex(i);
       try {
         await speakQa(qa[i].q, qa[i].a, {
@@ -488,12 +512,12 @@ export default function HomePage() {
           voiceQ: latest.voiceQ,
           voiceA: latest.voiceA,
           lang: latest.lang,
+          onStart: () => setAudioReady(true),
         });
       } catch (e) {
         flash(e.message || "TTS failed.", "error");
       } finally {
-        setPlayingIndex(-1);
-        setSpeaking(false);
+        endPlayback();
       }
     },
     [qa]
@@ -510,6 +534,8 @@ export default function HomePage() {
     const latest = readSettings();
     stopSpeech();
     setSpeaking(true);
+    setAudioPaused(false);
+    setAudioReady(false);
     try {
       const entries = indices.map((i) => {
         const preface =
@@ -525,14 +551,13 @@ export default function HomePage() {
         voiceQ: latest.voiceQ,
         voiceA: latest.voiceA,
         lang: latest.lang,
-        onProgress: (j) =>
-          setPlayingIndex(j >= 0 ? indices[j] : -1),
+        onProgress: (j) => setPlayingIndex(j >= 0 ? indices[j] : -1),
+        onStart: () => setAudioReady(true),
       });
     } catch (e) {
       flash(e.message || "TTS failed.", "error");
     } finally {
-      setPlayingIndex(-1);
-      setSpeaking(false);
+      endPlayback();
     }
   };
 
@@ -899,11 +924,7 @@ export default function HomePage() {
             aria-label={t("home.stop")}
             title={t("home.stop")}
             disabled={!speaking}
-            onClick={() => {
-              stopSpeech();
-              setSpeaking(false);
-              setPlayingIndex(-1);
-            }}
+            onClick={haltPlayback}
           >
             <Stop size={18} weight="fill" />
           </button>
@@ -937,6 +958,57 @@ export default function HomePage() {
           </p>
         ) : null}
       </div>
+
+      <AnimatePresence>
+        {speaking ? (
+          <motion.div
+            key="playback-fab"
+            className="playback-fab"
+            role="group"
+            aria-label={t("home.playbackControls")}
+            initial={reduce ? false : { opacity: 0, y: 18, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={reduce ? undefined : { opacity: 0, y: 12, scale: 0.96 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <span className="playback-fab-label">
+              {!audioReady ? (
+                <>
+                  <SpinnerGap size={16} className="animate-spin" />
+                  {t("home.preparingAudio")}
+                </>
+              ) : audioPaused ? (
+                t("home.paused")
+              ) : (
+                t("home.playingAudio")
+              )}
+            </span>
+            <button
+              type="button"
+              className="playback-fab-btn playback-fab-toggle"
+              disabled={!audioReady}
+              aria-label={audioPaused ? t("home.resumePlay") : t("home.pause")}
+              title={audioPaused ? t("home.resumePlay") : t("home.pause")}
+              onClick={togglePause}
+            >
+              {audioPaused ? (
+                <Play size={20} weight="fill" />
+              ) : (
+                <Pause size={20} weight="fill" />
+              )}
+            </button>
+            <button
+              type="button"
+              className="playback-fab-btn playback-fab-stop"
+              aria-label={t("home.stop")}
+              title={t("home.stop")}
+              onClick={haltPlayback}
+            >
+              <Stop size={18} weight="fill" />
+            </button>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       <AnimatePresence>
         {resetConfirmOpen ? (

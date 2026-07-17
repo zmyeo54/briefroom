@@ -4,6 +4,11 @@ let currentAudio = null;
 let currentUrl = null;
 let playToken = 0;
 
+/** In-memory MP3 cache — replay / re-export skips Edge round-trips. */
+const audioCache = new Map();
+const CACHE_MAX = 100;
+const FETCH_CONCURRENCY = 3;
+
 export const TTS_VOICES = [
   {
     id: "zh-xiaoxiao-news",
@@ -268,9 +273,42 @@ function isTransientTtsError(status, msg) {
   );
 }
 
+function cacheKey(text, voice, rate) {
+  return `${normalizeVoiceId(voice)}\0${rateForRequest(rate)}\0${text}`;
+}
+
+function rememberBlob(key, blob) {
+  audioCache.set(key, blob);
+  while (audioCache.size > CACHE_MAX) {
+    audioCache.delete(audioCache.keys().next().value);
+  }
+}
+
+/** Run async work over items with a fixed worker pool (order preserved). */
+async function mapPool(items, limit, fn) {
+  const n = items.length;
+  const out = new Array(n);
+  let next = 0;
+  const workers = Array.from(
+    { length: Math.min(Math.max(1, limit), Math.max(1, n)) },
+    async () => {
+      while (next < n) {
+        const i = next++;
+        out[i] = await fn(items[i], i);
+      }
+    }
+  );
+  await Promise.all(workers);
+  return out;
+}
+
 async function fetchAudio(text, voice, rate) {
   const clean = sanitizeSpeakText(text);
   if (!clean) throw new Error("Nothing to speak");
+
+  const key = cacheKey(clean, voice, rate);
+  const hit = audioCache.get(key);
+  if (hit) return hit;
 
   const payload = {
     text: clean,
@@ -286,7 +324,11 @@ async function fetchAudio(text, voice, rate) {
       body: JSON.stringify(payload),
     });
 
-    if (res.ok) return res.blob();
+    if (res.ok) {
+      const blob = await res.blob();
+      rememberBlob(key, blob);
+      return blob;
+    }
 
     let msg = `TTS failed (${res.status})`;
     try {
@@ -330,10 +372,10 @@ export async function synthesizeQaAudio(
   });
   if (!parts.length) throw new Error("Nothing to export");
 
-  const blobs = [];
-  for (const part of parts) {
-    blobs.push(await fetchAudio(part.text, part.voice, rate));
-  }
+  // Parallel segment fetches — Mix mode has 4–6 parts; sequential felt like “compile time”.
+  const blobs = await Promise.all(
+    parts.map((part) => fetchAudio(part.text, part.voice, rate))
+  );
   return new Blob(blobs, { type: "audio/mpeg" });
 }
 
@@ -359,19 +401,16 @@ export async function exportMergedQaAudio(items, options = {}) {
   if (!list.length) throw new Error("Nothing to export");
 
   const lang = options.lang || "en";
-  const blobs = [];
-  for (let i = 0; i < list.length; i++) {
-    const item = list[i];
+  const blobs = await mapPool(list, FETCH_CONCURRENCY, async (item, i) => {
     const preface =
       lang === "zh" || lang === "both"
         ? `第${i + 1}题。`
         : `Question ${i + 1}.`;
-    const part = await synthesizeQaAudio(item.q, item.a, {
+    return synthesizeQaAudio(item.q, item.a, {
       ...options,
       preface,
     });
-    blobs.push(part);
-  }
+  });
 
   const merged = new Blob(blobs, { type: "audio/mpeg" });
   const stamp = new Date()
@@ -387,7 +426,7 @@ export async function exportQaAudioFiles(items, options = {}) {
   return exportMergedQaAudio(items, options);
 }
 
-function playBlob(blob, token) {
+function playBlob(blob, token, { onStart } = {}) {
   return new Promise((resolve, reject) => {
     if (token !== playToken) {
       resolve();
@@ -405,10 +444,15 @@ function playBlob(blob, token) {
       cleanup();
       reject(new Error("Audio playback failed"));
     };
-    audio.play().catch((e) => {
-      cleanup();
-      reject(e);
-    });
+    audio
+      .play()
+      .then(() => {
+        if (token === playToken) onStart?.();
+      })
+      .catch((e) => {
+        cleanup();
+        reject(e);
+      });
   });
 }
 
@@ -441,6 +485,7 @@ export async function speakQa(
     voiceA = DEFAULT_VOICE_A,
     preface = "",
     lang = "en",
+    onStart,
   } = {}
 ) {
   return speakQaSequence([{ q: question, a: answer, preface }], {
@@ -448,6 +493,7 @@ export async function speakQa(
     voiceQ,
     voiceA,
     lang,
+    onStart,
   });
 }
 
@@ -470,26 +516,44 @@ export async function speakQaSequence(entries, options = {}) {
     voiceA = DEFAULT_VOICE_A,
     lang = "en",
     onProgress,
+    onStart,
   } = options;
 
-  const blobs = [];
-  for (let i = 0; i < list.length; i++) {
-    if (token !== playToken) return;
+  const blobs = await mapPool(list, FETCH_CONCURRENCY, async (e, i) => {
+    if (token !== playToken) return null;
     onProgress?.(i);
-    const e = list[i];
-    blobs.push(
-      await synthesizeQaAudio(e.q, e.a, {
-        rate,
-        voiceQ,
-        voiceA,
-        preface: e.preface || "",
-        lang,
-      })
-    );
-  }
+    return synthesizeQaAudio(e.q, e.a, {
+      rate,
+      voiceQ,
+      voiceA,
+      preface: e.preface || "",
+      lang,
+    });
+  });
   if (token !== playToken) return;
+  if (blobs.some((b) => !b)) return;
   onProgress?.(-1);
-  await playBlob(new Blob(blobs, { type: "audio/mpeg" }), token);
+  await playBlob(new Blob(blobs, { type: "audio/mpeg" }), token, { onStart });
+}
+
+/** Pause current practice audio without cancelling the session. */
+export function pauseSpeech() {
+  if (!currentAudio || currentAudio.paused) return false;
+  currentAudio.pause();
+  return true;
+}
+
+/** Resume after pauseSpeech(). */
+export function resumeSpeech() {
+  if (!currentAudio || !currentAudio.paused) return Promise.resolve(false);
+  return currentAudio
+    .play()
+    .then(() => true)
+    .catch(() => false);
+}
+
+export function isSpeechPaused() {
+  return Boolean(currentAudio && currentAudio.paused && currentAudio.src);
 }
 
 export function stopSpeech() {
