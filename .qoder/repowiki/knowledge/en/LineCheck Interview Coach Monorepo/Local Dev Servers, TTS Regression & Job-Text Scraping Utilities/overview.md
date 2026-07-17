@@ -1,0 +1,1 @@
+Standalone Node/Python helpers that provide a local OpenAI-compatible proxy, an Edge-TTS server, a job-description scraper, and a TTS regression harness for the main app.

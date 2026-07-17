@@ -1,0 +1,2 @@
+- All cross-process HTTP contracts are expressed as `/api/<service>` paths re-mapped by vite.config.js in dev and vercel.json in prod, so neither the frontend nor the serverless routes hard-code upstream hostnames.
+- Server-side entry points live as individual `.js` files under `api/` (one per route) rather than a single router, each configured explicitly in vercel.json with its own `maxDuration`.

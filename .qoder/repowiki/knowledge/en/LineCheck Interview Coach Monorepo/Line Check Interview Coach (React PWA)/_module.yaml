@@ -1,0 +1,10 @@
+schema_version: 1
+module_path: frontend_app
+title: Line Check Interview Coach (React PWA)
+scope:
+    - src/
+    - public/
+source_files: []
+depends_on: []
+related_to:
+    - path: api_routes

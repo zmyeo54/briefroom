@@ -1,0 +1,1 @@
+Vite + React 19 + Tailwind v4 for the SPA; Vercel Functions for serverless `/api/*` handlers; Node + Python co-located under `scripts/` for local dev proxies and utilities; oxlint for linting across all JS/TS files.

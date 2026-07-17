@@ -1,0 +1,1 @@
+`npm run dev` boots the entire local stack in parallel (Python TTS server, Node API proxy, Vite dev server on :8787); `npm run test:tts` runs the TTS regression harness against the live local TTS endpoint; `npm run build` produces the Vercel-ready `dist/` bundle.

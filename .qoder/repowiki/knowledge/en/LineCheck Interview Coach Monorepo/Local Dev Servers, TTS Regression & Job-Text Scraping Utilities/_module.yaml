@@ -1,0 +1,10 @@
+schema_version: 1
+module_path: scripts_and_tools
+title: Local Dev Servers, TTS Regression & Job-Text Scraping Utilities
+scope:
+    - scripts/
+    - _legacy_flat/
+source_files: []
+depends_on: []
+related_to:
+    - path: api_routes

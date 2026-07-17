@@ -1,0 +1,15 @@
+schema_version: 1
+module_path: ""
+title: LineCheck Interview Coach Monorepo
+scope:
+    - README.md
+    - .gitignore
+    - .oxlintrc.json
+    - index.html
+    - package.json
+    - package-lock.json
+    - vercel.json
+    - vite.config.js
+source_files: []
+depends_on: []
+related_to: []

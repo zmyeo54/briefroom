@@ -1,0 +1,1 @@
+React 18 + `react-dom/client` with `react-router-dom` for routing, `framer-motion` for page transitions, `@phosphor-icons/react` for iconography, Web Speech API for TTS, Service Worker + Web App Manifest for PWA, and a Gemini-compatible chat API called either through a Vercel `/api/chat` proxy or directly against a user-supplied OpenAI-compatible base URL.

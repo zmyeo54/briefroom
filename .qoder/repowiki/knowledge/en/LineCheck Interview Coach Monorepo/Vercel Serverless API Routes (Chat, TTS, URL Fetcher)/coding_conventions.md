@@ -1,0 +1,5 @@
+- Every route exports a `config` object declaring `maxDuration` and `api.bodyParser.sizeLimit` before defining its handler.
+- Handlers begin by calling `cors(res)` and immediately short-circuiting `OPTIONS` with a 204 response.
+- Input validation returns early with `res.status(400).json({ error: "..." })` for missing or malformed bodies, and errors bubble up to a top-level catch that responds with 500/502 JSON.
+- Server-side API keys are read from multiple env variables (`GEMINI_API_KEY[_N]`, `VITE_GEMINI_API_KEY`, `DEEPSEEK_API_KEY`) and deduplicated before use; user-supplied Bearer tokens are prepended to the pool per request.
+- Provider/key rotation is driven by status-code + error-message heuristics (`shouldTryNextKey`, `shouldTryOtherProvider`) rather than explicit error types.

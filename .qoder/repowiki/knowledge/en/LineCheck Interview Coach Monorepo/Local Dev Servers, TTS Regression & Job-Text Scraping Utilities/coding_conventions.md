@@ -1,0 +1,5 @@
+- Each script is self-contained and executable directly (`#!/usr/bin/env node` / `#!/usr/bin/env python3` shebangs) without a package manager entry point.
+- Both servers expose dual bare and prefixed paths (`/tts` and `/api/tts`, `/health` and `/api/tts-health`, `/fetch-url` and `/api/fetch-url`) so callers behind different proxies can use either form.
+- CORS is applied uniformly by sending `Access-Control-Allow-Origin: *` plus `GET,POST,OPTIONS` methods and a fixed allow-listed headers set on every response.
+- Error responses are returned as JSON objects with an `error` field containing a human-readable `message` string rather than HTTP status alone.
+- External API calls are retried with exponential backoff (up to 3 attempts) against transient network failures before surfacing the last exception.

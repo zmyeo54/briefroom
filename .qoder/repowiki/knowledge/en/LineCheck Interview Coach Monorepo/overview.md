@@ -1,0 +1,1 @@
+Root monorepo wiring a React PWA, Vercel serverless API routes, and local dev helpers into a single interview-coaching application built with Vite.

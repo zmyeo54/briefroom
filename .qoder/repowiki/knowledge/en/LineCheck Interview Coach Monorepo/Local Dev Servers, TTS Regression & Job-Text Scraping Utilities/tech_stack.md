@@ -1,0 +1,1 @@
+Node ESM (`node:http`, `node:url`, dynamic `import()`) for dev proxy and regression harness; Python 3 with stdlib `http.server` + `asyncio` plus third-party `edge_tts` for the local TTS endpoint; legacy flat PWA uses vanilla JS Service Worker and `speechSynthesis`.
