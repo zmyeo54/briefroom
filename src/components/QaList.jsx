@@ -8,9 +8,11 @@ import {
   CaretDown,
   PushPin,
   DownloadSimple,
+  Brain,
 } from "@phosphor-icons/react";
 import { useI18n } from "../lib/I18nContext";
 import GenerateLoading from "./GenerateLoading";
+import MindmapTree from "./MindmapTree";
 
 export default function QaList({
   items,
@@ -29,6 +31,7 @@ export default function QaList({
   const reduce = useReducedMotion();
   const [open, setOpen] = useState(() => new Set());
   const [copiedIdx, setCopiedIdx] = useState(-1);
+  const [activeTab, setActiveTab] = useState(() => new Map()); // index -> "answer" | "mindmap"
 
   useEffect(() => {
     if (copiedIdx < 0) return undefined;
@@ -51,6 +54,15 @@ export default function QaList({
   const handleCopy = async (i) => {
     await onCopy?.(i);
     setCopiedIdx(i);
+  };
+
+  const getTab = (i) => activeTab.get(i) || "answer";
+  const setTab = (i, tab) => {
+    setActiveTab((prev) => {
+      const next = new Map(prev);
+      next.set(i, tab);
+      return next;
+    });
   };
 
   if (loading) {
@@ -193,15 +205,44 @@ export default function QaList({
                           transition={{ duration: reduce ? 0 : 0.2 }}
                           className="overflow-hidden"
                         >
-                          {item.a?.trim() ? (
-                            <p className="ink mt-3 max-w-[70ch] whitespace-pre-wrap text-sm leading-relaxed">
-                              {item.a}
-                            </p>
+                          {/* Tab switcher */}
+                          <div className="mt-3 flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              className={`mindmap-tab ${getTab(i) === "answer" ? "mindmap-tab--active" : ""}`}
+                              onClick={() => setTab(i, "answer")}
+                            >
+                              {t("qa.answerTab")}
+                            </button>
+                            <button
+                              type="button"
+                              className={`mindmap-tab ${getTab(i) === "mindmap" ? "mindmap-tab--active" : ""}`}
+                              onClick={() => setTab(i, "mindmap")}
+                            >
+                              <Brain size={13} weight="bold" />
+                              {t("qa.mindmapTab")}
+                            </button>
+                          </div>
+
+                          {/* Tab content */}
+                          {getTab(i) === "answer" ? (
+                            <>
+                              {item.a?.trim() ? (
+                                <p className="ink mt-3 max-w-[70ch] whitespace-pre-wrap text-sm leading-relaxed">
+                                  {item.a}
+                                </p>
+                              ) : (
+                                <p className="warn mt-3 text-sm font-medium">
+                                  {t("qa.noAnswer")}
+                                </p>
+                              )}
+                            </>
                           ) : (
-                            <p className="warn mt-3 text-sm font-medium">
-                              {t("qa.noAnswer")}
-                            </p>
+                            <div className="mt-3">
+                              <MindmapTree map={item.map} />
+                            </div>
                           )}
+
                           <div className="mt-3 flex flex-wrap items-center gap-2 pb-1">
                             <button
                               type="button"

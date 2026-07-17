@@ -1,22 +1,64 @@
 import html2pdf from "html2pdf.js";
 import { downloadBlob } from "./tts.js";
 
-function slugify(text) {
-  return (
-    String(text || "")
-      .toLowerCase()
-      .replace(/[^\w\u4e00-\u9fff]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 48) || "interview"
-  );
-}
-
 function escapeHtml(s) {
   return String(s || "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+/** Title-case a string for professional filenames. */
+function titleCase(text) {
+  return String(text || "")
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .replace(/\s+-\s+/g, " - ")
+    .slice(0, 60);
+}
+
+/**
+ * Build a printable mindmap HTML block from map data.
+ * Uses pure CSS table-like layout for PDF compatibility (no SVG/JS).
+ */
+function buildMindmapHtml(map) {
+  if (!map || !map.topic || !Array.isArray(map.branches) || !map.branches.length) {
+    return "";
+  }
+
+  const topic = escapeHtml(map.topic);
+  const topicZh = map.topicZh ? `<span class="mm-topic-zh">${escapeHtml(map.topicZh)}</span>` : "";
+
+  const branchColors = ["#c49a3c", "#4a7ff8", "#ff7648", "#c5b4e3", "#4a9ff8"];
+
+  const branches = map.branches.map((b, idx) => {
+    const color = branchColors[idx % branchColors.length];
+    const label = escapeHtml(b.label || "");
+    const labelZh = b.labelZh ? `<span class="mm-branch-zh">${escapeHtml(b.labelZh)}</span>` : "";
+    const detail = b.detail ? `<span class="mm-detail">${escapeHtml(b.detail)}</span>` : "";
+    const example = b.example ? `<span class="mm-example">${escapeHtml(b.example)}</span>` : "";
+
+    return `
+      <div class="mm-branch-row">
+        <div class="mm-connector" style="background:${color}"></div>
+        <div class="mm-branch-card">
+          <span class="mm-label" style="border-left:3px solid ${color}">${label}</span>
+          ${labelZh}
+          ${detail}
+          ${example}
+        </div>
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="mm-wrap">
+      <div class="mm-topic">
+        <span class="mm-topic-text">${topic}</span>
+        ${topicZh}
+      </div>
+      <div class="mm-branches">${branches}</div>
+    </div>`;
 }
 
 function buildPrintHtml(items, { jobTitle, company, candidateName, brand }) {
@@ -26,17 +68,23 @@ function buildPrintHtml(items, { jobTitle, company, candidateName, brand }) {
     day: "numeric",
   });
   const headline = jobTitle || "Interview Practice Set";
-  const sub = [company, candidateName].filter(Boolean).join(" · ");
+  const sub = [company, candidateName].filter(Boolean).join("  ·  ");
 
   const rows = items
     .map((item, i) => {
       const q = escapeHtml(item.q || "").replace(/\n/g, "<br/>");
       const a = escapeHtml(item.a || "—").replace(/\n/g, "<br/>");
+      const mindmap = buildMindmapHtml(item.map);
+      const mindmapSection = mindmap
+        ? `<div class="qa-mindmap"><p class="mm-heading">Key Points</p>${mindmap}</div>`
+        : "";
+
       return `
         <article class="qa-block">
           <p class="qa-num">Q${i + 1}</p>
           <h2 class="qa-q">${q}</h2>
           <div class="qa-a">${a}</div>
+          ${mindmapSection}
         </article>`;
     })
     .join("");
@@ -114,6 +162,117 @@ function buildPrintHtml(items, { jobTitle, company, candidateName, brand }) {
     color: #2a3038;
     white-space: pre-wrap;
   }
+
+  /* ─── Mindmap Section ─────────────────────────────────────────── */
+  .qa-mindmap {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: #fff;
+    border: 1px solid #eef0f2;
+    border-radius: 8px;
+  }
+  .mm-heading {
+    font-size: 7pt;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #c49a3c;
+    margin-bottom: 8px;
+  }
+  .mm-wrap {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .mm-topic {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 10px;
+    background: linear-gradient(135deg, #c49a3c, #a67c2e);
+    color: #fff;
+    border-radius: 10px;
+    text-align: center;
+    width: 90px;
+    min-height: 52px;
+    box-shadow: 0 2px 6px rgba(196, 154, 60, 0.25);
+  }
+  .mm-topic-text {
+    font-size: 8.5pt;
+    font-weight: 700;
+    line-height: 1.25;
+    word-break: break-word;
+    hyphens: auto;
+  }
+  .mm-topic-zh {
+    font-size: 6.5pt;
+    opacity: 0.85;
+    margin-top: 3px;
+    line-height: 1.2;
+  }
+  .mm-branches {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+  .mm-branch-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  .mm-connector {
+    flex-shrink: 0;
+    width: 10px;
+    height: 2px;
+    border-radius: 1px;
+  }
+  .mm-branch-card {
+    flex: 1;
+    padding: 5px 10px;
+    background: #fff;
+    border: 1px solid #eef0f2;
+    border-radius: 6px;
+    min-width: 0;
+  }
+  .mm-label {
+    display: block;
+    font-size: 9.5pt;
+    font-weight: 700;
+    color: #1a1d21;
+    line-height: 1.3;
+    padding-left: 6px;
+  }
+  .mm-branch-zh {
+    display: block;
+    font-size: 7pt;
+    color: #8a8a8a;
+    margin-top: 1px;
+    padding-left: 6px;
+  }
+  .mm-detail {
+    display: block;
+    font-size: 7.5pt;
+    color: #6b7280;
+    margin-top: 2px;
+    padding-left: 6px;
+    line-height: 1.3;
+  }
+  .mm-example {
+    display: block;
+    font-size: 7pt;
+    color: #9ca3af;
+    font-style: italic;
+    margin-top: 1px;
+    padding-left: 6px;
+  }
+
+  @media print {
+    .qa-block { break-inside: avoid; }
+  }
 </style>
 </head>
 <body>
@@ -122,7 +281,7 @@ function buildPrintHtml(items, { jobTitle, company, candidateName, brand }) {
       <p class="brand">${escapeHtml(brand)}</p>
       <h1>${escapeHtml(headline)}</h1>
       ${sub ? `<p class="sub">${escapeHtml(sub)}</p>` : ""}
-      <p class="date">${escapeHtml(date)} · ${items.length} Q&amp;A</p>
+      <p class="date">${escapeHtml(date)}  ·  ${items.length} Q&amp;A</p>
     </header>
     ${rows}
   </div>
@@ -131,7 +290,7 @@ function buildPrintHtml(items, { jobTitle, company, candidateName, brand }) {
 }
 
 /**
- * Export selected Q&A as a formatted PDF (one file, merged in order).
+ * Export selected Q&A as a formatted PDF with mindmaps.
  * Returns number of items included.
  */
 export async function exportQaPdf(items, options = {}) {
@@ -152,7 +311,11 @@ export async function exportQaPdf(items, options = {}) {
   document.body.appendChild(host);
 
   const stamp = new Date().toISOString().slice(0, 10);
-  const filename = `linecheck-${slugify(options.jobTitle)}-${stamp}.pdf`;
+  const parts = ["Line Check"];
+  if (options.jobTitle) parts.push(titleCase(options.jobTitle));
+  if (options.candidateName) parts.push(titleCase(options.candidateName));
+  parts.push(stamp);
+  const filename = `${parts.join(" - ")}.pdf`;
 
   try {
     const blob = await html2pdf()

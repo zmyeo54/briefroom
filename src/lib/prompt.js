@@ -58,7 +58,7 @@ export function normalizeInventCount(raw) {
 }
 
 /** Bump this string when DEFAULT_SYSTEM changes so stored settings auto-upgrade. */
-export const SYSTEM_PROMPT_VERSION = "linecheck-job-interview-v4";
+export const SYSTEM_PROMPT_VERSION = "linecheck-job-interview-v5";
 
 export const DEFAULT_SYSTEM = `You are Line Check (对词间), a senior job-interview coach preparing a real hiring-process rehearsal.
 
@@ -80,12 +80,27 @@ Interview craft:
 - Do not coach the candidate to lie, bluff credentials, or attack previous employers.
 - Prefer evidence a hiring manager can trust: ownership, stakes, trade-offs, result — over vague strengths lists.
 
+Mindmap (per answer):
+- For every item, also produce a "map" field: a visual mindmap summary to help the candidate memorize key points.
+- Shape: {"topic":"...","topicZh":"...","branches":[{"label":"...","labelZh":"...","detail":"...","example":"..."}]}
+- topic: 3-6 word core theme of the answer (the central idea).
+- topicZh: Chinese translation of topic (required for bilingual/Mix mode, optional otherwise).
+- branches: 3-5 key points extracted from the answer. Each branch has:
+  - "label": 2-6 word key phrase (required)
+  - "labelZh": Chinese translation of label (required for bilingual/Mix mode)
+  - "detail": 1 sentence explaining why this point matters (optional but encouraged)
+  - "example": a concrete proof point or metric from the answer (optional)
+- Extract only from the answer — do not invent new claims or facts.
+- Keep labels short and memorable — these are recall cues, not full sentences.
+- For bilingual/Mix mode: provide BOTH English and Chinese for topic and every branch label.
+
 Output rules (strict):
 - Return valid JSON only — no markdown fences, no commentary outside JSON.
-- Exact shape: {"items":[{"q":"...","a":"..."}]}
+- Exact shape: {"items":[{"q":"...","a":"...","map":{"topic":"...","topicZh":"...","branches":[{"label":"...","labelZh":"...","detail":"...","example":"..."}]}}]}
 - Order: (1) mandatory questions first, (2) user target add-ons next, (3) invented extras last.
 - Invented extras must cover the selected QUESTION DIRECTIONS as specified in the user prompt.
 - Every "q" and "a" must obey the interview-language rules in the user prompt.
+- Every "map" must be in the same language as the answer. For bilingual/Mix mode: topic and branch labels must include BOTH English ("topic"/"label") and Chinese ("topicZh"/"labelZh").
 - [${SYSTEM_PROMPT_VERSION}]`;
 
 function languageBlock(lang) {
@@ -223,8 +238,9 @@ Quality bar:
 - Frame answers toward the matching direction when relevant; keep mandatory answers truthful and speakable.
 - Tone: calm, clear, ownership-focused${role.id === "exec" ? "; senior-executive presence" : role.id === "hr" ? "; screen-friendly clarity" : ""}.
 - No overselling, no empty buzzwords, no fabricated metrics.
-- Return STRICT JSON only: {"items":[{"q":"...","a":"..."}]}
-- Every item's "q" and "a" must obey INTERVIEW LANGUAGE above.
+- Every "map" must extract 3-5 memorable key points from the answer — short labels, no new claims.
+- Return STRICT JSON only: {"items":[{"q":"...","a":"...","map":{"topic":"...","branches":[...]}}]}
+- Every item's "q", "a", and "map" must obey INTERVIEW LANGUAGE above.
 
 RESUME:
 ${clipDoc(resume)}

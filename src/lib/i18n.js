@@ -193,6 +193,9 @@ const en = {
   "qa.saveAudio": "Export This One",
   "qa.copy": "Copy",
   "qa.copied": "Copied",
+  "qa.answerTab": "Answer",
+  "qa.mindmapTab": "Mindmap",
+  "qa.noMindmap": "No mindmap available — regenerate to get one.",
 
   "settings.eyebrow": "Your setup",
   "settings.title": "Settings",
@@ -472,6 +475,9 @@ const zh = {
   "qa.saveAudio": "导出本条",
   "qa.copy": "复制",
   "qa.copied": "已复制",
+  "qa.answerTab": "回答",
+  "qa.mindmapTab": "思维导图",
+  "qa.noMindmap": "暂无思维导图——重新生成可获取。",
 
   "settings.eyebrow": "你的设置",
   "settings.title": "设置",
