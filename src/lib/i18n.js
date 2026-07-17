@@ -88,7 +88,8 @@ const en = {
   "home.resetAllConfirmTitle": "Start a new interview?",
   "home.resetAllConfirmBody":
     "This clears the role, themes, target questions, and answers. Your resume and Settings stay.",
-  "home.clearAnswers": "Start Fresh",
+  "home.clearAnswers": "Clear Q&A",
+  "home.clearAnswersHint": "Remove the practice set only. Resume, role, and themes stay.",
 
   "home.questions": "Your practice set",
   "home.questionsHint":
@@ -336,7 +337,8 @@ const zh = {
   "home.resetAllHint": "清空岗位、主题、题目和回答。简历与设置会保留。",
   "home.resetAllConfirmTitle": "开始新一场面试？",
   "home.resetAllConfirmBody": "会清空岗位、主题、目标题和回答。简历与设置会保留。",
-  "home.clearAnswers": "清空重来",
+  "home.clearAnswers": "清空问答",
+  "home.clearAnswersHint": "只清空练习清单。简历、岗位和主题会保留。",
 
   "home.questions": "你的练习清单",
   "home.questionsHint":

@@ -8,6 +8,7 @@ import {
   DownloadSimple,
   SpinnerGap,
   ArrowCounterClockwise,
+  Trash,
 } from "@phosphor-icons/react";
 import DocumentField from "../components/DocumentField";
 import FocusBubbles from "../components/FocusBubbles";
@@ -182,6 +183,17 @@ export default function HomePage() {
     saveJson("qa", []);
     patchSettings({ focuses: [...DEFAULT_FOCUSES], interviewerRole: DEFAULT_INTERVIEWER_ROLE });
     flash(t("home.flash.resetAll"), "ok");
+  };
+
+  const clearAnswers = () => {
+    stopSpeech();
+    setSpeaking(false);
+    setPlayingIndex(-1);
+    setQa([]);
+    setSelected(new Set());
+    setQaEpoch((n) => n + 1);
+    saveJson("qa", []);
+    flash(t("home.flash.cleared"), "ok");
   };
 
   /** Fill Settings → Your name from resume when the field is still empty. */
@@ -808,13 +820,27 @@ export default function HomePage() {
       </section>
 
       <section className="panel p-3.5 md:p-6">
-        <div className="mb-3 md:mb-4">
-          <h2 className="display text-lg font-semibold title md:text-xl">
-            {t("home.questions")}
-          </h2>
-          <p className="mt-1 text-xs leading-relaxed mute md:mt-1.5 md:text-sm">
-            {t("home.questionsHint")}
-          </p>
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-3 md:mb-4">
+          <div className="min-w-0 flex-1">
+            <h2 className="display text-lg font-semibold title md:text-xl">
+              {t("home.questions")}
+            </h2>
+            <p className="mt-1 text-xs leading-relaxed mute md:mt-1.5 md:text-sm">
+              {t("home.questionsHint")}
+            </p>
+          </div>
+          {qa.length ? (
+            <button
+              type="button"
+              className="btn btn-clear shrink-0"
+              onClick={clearAnswers}
+              title={t("home.clearAnswersHint")}
+              disabled={speaking || loading}
+            >
+              <Trash size={16} weight="bold" />
+              {t("home.clearAnswers")}
+            </button>
+          ) : null}
         </div>
         <QaList
           key={qaEpoch}

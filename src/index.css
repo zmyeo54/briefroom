@@ -752,6 +752,22 @@ select.field {
   background: #b91c1c;
 }
 
+/* Soft clear / reset — brand coral, readable without alarm red */
+.btn-clear {
+  border-color: rgba(255, 118, 72, 0.45);
+  background: rgba(255, 118, 72, 0.12);
+  color: #c44a22;
+  box-shadow: 0 4px 14px -8px rgba(255, 118, 72, 0.35);
+}
+.btn-clear:hover:not(:disabled) {
+  border-color: #ff7648;
+  background: rgba(255, 118, 72, 0.22);
+  color: #a83d1a;
+}
+.btn-clear:focus-visible {
+  outline-color: rgba(255, 118, 72, 0.55);
+}
+
 .btn-ghost {
   border-color: transparent;
   background: transparent;
