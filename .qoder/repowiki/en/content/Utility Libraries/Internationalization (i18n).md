@@ -18,6 +18,7 @@
 - Expanded localization strings with better provider behavior descriptions and availability notifications
 - Improved error handling for provider-related issues with actionable user guidance
 - Enhanced regional messaging system for location-based provider recommendations
+- **Updated**: Expanded internationalization support with additional translation capabilities and enhanced multi-language features
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -36,7 +37,9 @@
 ## Introduction
 This document explains LineCheck's internationalization (i18n) system, focusing on the i18n module architecture, language management, translation loading mechanisms, and context-based usage in React components. The system has been extensively enhanced with comprehensive bilingual support covering onboarding content, mindmap labels, TTS error messages, and settings interface elements. It provides guidance for adding new languages, managing keys, handling pluralization and formatting, implementing dynamic language switching, organizing translation files, and optimizing performance for large datasets.
 
-The enhanced system now includes advanced caching mechanisms, intelligent lazy-loading, improved error handling, better locale-specific formatting capabilities, and **significantly improved provider availability messaging and regional difference communication**. Recent updates have focused on providing clearer user feedback about AI provider selection based on geographic location, with enhanced model availability notifications and detailed provider behavior descriptions across multiple languages.
+The enhanced system now includes advanced caching mechanisms, intelligent lazy-loading, improved error handling, better locale-specific formatting capabilities, and significantly improved provider availability messaging and regional difference communication. Recent updates have focused on providing clearer user feedback about AI provider selection based on geographic location, with enhanced model availability notifications and detailed provider behavior descriptions across multiple languages.
+
+**Updated**: The internationalization system has been further expanded with additional translation capabilities and enhanced multi-language support, improving the overall user experience across different regions and cultural contexts.
 
 ## Project Structure
 The i18n implementation is centered around two core modules with enhanced capabilities:
@@ -95,17 +98,8 @@ OnboardingTour --> I18nCtx
 - [SettingsPage.jsx](file://src/pages/SettingsPage.jsx)
 - [OnboardingTour.jsx](file://src/components/OnboardingTour.jsx)
 
-**Section sources**
-- [main.jsx](file://src/main.jsx)
-- [App.jsx](file://src/App.jsx)
-- [I18nContext.jsx](file://src/lib/I18nContext.jsx)
-- [i18n.js](file://src/lib/i18n.js)
-- [HomePage.jsx](file://src/pages/HomePage.jsx)
-- [SettingsPage.jsx](file://src/pages/SettingsPage.jsx)
-- [OnboardingTour.jsx](file://src/components/OnboardingTour.jsx)
-
 ## Core Components
-- **i18n.js**: Provides the core API for listing supported locales, setting the active locale, and retrieving translated strings with enhanced lazy-loading, caching, error handling capabilities, and **comprehensive provider availability monitoring with geographic-based messaging**.
+- **i18n.js**: Provides the core API for listing supported locales, setting the active locale, and retrieving translated strings with enhanced lazy-loading, caching, error handling capabilities, and comprehensive provider availability monitoring with geographic-based messaging.
 - **I18nContext.jsx**: Wraps the application with a React Context that exposes a translation function and the current locale to any descendant component with improved reactivity, state management, and real-time provider status monitoring.
 
 Key responsibilities:
@@ -115,19 +109,15 @@ Key responsibilities:
 - Provider integration for React components with optimized re-renders
 - Dynamic bundle loading for large translation datasets
 - Caching strategies for improved performance
-- **Enhanced provider availability tracking with geographic-based recommendations and behavioral descriptions**
+- Enhanced provider availability tracking with geographic-based recommendations and behavioral descriptions
 
-**Updated** Enhanced with advanced caching, error handling, performance optimizations, and significantly improved provider availability messaging with geographic-based selection guidance and detailed behavioral descriptions.
-
-**Section sources**
-- [i18n.js](file://src/lib/i18n.js)
-- [I18nContext.jsx](file://src/lib/I18nContext.jsx)
+**Updated**: Enhanced with advanced caching, error handling, performance optimizations, and significantly improved provider availability messaging with geographic-based selection guidance and detailed behavioral descriptions.
 
 ## Architecture Overview
 The i18n architecture follows an enhanced thin provider pattern with improved scalability and comprehensive provider feedback capabilities:
 - The provider initializes the i18n engine with enhanced configuration options and exposes a stable API to components.
 - Components consume translations via a hook or context value rather than importing the i18n module directly.
-- The i18n module centralizes translation loading, intelligent caching, locale change logic with performance optimizations and **advanced provider feedback systems with geographic awareness**.
+- The i18n module centralizes translation loading, intelligent caching, locale change logic with performance optimizations and advanced provider feedback systems with geographic awareness.
 
 ```mermaid
 sequenceDiagram
@@ -176,15 +166,15 @@ Responsibilities:
 - Provide functions to get the current locale, set a new locale, and retrieve translations by key.
 - Support pluralization rules and message formatting with locale-specific conventions.
 - Handle error scenarios gracefully with fallback mechanisms.
-- **Provide comprehensive provider availability feedback with geographic-based recommendations and detailed behavioral descriptions**.
+- Provide comprehensive provider availability feedback with geographic-based recommendations and detailed behavioral descriptions.
 
 Design considerations:
-- **Enhanced Lazy Loading**: Load only the requested locale bundle when needed with prefetching capabilities.
-- **Intelligent Fallbacks**: Gracefully fall back to default locale with detailed logging for missing keys.
-- **Immutable State Management**: Avoid mutating shared state with proper state isolation.
-- **Performance Optimization**: Implement request deduplication and batch loading for multiple translations.
-- **Enhanced Provider Feedback**: Clear messaging about provider availability, regional differences, and behavioral expectations.
-- **Geographic Awareness**: Location-based provider recommendations and availability status.
+- Enhanced Lazy Loading: Load only the requested locale bundle when needed with prefetching capabilities.
+- Intelligent Fallbacks: Gracefully fall back to default locale with detailed logging for missing keys.
+- Immutable State Management: Avoid mutating shared state with proper state isolation.
+- Performance Optimization: Implement request deduplication and batch loading for multiple translations.
+- Enhanced Provider Feedback: Clear messaging about provider availability, regional differences, and behavioral expectations.
+- Geographic Awareness: Location-based provider recommendations and availability status.
 
 Common APIs (conceptual):
 - Supported locales list with metadata
@@ -193,20 +183,17 @@ Common APIs (conceptual):
 - Translate(key, options) with parameter interpolation
 - Pluralize(count, keySingular, keyPlural, options) with locale-specific rules
 - Format(value, type, options) with extended formatter support
-- **GetProviderStatus() with availability, regional information, and behavioral descriptions**
-- **GetGeographicRecommendations() with location-based provider suggestions**
+- GetProviderStatus() with availability, regional information, and behavioral descriptions
+- GetGeographicRecommendations() with location-based provider suggestions
 
 Best practices:
 - Keep keys hierarchical and namespaced by feature area with consistent naming conventions.
 - Centralize pluralization rules and number/date formatting utilities with locale-specific implementations.
 - Validate keys at build time where possible with comprehensive error reporting.
 - Implement monitoring and analytics for translation usage patterns.
-- **Use enhanced provider feedback mechanisms for clear user communication about availability and regional limitations**.
+- Use enhanced provider feedback mechanisms for clear user communication about availability and regional limitations.
 
-**Updated** Enhanced with advanced caching, error handling, performance optimization features, and significantly improved provider availability messaging with geographic-based recommendations and detailed behavioral descriptions.
-
-**Section sources**
-- [i18n.js](file://src/lib/i18n.js)
+**Updated**: Enhanced with advanced caching, error handling, performance optimization features, and significantly improved provider availability messaging with geographic-based recommendations and detailed behavioral descriptions.
 
 ### Enhanced I18nContext (I18nContext.jsx)
 Responsibilities:
@@ -215,24 +202,21 @@ Responsibilities:
 - Trigger optimized re-renders when the locale changes using selective updates.
 - Expose helper hooks for convenience with TypeScript support.
 - Handle loading states and error boundaries for translation failures.
-- **Monitor and expose comprehensive provider availability status with geographic recommendations to components**.
+- Monitor and expose comprehensive provider availability status with geographic recommendations to components.
 
 Provider behavior:
 - On mount, initialize the i18n module with enhanced configuration and load the default locale.
 - When locale changes, update the context value with optimized re-rendering strategies.
 - Implement error boundaries to prevent translation failures from breaking the UI.
-- **Provide real-time provider status updates with geographic-based recommendations and behavioral descriptions**.
+- Provide real-time provider status updates with geographic-based recommendations and behavioral descriptions.
 
 Consumer patterns:
 - Use a hook to access the translation function within functional components with automatic dependency tracking.
 - Access the current locale for UI adjustments with reactive updates.
 - Handle loading states and errors gracefully in components.
-- **Monitor comprehensive provider availability for conditional UI rendering and enhanced user feedback**.
+- Monitor comprehensive provider availability for conditional UI rendering and enhanced user feedback.
 
-**Updated** Enhanced with better error handling, loading states, performance optimizations, and comprehensive provider availability monitoring with geographic recommendations and behavioral descriptions.
-
-**Section sources**
-- [I18nContext.jsx](file://src/lib/I18nContext.jsx)
+**Updated**: Enhanced with better error handling, loading states, performance optimizations, and comprehensive provider availability monitoring with geographic recommendations and behavioral descriptions.
 
 ### App Integration (App.jsx, main.jsx)
 Integration points:
@@ -288,23 +272,19 @@ AppShell --> EnhancedI18nProvider : "wraps"
 - [App.jsx](file://src/App.jsx)
 - [main.jsx](file://src/main.jsx)
 
-**Section sources**
-- [App.jsx](file://src/App.jsx)
-- [main.jsx](file://src/main.jsx)
-
 ### Usage in Pages (HomePage.jsx, SettingsPage.jsx, OnboardingTour.jsx)
 Components should:
 - Consume the translation function from the i18n context with proper error handling.
 - Use keys consistently across features with hierarchical organization.
 - For settings, allow users to switch languages dynamically with loading indicators.
 - Handle loading states and errors gracefully in all components.
-- **Display comprehensive provider availability status and geographic recommendations appropriately**.
+- Display comprehensive provider availability status and geographic recommendations appropriately.
 
 Dynamic language switching flow:
 - User selects a new language in settings with confirmation dialog.
 - The provider updates the locale with loading state and triggers optimized re-renders.
 - All components using the context render with the new language with smooth transitions.
-- **Comprehensive provider status is updated and displayed to users with enhanced feedback and geographic recommendations**.
+- Comprehensive provider status is updated and displayed to users with enhanced feedback and geographic recommendations.
 
 ```mermaid
 flowchart TD
@@ -332,11 +312,6 @@ Cancel --> End
 - [i18n.js](file://src/lib/i18n.js)
 - [SettingsPage.jsx](file://src/pages/SettingsPage.jsx)
 
-**Section sources**
-- [HomePage.jsx](file://src/pages/HomePage.jsx)
-- [SettingsPage.jsx](file://src/pages/SettingsPage.jsx)
-- [OnboardingTour.jsx](file://src/components/OnboardingTour.jsx)
-
 ## Enhanced Translation Features
 
 ### Onboarding Content Translations
@@ -362,6 +337,8 @@ Complete bilingual support for all settings interface elements, including form f
 
 This enhancement significantly improves user experience by reducing confusion about provider availability and providing transparent communication about service differences across geographic regions.
 
+**Updated**: The provider availability system has been further enhanced with additional translation support and improved multi-language capabilities, making it more accessible to users across different regions and cultural contexts.
+
 ## Provider Availability System
 
 ### Geographic-Based Recommendations
@@ -376,13 +353,15 @@ Detailed descriptions of provider behaviors, performance characteristics, and re
 ### Enhanced Error Handling and Recovery
 Improved error handling for provider-related issues with specific troubleshooting guidance and automatic fallback mechanisms. When primary providers are unavailable, the system suggests alternatives and provides clear explanations for why certain providers may not be accessible in specific regions.
 
+**Updated**: The provider availability system now includes expanded internationalization support with additional translation capabilities, providing better multi-language support for improved user experience across different regions.
+
 ## Dependency Analysis
 High-level dependencies with enhanced relationships:
 - I18nContext depends on i18n.js for language operations with improved error handling and comprehensive provider status monitoring.
 - App and pages depend on I18nContext for translation access with loading states and enhanced provider feedback.
 - main.jsx initializes the React tree with enhanced error boundaries and loading indicators.
 - New components like OnboardingTour integrate seamlessly with the enhanced i18n system.
-- **Enhanced provider feedback system integrates with i18n.js for comprehensive availability monitoring, geographic recommendations, and behavioral descriptions**.
+- Enhanced provider feedback system integrates with i18n.js for comprehensive availability monitoring, geographic recommendations, and behavioral descriptions.
 
 ```mermaid
 graph LR
@@ -411,29 +390,20 @@ Feedback --> ModelAvail["Model Availability Tracking"]
 - [OnboardingTour.jsx](file://src/components/OnboardingTour.jsx)
 - [main.jsx](file://src/main.jsx)
 
-**Section sources**
-- [i18n.js](file://src/lib/i18n.js)
-- [I18nContext.jsx](file://src/lib/I18nContext.jsx)
-- [App.jsx](file://src/App.jsx)
-- [HomePage.jsx](file://src/pages/HomePage.jsx)
-- [SettingsPage.jsx](file://src/pages/SettingsPage.jsx)
-- [OnboardingTour.jsx](file://src/components/OnboardingTour.jsx)
-- [main.jsx](file://src/main.jsx)
-
 ## Performance Considerations
 Strategies for large translation datasets have been significantly enhanced:
-- **Intelligent Lazy Loading**: Load only the requested locale bundle when needed with prefetching for predicted user actions.
-- **Advanced Caching**: Cache loaded bundles in memory with configurable expiration policies and size limits.
-- **Preloading Strategies**: Preload commonly used locales during idle time or on user interactions with priority queuing.
-- **Modular Translation Files**: Split translation files by feature area to enable selective loading and reduce bundle sizes.
-- **Request Optimization**: Debounce rapid locale switches and implement request deduplication to prevent excessive reloads.
-- **Component Memoization**: Use memoization in components to minimize unnecessary re-renders with selective updates.
-- **Bundle Analysis**: Monitor bundle sizes and remove unused keys during builds with automated cleanup.
-- **Memory Management**: Implement proper cleanup and garbage collection for translation resources.
-- **Enhanced Feedback System Optimization**: Efficient provider status checking, geographic recommendation caching, and behavioral description caching to minimize performance impact.
-- **Geographic Location Caching**: Cache location data and provider recommendations to avoid repeated geographic queries.
+- Intelligent Lazy Loading: Load only the requested locale bundle when needed with prefetching for predicted user actions.
+- Advanced Caching: Cache loaded bundles in memory with configurable expiration policies and size limits.
+- Preloading Strategies: Preload commonly used locales during idle time or on user interactions with priority queuing.
+- Modular Translation Files: Split translation files by feature area to enable selective loading and reduce bundle sizes.
+- Request Optimization: Debounce rapid locale switches and implement request deduplication to prevent excessive reloads.
+- Component Memoization: Use memoization in components to minimize unnecessary re-renders with selective updates.
+- Bundle Analysis: Monitor bundle sizes and remove unused keys during builds with automated cleanup.
+- Memory Management: Implement proper cleanup and garbage collection for translation resources.
+- Enhanced Feedback System Optimization: Efficient provider status checking, geographic recommendation caching, and behavioral description caching to minimize performance impact.
+- Geographic Location Caching: Cache location data and provider recommendations to avoid repeated geographic queries.
 
-**Updated** Comprehensive performance enhancements with advanced caching, preloading, memory management strategies, optimized enhanced provider feedback systems, and geographic recommendation caching.
+**Updated**: Comprehensive performance enhancements with advanced caching, preloading, memory management strategies, optimized enhanced provider feedback systems, and geographic recommendation caching.
 
 ## Troubleshooting Guide
 Common issues and resolutions with enhanced diagnostics:
@@ -442,25 +412,23 @@ Common issues and resolutions with enhanced diagnostics:
 - Dynamic switching not updating UI: Confirm the provider updates the context value and that components consume it via the correct hook with error boundaries.
 - Pluralization/formatting errors: Validate input types and ensure formatter options are correctly passed with comprehensive error reporting.
 - Performance issues: Monitor bundle sizes and loading times with built-in analytics and profiling tools.
-- **Provider availability issues**: Check comprehensive provider status indicators and geographic recommendations for specific troubleshooting guidance.
-- **Geographic recommendation problems**: Review location detection accuracy and regional provider messaging for specific troubleshooting steps.
-- **Behavioral description inconsistencies**: Verify provider behavior descriptions are properly localized and updated for regional differences.
+- Provider availability issues: Check comprehensive provider status indicators and geographic recommendations for specific troubleshooting guidance.
+- Geographic recommendation problems: Review location detection accuracy and regional provider messaging for specific troubleshooting steps.
+- Behavioral description inconsistencies: Verify provider behavior descriptions are properly localized and updated for regional differences.
 
 Operational checks:
 - Inspect the current locale exposed by the provider with detailed debugging information.
 - Log translation resolution steps to identify fallback paths and performance bottlenecks.
 - Validate that translation bundles are cached after first load with cache hit ratios.
 - Monitor error rates and fallback usage patterns for proactive issue detection.
-- **Monitor comprehensive provider availability status, geographic recommendation effectiveness, and behavioral description accuracy**.
+- Monitor comprehensive provider availability status, geographic recommendation effectiveness, and behavioral description accuracy.
 
-**Updated** Enhanced troubleshooting with better diagnostics, logging, monitoring capabilities, comprehensive provider-specific guidance, and geographic recommendation troubleshooting.
-
-**Section sources**
-- [I18nContext.jsx](file://src/lib/I18nContext.jsx)
-- [i18n.js](file://src/lib/i18n.js)
+**Updated**: Enhanced troubleshooting with better diagnostics, logging, monitoring capabilities, comprehensive provider-specific guidance, and geographic recommendation troubleshooting.
 
 ## Conclusion
-LineCheck's i18n system has been significantly enhanced with comprehensive bilingual support covering onboarding content, mindmap labels, TTS error messages, and settings interface elements. The system centers on a lightweight provider and a centralized i18n module with advanced caching, error handling, performance optimizations, and **significantly improved provider availability messaging with geographic-based recommendations and detailed behavioral descriptions**. By leveraging context-based translation access, intelligent lazy-loaded bundles, robust fallbacks, enhanced monitoring, and comprehensive provider feedback with geographic awareness, the application supports scalable multilingual experiences with clear communication about service availability, regional differences, and provider behaviors across all supported languages. Following the best practices outlined here will help maintain consistency, improve performance, simplify future localization efforts, and provide excellent user experience with transparent provider information and location-based guidance.
+LineCheck's i18n system has been significantly enhanced with comprehensive bilingual support covering onboarding content, mindmap labels, TTS error messages, and settings interface elements. The system centers on a lightweight provider and a centralized i18n module with advanced caching, error handling, performance optimizations, and significantly improved provider availability messaging with geographic-based recommendations and detailed behavioral descriptions. By leveraging context-based translation access, intelligent lazy-loaded bundles, robust fallbacks, enhanced monitoring, and comprehensive provider feedback with geographic awareness, the application supports scalable multilingual experiences with clear communication about service availability, regional differences, and provider behaviors across all supported languages. Following the best practices outlined here will help maintain consistency, improve performance, simplify future localization efforts, and provide excellent user experience with transparent provider information and location-based guidance.
+
+**Updated**: The recent expansion of internationalization support with additional translation capabilities and enhanced multi-language features further strengthens the system's ability to serve diverse global audiences effectively.
 
 ## Appendices
 
@@ -471,13 +439,9 @@ Steps with enhanced process:
 - Ensure the provider can load the new locale bundle with proper error handling and fallbacks.
 - Test dynamic switching and fallback behavior with automated testing suites.
 - Validate performance impact and optimize bundle sizes for the new language.
-- **Configure comprehensive provider availability messaging, geographic recommendations, and behavioral descriptions for the new locale**.
+- Configure comprehensive provider availability messaging, geographic recommendations, and behavioral descriptions for the new locale.
 
-**Updated** Enhanced process with validation, testing, performance optimization steps, and comprehensive provider feedback configuration.
-
-**Section sources**
-- [i18n.js](file://src/lib/i18n.js)
-- [I18nContext.jsx](file://src/lib/I18nContext.jsx)
+**Updated**: Enhanced process with validation, testing, performance optimization steps, and comprehensive provider feedback configuration.
 
 ### Managing Translation Keys
 Guidelines with enhanced structure:
@@ -486,12 +450,9 @@ Guidelines with enhanced structure:
 - Avoid embedding dynamic values in keys; use placeholders instead with type safety.
 - Remove unused keys periodically to keep bundles small with automated cleanup tools.
 - Implement key migration strategies for backward compatibility during updates.
-- **Include comprehensive provider feedback, geographic recommendation, and behavioral description keys in translation management**.
+- Include comprehensive provider feedback, geographic recommendation, and behavioral description keys in translation management.
 
-**Updated** Enhanced guidelines with automation, validation, migration support, and comprehensive provider feedback integration.
-
-**Section sources**
-- [i18n.js](file://src/lib/i18n.js)
+**Updated**: Enhanced guidelines with automation, validation, migration support, and comprehensive provider feedback integration.
 
 ### Pluralization and Formatting
 Recommendations with extended support:
@@ -499,12 +460,9 @@ Recommendations with extended support:
 - Provide a format utility for numbers, dates, currencies, and custom formats with locale awareness.
 - Pass explicit options to formatters to ensure consistent output across different locales.
 - Support complex formatting scenarios with nested parameters and conditional formatting.
-- **Handle comprehensive provider availability and geographic difference formatting with locale-specific messages and behavioral descriptions**.
+- Handle comprehensive provider availability and geographic difference formatting with locale-specific messages and behavioral descriptions.
 
-**Updated** Extended formatting support with advanced rule sets, customization options, and comprehensive provider feedback integration.
-
-**Section sources**
-- [i18n.js](file://src/lib/i18n.js)
+**Updated**: Extended formatting support with advanced rule sets, customization options, and comprehensive provider feedback integration.
 
 ### Using I18nContext in React Components
 Patterns with enhanced examples:
@@ -512,15 +470,9 @@ Patterns with enhanced examples:
 - Access the current locale for layout or direction adjustments with reactive updates.
 - Prefer hooks over direct context consumption for cleaner APIs with better performance.
 - Handle loading states and errors gracefully with comprehensive error boundaries.
-- **Monitor comprehensive provider availability status, geographic recommendations, and behavioral descriptions for conditional UI rendering and enhanced user feedback**.
+- Monitor comprehensive provider availability status, geographic recommendations, and behavioral descriptions for conditional UI rendering and enhanced user feedback.
 
-**Updated** Enhanced patterns with better error handling, loading states, performance optimizations, and comprehensive provider status monitoring with geographic awareness.
-
-**Section sources**
-- [I18nContext.jsx](file://src/lib/I18nContext.jsx)
-- [HomePage.jsx](file://src/pages/HomePage.jsx)
-- [SettingsPage.jsx](file://src/pages/SettingsPage.jsx)
-- [OnboardingTour.jsx](file://src/components/OnboardingTour.jsx)
+**Updated**: Enhanced patterns with better error handling, loading states, performance optimizations, and comprehensive provider status monitoring with geographic awareness.
 
 ### Organizing Translation Files
 Approaches with enhanced structure:
@@ -528,22 +480,19 @@ Approaches with enhanced structure:
 - Separate common/shared keys from page-specific keys with clear separation of concerns.
 - Maintain a canonical key map for validation and tooling with automated consistency checks.
 - Implement version control strategies for translation updates with merge conflict resolution.
-- **Organize comprehensive provider feedback, geographic recommendations, and behavioral descriptions separately for easier maintenance and updates**.
+- Organize comprehensive provider feedback, geographic recommendations, and behavioral descriptions separately for easier maintenance and updates.
 
-**Updated** Enhanced organization strategies with automation, version control support, and comprehensive provider feedback categorization.
-
-**Section sources**
-- [i18n.js](file://src/lib/i18n.js)
+**Updated**: Enhanced organization strategies with automation, version control support, and comprehensive provider feedback categorization.
 
 ### Advanced Features and Best Practices
 New capabilities introduced:
-- **Real-time Language Switching**: Instant language changes without page reloads with smooth transitions.
-- **Translation Analytics**: Track translation usage patterns and identify missing or underused keys.
-- **Performance Monitoring**: Built-in metrics for translation loading times and cache efficiency.
-- **Error Recovery**: Automatic fallback mechanisms and user-friendly error messages for translation failures.
-- **Accessibility Support**: Enhanced accessibility features for screen readers and assistive technologies.
-- **Enhanced Provider Feedback**: Comprehensive provider availability status, geographic recommendations, and behavioral descriptions with actionable guidance.
-- **Geographic Awareness**: Location-based provider recommendations and regional difference explanations.
-- **Model Availability Monitoring**: Real-time tracking of AI model availability across different providers.
+- Real-time Language Switching: Instant language changes without page reloads with smooth transitions.
+- Translation Analytics: Track translation usage patterns and identify missing or underused keys.
+- Performance Monitoring: Built-in metrics for translation loading times and cache efficiency.
+- Error Recovery: Automatic fallback mechanisms and user-friendly error messages for translation failures.
+- Accessibility Support: Enhanced accessibility features for screen readers and assistive technologies.
+- Enhanced Provider Feedback: Comprehensive provider availability status, geographic recommendations, and behavioral descriptions with actionable guidance.
+- Geographic Awareness: Location-based provider recommendations and regional difference explanations.
+- Model Availability Monitoring: Real-time tracking of AI model availability across different providers.
 
-**New Section** Covers advanced features and best practices introduced in the recent enhancements, with particular focus on the comprehensive provider feedback system, geographic recommendations, and detailed behavioral descriptions that significantly improve user experience and transparency.
+**Updated**: The advanced features section now includes the recently expanded internationalization support with additional translation capabilities and enhanced multi-language features, providing even better support for global users across different regions and cultural contexts.

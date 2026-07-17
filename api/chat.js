@@ -12,6 +12,14 @@ export const DEEPSEEK_MODEL = "deepseek-v4-flash";
 export const AI_REGION_HEADER = "x-linecheck-ai-region";
 export const AI_PROVIDER_HEADER = "x-linecheck-ai-provider";
 export const AI_ENABLED_HEADER = "x-linecheck-ai-enabled";
+/** Soft ceiling under Vercel maxDuration:60 — return JSON 504 instead of HTML kill. */
+export const HANDLER_BUDGET_MS = 55_000;
+/** Per upstream call; leaves room to return cleanly (or try a fast failover). */
+export const UPSTREAM_CALL_MS = 50_000;
+/** Min remaining budget before attempting the other provider after a timeout. */
+export const FAILOVER_MIN_MS = 20_000;
+/** Cap DeepSeek completion size so bilingual Builds stay inside the budget. */
+export const DEEPSEEK_MAX_TOKENS = 4096;
 
 /** User setting: global → Gemini, greater-china → DeepSeek. */
 export function parseAiRegion(req) {
@@ -88,10 +96,19 @@ export function keysForRequest(userKey, env = process.env) {
   return out;
 }
 
+/** DeepSeek keys are sk-…; Settings still labels the paste field as Gemini. */
+export function keyLooksLikeDeepSeek(key) {
+  return /^sk-/i.test(String(key || "").trim());
+}
+
 export function keysForProvider(provider, userKey, env = process.env) {
   const out = [];
   const u = String(userKey || "").trim();
-  if (u) out.push(u);
+  // Skip mismatched paste-key (Gemini key → DeepSeek = fast 401 noise).
+  if (u) {
+    const ds = keyLooksLikeDeepSeek(u);
+    if (provider === "deepseek" ? ds : !ds) out.push(u);
+  }
   const pool =
     provider === "deepseek" ? collectDeepSeekKeys(env) : collectServerKeys(env);
   for (const k of pool) {
@@ -121,8 +138,10 @@ export function otherProvider(provider, env = process.env) {
  */
 export function providersToTry(req, env = process.env) {
   const enabled = parseEnabledProviders(req);
-  const hasDeepseek = collectDeepSeekKeys(env).length > 0;
-  const hasGemini = collectServerKeys(env).length > 0 || Boolean(bearerFromReq(req));
+  const userKey = Boolean(bearerFromReq(req));
+  // Bearer may be either provider's key — allow both routes when present.
+  const hasDeepseek = collectDeepSeekKeys(env).length > 0 || userKey;
+  const hasGemini = collectServerKeys(env).length > 0 || userKey;
 
   const allow = (p) => {
     if (enabled && !enabled.has(p)) return false;
@@ -144,9 +163,39 @@ export function providersToTry(req, env = process.env) {
 
 export function bodyForProvider(body, provider) {
   if (provider === "deepseek") {
-    return { ...body, model: DEEPSEEK_MODEL };
+    // V4 defaults thinking=enabled; CoT eats max_tokens + wall clock →
+    // truncated JSON (finish=length) and Vercel ~60s 504s on Build.
+    const rawMax = Number(body?.max_tokens);
+    const max_tokens = Math.min(
+      Number.isFinite(rawMax) && rawMax > 0 ? rawMax : DEEPSEEK_MAX_TOKENS,
+      DEEPSEEK_MAX_TOKENS
+    );
+    return {
+      ...body,
+      model: DEEPSEEK_MODEL,
+      thinking: { type: "disabled" },
+      max_tokens,
+    };
   }
   return body;
+}
+
+export function isAbortError(err) {
+  const name = String(err?.name || "");
+  return name === "AbortError" || name === "TimeoutError";
+}
+
+export function timeoutResponse(provider) {
+  return {
+    upstream: { ok: false, status: 504 },
+    data: {
+      error: {
+        message: `${provider} timed out`,
+        code: "upstream_timeout",
+        provider,
+      },
+    },
+  };
 }
 
 export function shouldTryNextKey(status, data) {
@@ -185,7 +234,7 @@ function bearerFromReq(req) {
   return m ? m[1].trim() : "";
 }
 
-async function callChat(baseUrl, key, body) {
+async function callChat(baseUrl, key, body, signal) {
   const upstream = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
@@ -193,15 +242,16 @@ async function callChat(baseUrl, key, body) {
       Authorization: `Bearer ${key}`,
     },
     body: JSON.stringify(body),
+    signal,
   });
   const data = await upstream.json().catch(() => ({}));
   return { upstream, data };
 }
 
-async function callProvider(provider, key, body) {
+async function callProvider(provider, key, body, signal) {
   const base = provider === "deepseek" ? DEEPSEEK_BASE : GEMINI_BASE;
   const payload = bodyForProvider(body, provider);
-  let { upstream, data } = await callChat(base, key, payload);
+  let { upstream, data } = await callChat(base, key, payload, signal);
 
   if (
     !upstream.ok &&
@@ -209,7 +259,7 @@ async function callProvider(provider, key, body) {
     /response_format|json_object|unknown/i.test(data?.error?.message || "")
   ) {
     const { response_format: _, ...rest } = payload;
-    ({ upstream, data } = await callChat(base, key, rest));
+    ({ upstream, data } = await callChat(base, key, rest, signal));
   }
 
   return { upstream, data };
@@ -265,14 +315,35 @@ export default async function handler(req, res) {
   try {
     let upstream;
     let data;
+    const deadline = Date.now() + HANDLER_BUDGET_MS;
 
     for (let p = 0; p < order.length; p++) {
       const provider = order[p];
       const keys = keysForProvider(provider, userKey);
       if (!keys.length) continue;
 
+      let timedOut = false;
       for (let i = 0; i < keys.length; i++) {
-        ({ upstream, data } = await callProvider(provider, keys[i], body));
+        const left = deadline - Date.now();
+        if (left < 3_000) {
+          ({ upstream, data } = timeoutResponse(provider));
+          timedOut = true;
+          break;
+        }
+        const signal = AbortSignal.timeout(Math.min(UPSTREAM_CALL_MS, left));
+        try {
+          ({ upstream, data } = await callProvider(
+            provider,
+            keys[i],
+            body,
+            signal
+          ));
+        } catch (e) {
+          if (!isAbortError(e)) throw e;
+          ({ upstream, data } = timeoutResponse(provider));
+          timedOut = true;
+          break; // same provider will also burn the budget
+        }
         if (upstream.ok) break;
         if (shouldTryNextKey(upstream.status, data) && i < keys.length - 1) {
           continue;
@@ -281,12 +352,12 @@ export default async function handler(req, res) {
       }
 
       if (upstream.ok) break;
-      if (
+      const canFailover =
         p < order.length - 1 &&
-        shouldTryOtherProvider(upstream.status, data)
-      ) {
-        continue;
-      }
+        (timedOut
+          ? deadline - Date.now() >= FAILOVER_MIN_MS
+          : shouldTryOtherProvider(upstream.status, data));
+      if (canFailover) continue;
       break;
     }
 
@@ -381,6 +452,39 @@ if (typeof process !== "undefined" && process.argv?.[1]?.endsWith("chat.js")) {
     bodyForProvider({ model: "gemini-2.5-flash-lite", messages: [] }, "deepseek")
       .model === DEEPSEEK_MODEL,
     "deepseek model swap"
+  );
+  console.assert(
+    bodyForProvider({ model: "x", messages: [] }, "deepseek").thinking
+      ?.type === "disabled",
+    "deepseek disables thinking"
+  );
+  console.assert(
+    bodyForProvider({ model: "x", messages: [] }, "gemini").thinking == null,
+    "gemini leaves thinking alone"
+  );
+  console.assert(
+    bodyForProvider({ max_tokens: 8192, messages: [] }, "deepseek")
+      .max_tokens === DEEPSEEK_MAX_TOKENS,
+    "deepseek caps max_tokens"
+  );
+  console.assert(
+    keyLooksLikeDeepSeek("sk-abc") && !keyLooksLikeDeepSeek("AIza"),
+    "key fingerprint"
+  );
+  console.assert(
+    JSON.stringify(keysForProvider("deepseek", "AIza-gemini", env)) ===
+      JSON.stringify(["ds"]),
+    "skip gemini paste on deepseek"
+  );
+  console.assert(
+    JSON.stringify(keysForProvider("gemini", "sk-deepseek", env)) ===
+      JSON.stringify(["a", "b", "c"]),
+    "skip deepseek paste on gemini"
+  );
+  console.assert(isAbortError({ name: "TimeoutError" }), "timeout is abort");
+  console.assert(
+    timeoutResponse("deepseek").upstream.status === 504,
+    "timeout → 504"
   );
   console.log("ok");
 }

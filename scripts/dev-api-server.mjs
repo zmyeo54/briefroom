@@ -96,8 +96,9 @@ function parseEnabled(req) {
 
 function providersToTry(req, env = process.env) {
   const enabled = parseEnabled(req);
-  const hasDeepseek = collectDeepSeekKeys(env).length > 0;
-  const hasGemini = collectServerKeys(env).length > 0 || Boolean(bearerFrom(req));
+  const userKey = Boolean(bearerFrom(req));
+  const hasDeepseek = collectDeepSeekKeys(env).length > 0 || userKey;
+  const hasGemini = collectServerKeys(env).length > 0 || userKey;
   const allow = (p) => {
     if (enabled && !enabled.has(p)) return false;
     return p === 'deepseek' ? hasDeepseek : hasGemini;
@@ -112,12 +113,41 @@ function providersToTry(req, env = process.env) {
 
 function bodyForProvider(body, provider) {
   if (provider === 'deepseek') {
-    return { ...body, model: 'deepseek-v4-flash' };
+    // Match api/chat.js — V4 thinking defaults ON and blows Vercel ~60s.
+    const rawMax = Number(body?.max_tokens);
+    const max_tokens = Math.min(
+      Number.isFinite(rawMax) && rawMax > 0 ? rawMax : 4096,
+      4096
+    );
+    return {
+      ...body,
+      model: 'deepseek-v4-flash',
+      thinking: { type: 'disabled' },
+      max_tokens,
+    };
   }
   return body;
 }
 
-async function callProvider(provider, key, body) {
+function keyLooksLikeDeepSeek(key) {
+  return /^sk-/i.test(String(key || '').trim());
+}
+
+function keysForProvider(provider, userKey) {
+  const out = [];
+  const u = String(userKey || '').trim();
+  if (u) {
+    const ds = keyLooksLikeDeepSeek(u);
+    if (provider === 'deepseek' ? ds : !ds) out.push(u);
+  }
+  const pool = provider === 'deepseek' ? collectDeepSeekKeys() : collectServerKeys();
+  for (const key of pool) {
+    if (!out.includes(key)) out.push(key);
+  }
+  return out;
+}
+
+async function callProvider(provider, key, body, signal) {
   const base = provider === 'deepseek'
     ? 'https://api.deepseek.com'
     : 'https://generativelanguage.googleapis.com/v1beta/openai';
@@ -129,6 +159,7 @@ async function callProvider(provider, key, body) {
       Authorization: `Bearer ${key}`,
     },
     body: JSON.stringify(payload),
+    signal,
   });
   const data = await upstream.json().catch(() => ({}));
   return { upstream, data };
@@ -185,22 +216,34 @@ const server = http.createServer(async (req, res) => {
   }
 
   let lastResponse;
+  const deadline = Date.now() + 55_000;
   for (const provider of order) {
-    const keys = [];
-    if (userKey) keys.push(userKey);
-    const pool = provider === 'deepseek' ? collectDeepSeekKeys() : collectServerKeys();
-    for (const key of pool) {
-      if (!keys.includes(key)) keys.push(key);
-    }
+    const keys = keysForProvider(provider, userKey);
     if (!keys.length) continue;
 
     for (const key of keys) {
-      const { upstream, data } = await callProvider(provider, key, body);
-      lastResponse = { upstream, data };
-      if (upstream.ok) {
-        res.writeHead(upstream.status, { 'Content-Type': 'application/json; charset=utf-8' });
-        res.end(JSON.stringify(data));
-        return;
+      const left = deadline - Date.now();
+      if (left < 3000) break;
+      try {
+        const { upstream, data } = await callProvider(
+          provider,
+          key,
+          body,
+          AbortSignal.timeout(Math.min(50_000, left))
+        );
+        lastResponse = { upstream, data };
+        if (upstream.ok) {
+          res.writeHead(upstream.status, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify(data));
+          return;
+        }
+      } catch (e) {
+        if (e?.name !== 'AbortError' && e?.name !== 'TimeoutError') throw e;
+        lastResponse = {
+          upstream: { status: 504 },
+          data: { error: { message: `${provider} timed out`, code: 'upstream_timeout' } },
+        };
+        break;
       }
     }
   }

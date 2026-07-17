@@ -143,7 +143,7 @@ const en = {
   "home.flash.retryDeepseek":
     "Build didn’t go through. Tap Build My Questions again — we’ll switch routes and retry.",
   "home.flash.retryAltProvider":
-    "Build didn’t go through. Tap Build My Questions again — we’ll try the other AI route.",
+    "That route didn’t finish — switching to the other AI and trying again…",
   "home.flash.timeout":
     "{provider} took too long (Vercel stops at ~60s). Turn it off or switch provider in Settings, then Build again.",
   "home.flash.noProvider":
@@ -517,7 +517,7 @@ const zh = {
   "home.flash.retryDeepseek":
     "这次生成没成功。请再点一次「生成我的题目」——我们会换一条线路重试。",
   "home.flash.retryAltProvider":
-    "这次生成没成功。请再点一次「生成我的题目」——我们会换另一条 AI 线路重试。",
+    "这条线路没跑完——正在换另一条 AI 重试…",
   "home.flash.timeout":
     "{provider} 响应超时（Vercel 约 60 秒会中断）。请在设置里关掉它或换线路，再生成一次。",
   "home.flash.noProvider":

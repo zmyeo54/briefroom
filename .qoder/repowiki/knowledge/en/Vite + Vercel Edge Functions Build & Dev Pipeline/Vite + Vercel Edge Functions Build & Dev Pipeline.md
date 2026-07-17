@@ -8,33 +8,45 @@ source_files:
     - package.json
     - vite.config.js
     - vercel.json
-    - index.html
     - scripts/dev-api-server.mjs
     - scripts/tts_server.py
+    - scripts/tts_regression.mjs
 ---
 
-LineCheck uses a minimal, script-driven build system centered on Vite for the React SPA and Vercel for hosting. There is no Makefile, Dockerfile, or CI YAML — the entire pipeline is expressed through `package.json` scripts and `vercel.json`.
+## Build System Overview
 
-**Build toolchain**
-- **Vite 8** with `@vitejs/plugin-react` and `@tailwindcss/vite` compiles `src/` into static assets under `dist/`. The dev server runs on port 8787 (`--host 0.0.0.0`) and proxies `/api/*` to two local helper servers (see below).
-- `optimizeDeps.exclude = ['tesseract.js']` avoids pre-bundling that library because it ships native WASM binaries.
-- `index.html` is the Vite entry; PWA manifest, icons, OG/Twitter metadata, and JSON-LD are baked in directly.
+LineCheck uses a **Vite-based React SPA** with a dual-process development server and Vercel Edge Functions for deployment. There is no Makefile, Dockerfile, or CI pipeline in the repository — build orchestration lives entirely in `package.json` scripts and `vite.config.js`, with deployment configuration in `vercel.json`.
 
-**Local development workflow**
-The `npm run dev` script starts three processes in parallel:
-1. `scripts/tts_server.py` — a Python `ThreadingHTTPServer` on `127.0.0.1:8790` exposing `/tts`, `/api/tts`, `/fetch-url`, `/health` backed by `edge_tts` with newscaster voice styles, chunking, retry, and SSML sanitization.
-2. `scripts/dev-api-server.mjs` — a Node `http` server on `127.0.0.1:8791` proxying `/api/chat` to either DeepSeek (`https://api.deepseek.com`) or Gemini (`generativelanguage.googleapis.com/v1beta/openai`) depending on which API keys are present in the environment (`DEEPSEEK_API_KEY`, `GEMINI_API_KEY`, `GEMINI_API_KEYS`, `GEMINI_API_KEY_2..10`). It also exposes `/health` and a capability probe at `/api/chat`.
-3. `vite --host 0.0.0.0 --port 8787` — the SPA dev server, whose `vite.config.js` rewrites `/api/tts-health` → `/health`, `/api/tts` → `/tts`, `/api/fetch-url` → `/fetch-url`, and forwards `/api/chat` to the Node proxy.
+### Development Workflow (`npm run dev`)
+The dev command launches three concurrent processes:
+- **Python TTS server** (`scripts/tts_server.py`) on port 8790 — wraps Microsoft Edge TTS with newscaster voice styles, text chunking, and retry logic
+- **Node API proxy** (`scripts/dev-api-server.mjs`) on port 8791 — proxies `/api/chat` to Gemini/DeepSeek backends with key rotation and region routing
+- **Vite dev server** on port 8787 — serves the React app and rewrites `/api/*` routes to the two local services via its built-in proxy
 
-A separate `npm test:tts` runs `scripts/tts_regression.mjs` against the local TTS server to assert audio output quality.
+This multi-process setup lets developers iterate on the frontend while independently testing the Python TTS service and Node chat proxy without a container runtime.
 
-**Production build & deployment**
-- `npm run build` invokes `vite build`; the output directory is `dist/`.
-- `vercel.json` declares `buildCommand: npm run build`, `outputDirectory: dist`, and `framework: vite` so Vercel auto-detects the project. Static assets are served from `dist/`.
-- Serverless functions live in `api/` (`chat.js`, `tts.js`, `fetch-url.js`) and are mapped via `functions` with per-function `maxDuration` limits (60 s for chat/tts, 30 s for fetch-url). A single-page rewrite sends `/settings` to `/index.html` for client-side routing.
-- Security headers (`X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`) are applied globally; `/og-image.png` gets a 1-day cache header.
+### Production Build (`npm run build`)
+Runs `vite build` which outputs a static `dist/` directory. The build includes:
+- React 19 + Tailwind CSS v4 compilation via `@vitejs/plugin-react` and `@tailwindcss/vite`
+- Dependency optimization excluding `tesseract.js` (large WASM module) from pre-bundling
+- Single-page application output with client-side routing
 
-**Conventions & constraints**
-- All runtime secrets (API keys) are consumed exclusively from process environment variables; nothing is committed. The dev proxy reads multiple key names to support key rotation.
-- The TTS server hardcodes its host/port (`127.0.0.1:8790`) and is only intended for local development; production deployments use Vercel Edge Functions instead of this Python server.
-- The build has no version bump step — `package.json` stays at `0.0.0` and Vercel's git-based deploy triggers the build automatically.
+### Deployment (Vercel)
+`vercel.json` configures:
+- **Static site**: `buildCommand: npm run build`, `outputDirectory: dist`, `framework: vite`
+- **Edge Functions**: `api/tts.js`, `api/fetch-url.js`, `api/chat.js` are deployed as serverless functions with explicit `maxDuration` limits (30–60s)
+- **SPA rewrites**: `/settings` → `/index.html` for client-side routing
+- **Security headers**: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` on all responses, plus cache control for OG image
+
+### Testing & Regression
+The `test:tts` script runs `scripts/tts_regression.mjs`, a Node-based regression suite that:
+- Probes `/api/tts-health` for service availability
+- Imports and exercises browser-side TTS utilities (`src/lib/tts.js`) against the live dev stack
+- Generates MP3 fixtures into `.tmp/tts-regression/` covering short/long/bilingual inputs, chunked synthesis, combined sequences, and stress bursts (8 concurrent requests)
+- Validates MP3 magic bytes, minimum sizes, duration estimates, and cache hit performance
+
+### Key Conventions
+- **Port contract**: Vite (8787) → TTS (8790), Vite → Chat proxy (8791). Changing one requires updating the other's proxy config.
+- **API path rewriting**: Vite strips `/api/` prefix when forwarding to the TTS server (e.g., `/api/tts` → `/tts`), so the Python server must handle both prefixed and unprefixed paths.
+- **Environment-driven providers**: The chat proxy reads keys from `GEMINI_API_KEY*`, `DEEPSEEK_API_KEY`, and per-request `Authorization: Bearer` headers, with automatic fallback between providers based on `x-linecheck-ai-region`.
+- **No global state across builds**: Each process is independent; there is no shared build artifact between the Python TTS server and the Vite bundle.

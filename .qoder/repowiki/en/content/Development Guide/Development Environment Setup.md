@@ -19,11 +19,11 @@
 
 ## Update Summary
 **Changes Made**
-- Updated development server configuration with refined dev-api-server.mjs settings and enhanced error handling
-- Revised deployment configuration documentation to reflect vercel.json adjustments for improved API routing
-- Added comprehensive LLM discovery documentation covering the new llms.txt file and provider selection capabilities
-- Enhanced troubleshooting section with specific guidance for updated API server connection issues and provider selection problems
-- Expanded environment variable configuration documentation for the enhanced API functionality
+- Updated development API server documentation to reflect enhanced error handling and improved API routing capabilities
+- Revised API endpoint descriptions with new provider selection logic and enhanced request/response patterns
+- Added comprehensive troubleshooting guidance for the updated API server connection issues and provider configuration problems
+- Enhanced environment variable documentation for the improved API server functionality
+- Updated performance tips section with new API server optimization recommendations
 
 ## Table of Contents
 1. [Introduction](#introduction)

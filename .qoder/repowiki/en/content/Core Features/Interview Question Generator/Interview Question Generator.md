@@ -16,10 +16,11 @@
 
 ## Update Summary
 **Changes Made**
-- Updated system prompt version to 'linecheck-job-interview-v9' for improved question generation
-- Enhanced JSON output structure with additional metadata fields (jobTitle, company)
-- Improved AI-driven job title and company extraction capabilities
-- Updated prompt engineering section to reflect enhanced context processing
+- Updated system prompt version from previous iteration to 'linecheck-job-interview-v9' for enhanced AI-driven interview question generation
+- Enhanced JSON output structure with additional metadata fields (jobTitle, company) for improved context preservation
+- Improved AI-driven job title and company extraction capabilities for better contextual accuracy
+- Updated prompt engineering section to reflect enhanced v9 engine capabilities and improved relevance
+- Enhanced performance considerations for v9 engine processing overhead
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -34,7 +35,7 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document explains the Interview Question Generator feature that creates AI-powered interview questions tailored to job descriptions, candidate profiles, and selected interview modes. It covers how the system builds prompts using the latest v9 prompt engine, applies customization options (difficulty levels and question types), integrates with candidate management, configures mandatory questions, and manages generated questions via the QaList component. The enhanced system now provides improved AI-driven extraction of job titles and company information, resulting in more accurate and contextualized question generation. Practical examples, prompt engineering techniques, and export workflows are included for end users and integrators.
+This document explains the Interview Question Generator feature that creates AI-powered interview questions tailored to job descriptions, candidate profiles, and selected interview modes. The system now utilizes the advanced 'linecheck-job-interview-v9' prompt engine, which provides significantly improved accuracy and relevance in question generation. It covers how the system builds prompts using the latest v9 prompt engine, applies customization options (difficulty levels and question types), integrates with candidate management, configures mandatory questions, and manages generated questions via the QaList component. The enhanced v9 system provides superior AI-driven extraction of job titles and company information, resulting in more accurate and contextualized question generation with improved JSON output structure. Practical examples, prompt engineering techniques, and export workflows are included for end users and integrators.
 
 ## Project Structure
 The feature spans UI components, prompt construction utilities, configuration modules, and integration helpers:
@@ -101,13 +102,15 @@ QL --> GL
 ## Core Components
 - HomePage: Orchestrates user inputs (job description, candidate profile, interview mode, difficulty, question types), triggers generation with enhanced v9 prompt engine, and renders the question list.
 - QaList: Displays generated questions, supports editing, reordering, deletion, and exporting to PDF.
-- prompt.js: Builds structured prompts using the latest v9 engine by combining job context, candidate details, interview mode, difficulty, and question type constraints with enhanced AI-driven extraction.
+- prompt.js: Builds structured prompts using the latest v9 engine by combining job context, candidate details, interview mode, difficulty, and question type constraints with enhanced AI-driven extraction and improved JSON output structure.
 - interviewModes.js: Defines available interview modes and their characteristics.
 - mandatoryQuestions.js: Provides a mechanism to enforce specific questions across generations.
 - jobMeta.js: Supplies job-related metadata used to enrich prompts with extracted job titles and company information.
 - candidate.js: Reads candidate information for personalization.
 - exportPdf.js: Converts the current question set into a downloadable PDF.
 - GenerateLoading: Visual feedback during asynchronous generation.
+
+**Updated** Enhanced with v9 prompt engine featuring improved JSON output structure and additional metadata fields for better context preservation.
 
 **Section sources**
 - [HomePage.jsx](file://src/pages/HomePage.jsx)
@@ -123,17 +126,17 @@ QL --> GL
 ## Architecture Overview
 The generator follows a clear pipeline with enhanced v9 prompt processing:
 - Inputs: Job description, candidate profile, interview mode, difficulty, question types, and mandatory flags.
-- Enhanced Context Processing: AI-driven extraction of job titles and company information from job descriptions.
-- Prompt Assembly: The v9 prompting module composes a structured prompt using all inputs and configuration with improved JSON output structure.
-- Generation: An external AI service is invoked with the assembled prompt.
-- Post-processing: Mandatory questions are ensured; results are normalized into a consistent model with enhanced metadata.
+- Enhanced Context Processing: AI-driven extraction of job titles and company information from job descriptions using v9 engine capabilities.
+- Prompt Assembly: The v9 prompting module composes a structured prompt using all inputs and configuration with improved JSON output structure and enhanced metadata fields.
+- Generation: An external AI service is invoked with the assembled v9 prompt.
+- Post-processing: Mandatory questions are ensured; results are normalized into a consistent model with enhanced metadata including job title and company information.
 - Management: The QaList component presents, edits, and exports the final question set.
 
 ```mermaid
 sequenceDiagram
 participant User as "User"
 participant Page as "HomePage.jsx"
-participant Extractor as "AI Extraction"
+participant Extractor as "AI Extraction v9"
 participant Prompt as "prompt.js v9"
 participant Modes as "interviewModes.js"
 participant Cand as "candidate.js"
@@ -142,15 +145,15 @@ participant Gen as "AI Service"
 participant List as "QaList.jsx"
 participant Export as "exportPdf.js"
 User->>Page : "Configure inputs<br/>Job, Candidate, Mode, Difficulty, Types"
-Page->>Extracto r : "Extract job title & company"
-Extractor-->>Page : "Enhanced metadata"
+Page->>Extracto r : "Extract job title & company<br/>(v9 enhanced)"
+Extractor-->>Page : "Enhanced metadata<br/>(improved accuracy)"
 Page->>Cand : "Load candidate profile"
 Page->>Job : "Load job metadata"
 Page->>Modes : "Resolve interview mode"
-Page->>Prompt : "Assemble v9 prompt with enhanced context"
-Prompt-->>Page : "Structured prompt with JSON enhancements"
-Page->>Gen : "Send prompt for generation"
-Gen-->>Page : "Raw questions with enhanced metadata"
+Page->>Prompt : "Assemble v9 prompt<br/>with enhanced JSON structure"
+Prompt-->>Page : "Structured prompt with<br/>additional metadata fields"
+Page->>Gen : "Send v9 prompt for generation"
+Gen-->>Page : "Raw questions with<br/>enhanced metadata"
 Page->>Page : "Ensure mandatory questions"
 Page-->>List : "Render question list"
 User->>List : "Edit / reorder / delete"
@@ -172,19 +175,19 @@ Export-->>User : "Downloaded file"
 ### HomePage Orchestration
 Responsibilities:
 - Collects and validates user inputs (job description, candidate profile selection, interview mode, difficulty level, question types).
-- Invokes enhanced AI-driven extraction for job title and company information.
-- Triggers v9 prompt assembly and generation flow.
+- Invokes enhanced v9 AI-driven extraction for job title and company information with improved accuracy.
+- Triggers v9 prompt assembly and generation flow with enhanced JSON output structure.
 - Manages loading state and error handling.
 - Passes generated questions with enhanced metadata to QaList.
 
 Key behaviors:
 - Input validation ensures required fields before generation.
-- Integrates with AI-driven extraction to automatically populate job title and company fields.
+- Integrates with v9 AI-driven extraction to automatically populate job title and company fields with improved accuracy.
 - Integrates with candidate and job metadata modules to enrich context.
 - Applies interview mode constraints and difficulty scaling.
 - Ensures mandatory questions are present after generation.
 
-**Updated** Enhanced with AI-driven job title and company extraction capabilities for improved context accuracy.
+**Updated** Enhanced with v9 AI-driven job title and company extraction capabilities providing improved accuracy and relevance for better contextual understanding.
 
 **Section sources**
 - [HomePage.jsx](file://src/pages/HomePage.jsx)
@@ -199,7 +202,7 @@ Responsibilities:
 
 Data model:
 - Each question includes an identifier, text content, optional tags or categories, and metadata such as difficulty or type.
-- Enhanced metadata support for job title and company information.
+- Enhanced metadata support for job title and company information from v9 engine output.
 
 Operations:
 - Edit: Inline updates to question text and attributes.
@@ -239,28 +242,28 @@ Responsibilities:
   - Interview mode parameters
   - Difficulty level and question type filters
   - Mandatory questions requirement
-- Formats instructions to guide the AI toward producing high-quality, relevant questions with improved JSON output structure.
+- Formats instructions to guide the AI toward producing high-quality, relevant questions with improved JSON output structure and additional metadata fields.
 
-**Updated** Enhanced with v9 prompt engine featuring improved JSON output structure and additional metadata fields.
+**Updated** Enhanced with v9 prompt engine featuring improved JSON output structure with additional metadata fields (jobTitle, company) and enhanced context processing capabilities.
 
 Prompt construction logic:
-- Context injection: Merges job and candidate data into a concise background summary with AI-extracted job title and company information.
+- Context injection: Merges job and candidate data into a concise background summary with AI-extracted job title and company information using v9 enhanced extraction.
 - Mode alignment: Adjusts tone and focus based on interview mode (e.g., technical, behavioral, case-based).
 - Difficulty scaling: Modifies complexity and depth according to selected difficulty.
 - Type constraints: Enforces distribution across question types (e.g., multiple choice, open-ended, scenario-based).
 - Mandatory inclusion: Appends required questions or templates to ensure coverage.
-- Enhanced JSON structure: Outputs include additional fields for better context preservation.
+- Enhanced JSON structure: Outputs include additional fields for better context preservation and improved metadata handling.
 
 ```mermaid
 flowchart TD
 Start(["Start"]) --> Gather["Gather inputs:<br/>Job, Candidate, Mode, Difficulty, Types"]
-Gather --> Extract["AI-driven extraction:<br/>Job Title & Company"]
-Extract --> BuildContext["Build enhanced context summary"]
+Gather --> Extract["v9 AI-driven extraction:<br/>Enhanced Job Title & Company"]
+Extract --> BuildContext["Build enhanced context summary<br/>(v9 improved accuracy)"]
 BuildContext --> ApplyMode["Apply interview mode rules"]
 ApplyMode --> ScaleDifficulty["Scale difficulty level"]
 ScaleDifficulty --> FilterTypes["Filter by question types"]
 FilterTypes --> EnsureMandatory["Ensure mandatory questions"]
-EnsureMandatory --> FormatV9["Format v9 prompt with enhanced JSON"]
+EnsureMandatory --> FormatV9["Format v9 prompt with<br/>enhanced JSON structure"]
 FormatV9 --> End(["End"])
 ```
 
@@ -318,12 +321,12 @@ Usage:
 ### Job Metadata (jobMeta.js)
 Responsibilities:
 - Provides job-related metadata such as role title, key responsibilities, and required competencies.
-- Enhances prompt context for relevance and accuracy with AI-extracted information.
+- Enhances prompt context for relevance and accuracy with AI-extracted information from v9 engine.
 
 Usage:
 - HomePage merges job metadata including AI-extracted job title and company into the v9 prompt context.
 
-**Updated** Enhanced to work with AI-driven extraction for automatic job title and company identification.
+**Updated** Enhanced to work with v9 AI-driven extraction for automatic job title and company identification with improved accuracy.
 
 **Section sources**
 - [jobMeta.js](file://src/lib/jobMeta.js)
@@ -332,7 +335,7 @@ Usage:
 Responsibilities:
 - Converts the current question set into a formatted PDF document.
 - Supports headers, sections, and basic styling suitable for interviews.
-- Includes enhanced metadata in exported documents.
+- Includes enhanced metadata from v9 engine in exported documents.
 
 Usage:
 - QaList triggers export when user requests a download.
@@ -341,14 +344,14 @@ Usage:
 - [exportPdf.js](file://src/lib/exportPdf.js)
 
 ### Conceptual Overview
-The feature enables recruiters and hiring managers to quickly generate customized interview questions aligned with job requirements and candidate backgrounds. Users can select interview modes, adjust difficulty, filter question types, and enforce mandatory questions. The v9 engine provides enhanced AI-driven extraction of job context, resulting in more accurate and personalized questions. The resulting list is fully editable and exportable for offline use.
+The feature enables recruiters and hiring managers to quickly generate customized interview questions aligned with job requirements and candidate backgrounds. Users can select interview modes, adjust difficulty, filter question types, and enforce mandatory questions. The v9 engine provides enhanced AI-driven extraction of job context with improved accuracy, resulting in more precise and personalized questions. The resulting list is fully editable and exportable for offline use.
 
 ```mermaid
 flowchart TD
-A["Select Job & Candidate"] --> B["AI Extracts Job Context"]
+A["Select Job & Candidate"] --> B["v9 AI Extracts Job Context<br/>(Enhanced Accuracy)"]
 B --> C["Choose Interview Mode"]
 C --> D["Set Difficulty & Types"]
-D --> E["Generate with v9 Engine"]
+D --> E["Generate with v9 Engine<br/>(Improved JSON Structure)"]
 E --> F["Review & Edit"]
 F --> G["Export to PDF"]
 ```
@@ -395,29 +398,32 @@ SP --> JM
 
 ## Performance Considerations
 - Prompt size: Keep job descriptions and candidate summaries concise to reduce token usage and latency.
-- AI extraction overhead: The enhanced v9 engine performs additional AI-driven extraction which may add slight processing time.
+- AI extraction overhead: The enhanced v9 engine performs additional AI-driven extraction with improved accuracy which may add slight processing time compared to previous versions.
 - Batch operations: Avoid frequent small edits in QaList; batch changes where possible.
 - Export frequency: Limit repeated PDF exports; cache the last exported version if needed.
 - Network calls: Implement retry and timeout strategies for AI service calls to improve resilience.
-- Memory usage: Enhanced JSON output structure may require slightly more memory for large question sets.
+- Memory usage: Enhanced JSON output structure with additional metadata fields may require slightly more memory for large question sets.
+- v9 engine optimization: The v9 prompt engine provides improved accuracy but may have slightly higher computational requirements than previous versions.
 
-**Updated** Added considerations for v9 engine performance and enhanced metadata processing.
+**Updated** Added considerations for v9 engine performance improvements and enhanced metadata processing overhead.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
 - Missing inputs: Ensure job description and candidate profile are provided before generation.
 - Empty results: Verify interview mode and question types are valid; check mandatory questions configuration.
 - Export failures: Confirm browser permissions for downloads and sufficient memory for large question sets.
-- Slow generation: Reduce input length or simplify prompt constraints; v9 engine may take slightly longer due to enhanced processing.
-- AI extraction errors: If job title or company extraction fails, verify job description contains sufficient context.
+- Slow generation: Reduce input length or simplify prompt constraints; v9 engine may take slightly longer due to enhanced processing and improved accuracy features.
+- AI extraction errors: If job title or company extraction fails, verify job description contains sufficient context for v9 enhanced extraction.
+- v9 compatibility: Ensure AI service endpoints support the v9 prompt format and enhanced JSON output structure.
 
 Operational checks:
-- Validate that candidate and job modules return expected data structures.
-- Confirm v9 prompt assembly includes all required sections and enhanced metadata.
-- Inspect network logs for AI service responses and errors.
-- Check AI extraction functionality for job title and company identification.
+- Validate that candidate and job modules return expected data structures compatible with v9 engine.
+- Confirm v9 prompt assembly includes all required sections and enhanced metadata fields.
+- Inspect network logs for AI service responses and v9-specific error messages.
+- Check AI extraction functionality for improved job title and company identification accuracy.
+- Monitor v9 engine performance metrics for optimal tuning.
 
-**Updated** Added troubleshooting guidance for v9 engine and AI extraction features.
+**Updated** Added troubleshooting guidance for v9 engine features, enhanced extraction capabilities, and improved JSON output structure.
 
 **Section sources**
 - [HomePage.jsx](file://src/pages/HomePage.jsx)
@@ -426,7 +432,7 @@ Operational checks:
 - [exportPdf.js](file://src/lib/exportPdf.js)
 
 ## Conclusion
-The Interview Question Generator combines modular configuration, robust v9 prompt engineering, and flexible question management to deliver tailored interview materials. The enhanced v9 engine provides improved AI-driven extraction of job context, resulting in more accurate and personalized questions. By leveraging interview modes, difficulty scaling, question type filters, and mandatory questions, users can efficiently create high-quality assessments. The QaList component streamlines review and editing, while PDF export supports offline workflows. The enhanced JSON output structure ensures better context preservation throughout the generation process.
+The Interview Question Generator combines modular configuration, robust v9 prompt engineering, and flexible question management to deliver tailored interview materials. The enhanced v9 engine provides significantly improved AI-driven extraction of job context with enhanced accuracy, resulting in more precise and personalized questions. By leveraging interview modes, difficulty scaling, question type filters, and mandatory questions, users can efficiently create high-quality assessments. The QaList component streamlines review and editing, while PDF export supports offline workflows. The enhanced JSON output structure with additional metadata fields ensures better context preservation throughout the generation process, making the v9 engine a substantial improvement over previous versions.
 
 ## Appendices
 
@@ -437,32 +443,34 @@ The Interview Question Generator combines modular configuration, robust v9 promp
   - Difficulty: Intermediate.
   - Types: Scenario-based, problem-solving.
   - Mandatory: System design fundamentals.
-  - Enhanced: AI extracts "Senior Backend Engineer" and "TechCorp Inc." from job description.
+  - Enhanced v9: AI extracts "Senior Backend Engineer" and "TechCorp Inc." from job description with improved accuracy.
 - Behavioral interview for a product manager:
   - Inputs: Role emphasizing stakeholder management and roadmap planning.
   - Mode: Behavioral.
   - Difficulty: Advanced.
   - Types: Open-ended, situational.
   - Mandatory: Conflict resolution and prioritization.
-  - Enhanced: AI identifies "Product Manager" and "InnovateTech Solutions" for better context.
+  - Enhanced v9: AI identifies "Product Manager" and "InnovateTech Solutions" for better context with enhanced precision.
 
-**Updated** Added examples showing enhanced AI-driven extraction capabilities.
+**Updated** Added examples showing enhanced v9 AI-driven extraction capabilities with improved accuracy and relevance.
 
 ### Prompt Engineering Techniques
 - Use explicit constraints: Specify output format, number of questions, and distribution across types.
 - Provide context anchors: Include key responsibilities and required competencies from job metadata.
 - Personalize references: Mention candidate's notable projects or skills to increase relevance.
 - Enforce quality: Add instructions to avoid generic questions and encourage specificity.
-- Leverage v9 enhancements: Utilize improved JSON structure and enhanced metadata fields.
-- Iterate: Refine prompts based on generated results and user feedback.
+- Leverage v9 enhancements: Utilize improved JSON structure with additional metadata fields and enhanced context processing.
+- Optimize for accuracy: Take advantage of v9 engine's improved AI-driven extraction capabilities for better job title and company identification.
+- Iterate: Refine prompts based on generated results and user feedback, considering v9 engine improvements.
 
-**Updated** Added guidance for leveraging v9 engine enhancements.
+**Updated** Added guidance for leveraging v9 engine enhancements and improved extraction capabilities.
 
 ### Configuring Mandatory Questions
 - Access mandatory question settings via the settings interface.
 - Add, remove, or toggle mandatory items as needed.
 - Ensure mandatory questions align with compliance or assessment standards.
 - Validate that mandatory items integrate smoothly with selected interview modes and difficulty levels.
+- Consider v9 engine compatibility when configuring complex mandatory question patterns.
 
 **Section sources**
 - [mandatoryQuestions.js](file://src/lib/mandatoryQuestions.js)

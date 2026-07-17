@@ -138,7 +138,7 @@ export default function HomePage() {
   const [qaEpoch, setQaEpoch] = useState(0);
   const [selected, setSelected] = useState(() => new Set());
   const [loading, setLoading] = useState(false);
-  // After first Build failure, next attempt forces the alternate enabled provider
+  // After a failed Build, next attempt starts on the alternate provider
   const [useAltProviderRetry, setUseAltProviderRetry] = useState(false);
   const [status, setStatus] = useState({ text: "", kind: "" });
   const [playingIndex, setPlayingIndex] = useState(-1);
@@ -480,10 +480,10 @@ export default function HomePage() {
         flash(t("home.flash.noProvider"), "error");
         return;
       }
-      let provider = order[0];
-      if (useAltProviderRetry && order.length > 1) {
-        provider = order[1];
-      }
+      // Fresh Build: try preferred then alt in the same click (each /api/chat
+      // gets a full Vercel budget). After a prior failure flag, start on alt.
+      const providersQueue =
+        useAltProviderRetry && order.length > 1 ? [order[1]] : [...order];
       const enabledHeader = order.join(",");
       const body = {
         temperature: 0.6,
@@ -499,6 +499,11 @@ export default function HomePage() {
           { role: "user", content: userContent },
         ],
       };
+
+      let provider = providersQueue[0];
+      let res;
+      let data;
+      let lastStatus = 0;
 
       // Prefer /api/chat (user key + Vercel keys rotate there). Local Vite has no
       // chat proxy — fall back to direct Gemini with the pasted key only.
@@ -593,54 +598,58 @@ export default function HomePage() {
         return { res, data };
       }
 
-      const offerAltRetry = () => {
-        if (!useAltProviderRetry && order.length > 1) {
+      const models = geminiModelsToTry(latest.model);
+      providerLoop: for (let pi = 0; pi < providersQueue.length; pi++) {
+        provider = providersQueue[pi];
+        for (let i = 0; i < models.length; i++) {
+          ({ res, data } = await callChatWithModel(models[i]));
+          lastStatus = res.status;
+          if (res.ok) break providerLoop;
+          if (res.status === 503) {
+            if (pi < providersQueue.length - 1) {
+              setUseAltProviderRetry(true);
+              flash(t("home.flash.retryAltProvider"), "error");
+              continue providerLoop;
+            }
+            flash(data?.error?.message || t("home.flash.needKey"), "error");
+            return;
+          }
+          if (res.status === 504 || res.status === 502) {
+            if (pi < providersQueue.length - 1) {
+              setUseAltProviderRetry(true);
+              flash(t("home.flash.retryAltProvider"), "error");
+              continue providerLoop;
+            }
+            flash(
+              data?.error?.message ||
+                t("home.flash.timeout", {
+                  provider:
+                    provider === "deepseek"
+                      ? t("settings.aiProvider.deepseek")
+                      : t("settings.aiProvider.gemini"),
+                }),
+              "error"
+            );
+            return;
+          }
+          // Quota / missing model → try next; other errors stop this provider.
+          if (
+            shouldTryNextGeminiModel(res.status, data) &&
+            i < models.length - 1
+          ) {
+            continue;
+          }
+          break;
+        }
+        if (!res.ok && pi < providersQueue.length - 1) {
           setUseAltProviderRetry(true);
           flash(t("home.flash.retryAltProvider"), "error");
-          return true;
-        }
-        return false;
-      };
-
-      const models = geminiModelsToTry(latest.model);
-      let res;
-      let data;
-      let lastStatus = 0;
-      for (let i = 0; i < models.length; i++) {
-        ({ res, data } = await callChatWithModel(models[i]));
-        lastStatus = res.status;
-        if (res.ok) break;
-        if (res.status === 503) {
-          if (offerAltRetry()) return;
-          const msg =
-            data?.error?.message ||
-            t("home.flash.needKey");
-          flash(msg, "error");
-          return;
-        }
-        if (res.status === 504 || res.status === 502) {
-          if (offerAltRetry()) return;
-          flash(
-            data?.error?.message ||
-              t("home.flash.timeout", {
-                provider:
-                  provider === "deepseek"
-                    ? t("settings.aiProvider.deepseek")
-                    : t("settings.aiProvider.gemini"),
-              }),
-            "error"
-          );
-          return;
-        }
-        // Quota / missing model → try next; other errors stop immediately.
-        if (shouldTryNextGeminiModel(res.status, data) && i < models.length - 1) {
           continue;
         }
         break;
       }
 
       if (!res.ok) {
-        if (offerAltRetry()) return;
         if (lastStatus === 429 || lastStatus === 404) {
           setUseAltProviderRetry(true);
           flash(
