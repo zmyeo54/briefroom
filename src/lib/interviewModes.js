@@ -238,6 +238,33 @@ export const QUESTION_FOCUSES = [
 
 export const DEFAULT_FOCUSES = ["leadership", "delivery", "customer", "rolefit"];
 
+/** Display config for all category badges (focus themes + special types). */
+export const CATEGORY_CONFIG = {
+  foundation: { label: "Foundation", labelZh: "基础", color: "#6b7280", bg: "#f3f4f6" },
+  addon: { label: "Addon", labelZh: "附加", color: "#7c3aed", bg: "#ede9fe" },
+  leadership: { label: "Leadership", labelZh: "领导力", color: "#b45309", bg: "#fef3c7" },
+  delivery: { label: "Delivery", labelZh: "交付", color: "#0369a1", bg: "#e0f2fe" },
+  customer: { label: "Customer", labelZh: "客户", color: "#be185d", bg: "#fce7f3" },
+  rolefit: { label: "Role Fit", labelZh: "匹配度", color: "#15803d", bg: "#dcfce7" },
+  gaps: { label: "Gaps", labelZh: "短板", color: "#a16207", bg: "#fef9c3" },
+  stakeholder: { label: "Stakeholders", labelZh: "协作", color: "#7e22ce", bg: "#f3e8ff" },
+  culture: { label: "Culture", labelZh: "文化", color: "#0f766e", bg: "#ccfbf1" },
+  domain: { label: "Domain", labelZh: "专业", color: "#c2410c", bg: "#ffedd5" },
+};
+
+/** Get category display config, falling back to a neutral style. */
+export function getCategoryConfig(id) {
+  const key = String(id || "").toLowerCase();
+  return (
+    CATEGORY_CONFIG[key] || {
+      label: key.charAt(0).toUpperCase() + key.slice(1),
+      labelZh: key,
+      color: "#6b7280",
+      bg: "#f3f4f6",
+    }
+  );
+}
+
 /** Themes this interviewer persona tends to lean on (soft prior, not a hard lock). */
 const ROLE_FOCUS_BIAS = {
   any: [],
@@ -340,29 +367,13 @@ export function partitionFocuses(selectedIds, suggestedIds) {
 export function focusPromptBlock(focusIds) {
   const ids = normalizeFocuses(focusIds);
   const items = QUESTION_FOCUSES.filter((f) => ids.includes(f.id));
-  const n = items.length;
 
   const detail = items
     .map(
-      (f, i) => `${i + 1}. ${f.label.toUpperCase()}
-   Probe for: ${f.ask}
-   Answer craft: ${f.answer}`
+      (f, i) => `${i + 1}. ${f.label.toUpperCase()}: ${f.ask} → ${f.answer}`
     )
     .join("\n");
 
-  return `QUESTION DIRECTIONS — selected by the candidate (${n}). These are REQUIRED rehearsal themes, not soft suggestions.
-
-COVERAGE (invented extras only — after mandatory 3 and any user target add-ons):
-- Aim for at least one invented question per selected direction when inventing 5+ extras.
-- If inventing fewer extras than selected directions, cover the highest-priority directions first (order listed below).
-- Do not invent duplicate questions that only rephrase the same probe.
-- Mandatory intros / self-intro may lightly echo role-fit; do not force every direction into the mandatory 3.
-
-ANSWER FRAMING:
-- When a question maps to a selected direction, shape the spoken answer with that direction's "Answer craft".
-- Stay truthful to the resume. Prefer ownership language ("I led…", "I decided…").
-- Score for substance + structure: one clear story beat, concrete action, believable result — not buzzwords.
-
-SELECTED DIRECTIONS (in priority order):
+  return `QUESTION DIRECTIONS (${items.length} themes). Cover in invented extras (≥1 per direction when possible). Shape answers using craft notes. No duplicates.
 ${detail}`;
 }

@@ -1273,6 +1273,53 @@ html[lang="zh-CN"] .app-dialog-body {
   }
 }
 
+/* Role info block — premium display for Position & Company */
+.doc-role-info {
+  margin-top: 0.65rem;
+  border-radius: 12px;
+  border: 1px solid rgba(74, 127, 248, 0.18);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(6px);
+  padding: 0.6rem 0.75rem;
+}
+
+.doc-role-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+}
+
+.doc-role-label {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #4a7ff8;
+  min-width: 62px;
+}
+
+.doc-role-value {
+  font-size: 13px;
+  font-weight: 650;
+  color: #1a1a2e;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+.doc-role-value--sub {
+  font-size: 12px;
+  font-weight: 550;
+  color: #4a4a5a;
+}
+
+.doc-role-divider {
+  height: 1px;
+  background: linear-gradient(90deg, rgba(74, 127, 248, 0.15), rgba(74, 127, 248, 0.04));
+  margin: 0.25rem 0;
+}
+
 .skeleton {
   border-radius: 20px;
   background: linear-gradient(90deg, #eae8e3 25%, #f7f6f3 50%, #eae8e3 75%);
@@ -1823,6 +1870,19 @@ html[lang="zh-CN"] .app-dialog-body {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.qa-category-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.125rem 0.5rem;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  line-height: 1.4;
 }
 
 .qa-number {
@@ -3218,7 +3278,7 @@ html[lang="zh-CN"] .app-dialog-body {
   flex-direction: column;
   width: 100%;
   max-width: 460px;
-  max-height: min(92dvh, 680px);
+  max-height: 90dvh;
   overflow: hidden;
   border-radius: 28px;
   background: var(--color-panel);
@@ -3266,14 +3326,14 @@ html[lang="zh-CN"] .app-dialog-body {
 .onboard-body {
   flex: 1 1 auto;
   overflow-y: auto;
-  padding: 20px 24px 0;
+  padding: 16px 22px 0;
   min-height: 0;
 }
 
 .onboard-step {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .onboard-visual-wrap {
@@ -3284,9 +3344,9 @@ html[lang="zh-CN"] .app-dialog-body {
 
 .onboard-kicker {
   font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #4a7ff8;
 }
@@ -3314,7 +3374,7 @@ html[lang="zh-CN"] .app-dialog-body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 16px 24px 0;
+  padding: 12px 22px 0;
 }
 
 .onboard-back {
@@ -3342,9 +3402,9 @@ html[lang="zh-CN"] .app-dialog-body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
-  padding: 20px;
+  padding: 16px;
   border-radius: 18px;
   position: relative;
   overflow: hidden;
@@ -3385,6 +3445,50 @@ html[lang="zh-CN"] .app-dialog-body {
   font-size: 12px;
   color: var(--color-mute);
   margin: -4px 0 0;
+}
+
+.obv-welcome-lang {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 4px;
+}
+
+.obv-lang-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a8a9a;
+}
+
+.obv-lang-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.obv-lang-btn {
+  padding: 6px 18px;
+  border-radius: 999px;
+  border: 1.5px solid #e2e2ea;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.obv-lang-btn:hover {
+  border-color: #c49a3c;
+  color: #c49a3c;
+}
+
+.obv-lang-btn--active {
+  background: #c49a3c;
+  border-color: #c49a3c;
+  color: #fff;
 }
 
 .obv-welcome-feats {
@@ -3677,63 +3781,84 @@ html[lang="zh-CN"] .app-dialog-body {
 }
 
 .obv-mm {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: auto 32px 1fr;
+  grid-template-rows: repeat(4, auto);
+  gap: 6px 0;
   width: 100%;
-  min-height: 140px;
-}
-
-.obv-mm-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 0;
+  align-items: stretch;
 }
 
 .obv-mm-center {
-  position: relative;
-  z-index: 1;
+  grid-row: 1 / -1;
+  grid-column: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 8px 10px;
-  background: linear-gradient(135deg, #c49a3c, #a67c2e);
-  border-radius: 10px;
-  box-shadow: 0 3px 12px rgba(196, 154, 60, 0.3);
-  flex-shrink: 0;
-  width: 80px;
-  min-height: 44px;
+  padding: 18px 20px 18px 18px;
+  background: linear-gradient(145deg, #d4a84a 0%, #b8892e 50%, #9a6f20 100%);
+  border-radius: 14px 0 0 14px;
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.25),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.1),
+    0 4px 16px rgba(180, 130, 40, 0.4),
+    0 1px 3px rgba(0, 0, 0, 0.15);
   text-align: center;
+  min-width: 100px;
+  position: relative;
+}
+
+.obv-mm-center::before {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  right: 1px;
+  bottom: 1px;
+  border-radius: 13px 0 0 13px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, transparent 40%);
+  pointer-events: none;
 }
 
 .obv-mm-center-text {
-  font-size: 9.5px;
+  font-size: 12px;
   font-weight: 700;
   color: #fff;
-  line-height: 1.2;
+  line-height: 1.35;
   word-break: break-word;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  letter-spacing: 0.01em;
+  position: relative;
+  z-index: 1;
 }
 
-.obv-mm-center-zh {
-  font-size: 8px;
-  color: rgba(255, 255, 255, 0.8);
-  margin-top: 2px;
-  line-height: 1.15;
+.obv-mm-connectors {
+  grid-column: 2;
+  grid-row: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-self: stretch;
+}
+
+.obv-mm-connector {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.obv-mm-connector-h {
+  width: 100%;
+  height: 2px;
+  background: var(--connector-color);
 }
 
 .obv-mm-branches {
-  position: relative;
-  z-index: 1;
+  grid-column: 3;
+  grid-row: 1 / -1;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  flex: 1;
-  min-width: 0;
+  gap: 6px;
 }
 
 .obv-mm-branch {
@@ -3741,10 +3866,10 @@ html[lang="zh-CN"] .app-dialog-body {
   flex-direction: column;
   gap: 1px;
   padding: 5px 8px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(32, 32, 32, 0.06);
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(32, 32, 32, 0.08);
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .obv-mm-branch-header {
@@ -3827,27 +3952,38 @@ html[lang="zh-CN"] .app-dialog-body {
     border-radius: 22px;
   }
 
-  .onboard-body { padding: 14px 18px 0; }
-  .onboard-nav { padding: 12px 18px 0; }
-  .onboard-skip-hint { padding: 8px 18px 12px; }
-  .onboard-title { font-size: 18px; }
-  .onboard-desc { font-size: 12.5px; }
+  .onboard-body { padding: 12px 16px 0; }
+  .onboard-nav { padding: 10px 16px 0; }
+  .onboard-skip-hint { padding: 8px 16px 12px; }
+  .onboard-title { font-size: 17px; }
+  .onboard-desc { font-size: 12px; }
+  .onboard-kicker { font-size: 11px; }
 
-  .obv { padding: 14px; }
+  .obv { padding: 12px; gap: 8px; }
 
-  .obv-gen-cards { gap: 6px; }
-  .obv-gen-card { padding: 8px 6px; }
-  .obv-gen-card-q { font-size: 9.5px; }
+  .obv-gen-cards { gap: 5px; }
+  .obv-gen-card { padding: 6px 5px; }
+  .obv-gen-card-q { font-size: 9px; }
+  .obv-gen-card-a { font-size: 8px; }
 
-  .obv-practice-dock { gap: 6px; }
-  .obv-practice-btn { padding: 10px 8px; min-width: 76px; font-size: 10px; }
+  .obv-practice-dock { gap: 5px; }
+  .obv-practice-btn { padding: 8px 6px; min-width: 70px; font-size: 9.5px; }
 
-  .obv-mm-center { width: 68px; padding: 6px 8px; }
-  .obv-mm-center-text { font-size: 8.5px; }
+  /* Mindmap mobile - smaller but keep connected */
+  .obv-mm { grid-template-columns: auto 24px 1fr; gap: 5px 0; }
+  .obv-mm-center { min-width: 70px; padding: 10px 10px 10px 12px; }
+  .obv-mm-center-text { font-size: 9px; }
+  .obv-mm-connector-h { height: 1.5px; }
+  .obv-mm-branches { gap: 5px; }
   .obv-mm-branch { padding: 4px 6px; }
-  .obv-mm-branch-label { font-size: 9.5px; }
+  .obv-mm-branch-label { font-size: 9px; }
   .obv-mm-branch-detail { font-size: 8px; }
+  .obv-mm-branch-dot { width: 5px; height: 5px; }
 
-  .obv-mm-legend { gap: 10px; }
-  .obv-mm-legend-item { font-size: 9px; }
+  .obv-mm-legend { gap: 8px; }
+  .obv-mm-legend-item { font-size: 8.5px; }
+  .obv-mm-legend-swatch { width: 10px; height: 10px; }
+
+  .obv-welcome-lang { margin: 8px 0 2px; }
+  .obv-lang-btn { padding: 5px 14px; font-size: 12px; }
 }

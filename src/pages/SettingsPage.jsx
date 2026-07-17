@@ -501,8 +501,16 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
+        </motion.section>
 
-          {/* Replay welcome tour */}
+        {/* Welcome Tour */}
+        <motion.section
+          className="settings-section"
+          custom={5}
+          initial="hidden"
+          animate="visible"
+          variants={fadeUp}
+        >
           <div className="settings-card">
             <div className="settings-card-header">
               <span className="settings-card-icon">

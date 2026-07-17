@@ -179,6 +179,9 @@ export default function DocumentField({
       <div className="doc-card-head">
         <div className="min-w-0 flex-1 pr-2">
           <h2 className="display text-lg title md:text-xl">{title}</h2>
+          {hint ? (
+            <p className="mute mt-0.5 text-xs leading-relaxed md:text-sm">{hint}</p>
+          ) : null}
         </div>
         {loaded ? (
           <button
@@ -204,18 +207,27 @@ export default function DocumentField({
               />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold title leading-snug">
-                  {displayTitle?.trim() || t("doc.ready", { title })}
+                  {t("doc.ready", { title })}
                 </p>
+                {sourceFriendly ? (
+                  <p className="mute mt-0.5 text-xs">{sourceFriendly}</p>
+                ) : null}
                 {displayTitle?.trim() ? (
-                  <p className="mute mt-1 text-xs">{t("doc.roleReady")}</p>
-                ) : null}
-                {displaySubtitle?.trim() ? (
-                  <p className="mute mt-0.5 text-xs">{displaySubtitle}</p>
-                ) : displayTitle?.trim() ? null : sourceFriendly ? (
-                  <p className="mute mt-1 text-xs">{sourceFriendly}</p>
-                ) : null}
-                {displayTitle?.trim() && sourceFriendly ? (
-                  <p className="mute mt-0.5 text-[11px] opacity-80">{sourceFriendly}</p>
+                  <div className="doc-role-info">
+                    <div className="doc-role-row">
+                      <span className="doc-role-label">{t("doc.positionLabel")}</span>
+                      <span className="doc-role-value">{displayTitle}</span>
+                    </div>
+                    {displaySubtitle?.trim() ? (
+                      <>
+                        <div className="doc-role-divider" />
+                        <div className="doc-role-row">
+                          <span className="doc-role-label">{t("doc.companyLabel")}</span>
+                          <span className="doc-role-value doc-role-value--sub">{displaySubtitle}</span>
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
                 ) : null}
               </div>
             </div>

@@ -594,6 +594,7 @@ export default function HomePage() {
         .map((x) => ({
           q: String(x.q || x.question || "").trim(),
           a: String(x.a || x.answer || "").trim(),
+          category: String(x.category || "").trim() || null,
           map: x.map && typeof x.map === "object" ? x.map : null,
         }))
         .filter((x) => x.q && x.a);

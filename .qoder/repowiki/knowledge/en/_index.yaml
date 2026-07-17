@@ -3,11 +3,11 @@ schema_version: 1
 locale: en-US
 branch: main
 nodes_managed: true
-exported_at: "2026-07-17T14:59:56Z"
+exported_at: "2026-07-17T16:28:01Z"
 modules:
     "":
-        dir_name: Interview Coach Monorepo (Vite PWA + Vercel Functions + Dev Helpers)
-        title: Interview Coach Monorepo (Vite PWA + Vercel Functions + Dev Helpers)
+        dir_name: Interview Coach Monorepo (Vite + Vercel Functions)
+        title: Interview Coach Monorepo (Vite + Vercel Functions)
         scope:
             - README.md
             - .gitignore

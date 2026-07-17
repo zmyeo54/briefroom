@@ -40,11 +40,39 @@ function normalizeQ(q) {
     .slice(0, 48);
 }
 
+/** Extract meaningful words from a question (drops stop words). */
+function qWords(q) {
+  const stop = new Set([
+    "what", "is", "are", "do", "does", "did", "how", "why", "can", "could",
+    "would", "should", "will", "the", "a", "an", "your", "you", "my", "me",
+    "i", "we", "us", "this", "that", "for", "of", "in", "to", "and", "or",
+    "be", "been", "was", "were", "have", "has", "had", "not", "no",
+    "请", "你", "的", "吗", "呢", "了", "是", "为", "什么", "怎么",
+    "如何", "能", "会", "可以", "想", "要",
+  ]);
+  return new Set(
+    String(q || "")
+      .toLowerCase()
+      .replace(/[？?。.!！,，、/]+/g, " ")
+      .split(/\s+/)
+      .filter((w) => w.length > 1 && !stop.has(w))
+  );
+}
+
 function isSameQuestion(a, b) {
   const na = normalizeQ(a);
   const nb = normalizeQ(b);
   if (!na || !nb) return false;
-  return na === nb || na.includes(nb) || nb.includes(na);
+  // Exact substring match (fast path)
+  if (na === nb || na.includes(nb) || nb.includes(na)) return true;
+  // Word-overlap fallback: if ≥60% of meaningful words match
+  const wa = qWords(a);
+  const wb = qWords(b);
+  if (!wa.size || !wb.size) return false;
+  let common = 0;
+  for (const w of wa) if (wb.has(w)) common++;
+  const ratio = common / Math.min(wa.size, wb.size);
+  return ratio >= 0.6;
 }
 
 function isMandatoryText(q) {

@@ -18,7 +18,7 @@ const en = {
   "nav.uiLang": "App language",
 
   "brand.name": "Line Check",
-  "brand.tagline": "Your interview coach",
+  "brand.tagline": "Your Interview Coach",
   "brand.docTitle":
     "Interview coach for answers you can say out loud",
 
@@ -40,7 +40,7 @@ const en = {
   "install.step2Label": "Add to Home Screen",
   "install.step2Hint": "Then tap Add",
 
-  "home.eyebrow": "Your interview coach",
+  "home.eyebrow": "Your Interview Coach",
   "home.tagline":
     "Turn your story into answers you can say out loud — then practice until they feel natural.",
   "home.prepLabel": "Warm-up",
@@ -150,6 +150,8 @@ const en = {
 
   "doc.ready": "{title} locked in",
   "doc.roleReady": "Full posting saved for coaching",
+  "doc.positionLabel": "Position",
+  "doc.companyLabel": "Company",
   "doc.fromUpload": "From your upload",
   "doc.fromLink": "From the job link",
   "doc.fromPaste": "From your paste",
@@ -312,28 +314,29 @@ const en = {
   "onboard.next": "Next",
   "onboard.finish": "Let's Go",
 
-  "onboard.featAudio": "Audio practice",
-  "onboard.featPdf": "PDF export",
+  "onboard.featAudio": "Audio Practice",
+  "onboard.featPdf": "PDF Export",
   "onboard.featMindmap": "Mindmap",
 
   "onboard.step0Kicker": "Welcome",
-  "onboard.step0Title": "Your interview coach is ready",
+  "onboard.step0Title": "Your Interview Coach Is Ready",
   "onboard.step0Body": "Turn your resume into real interview answers you can say out loud — then practice, export, and memorize with mindmaps.",
+  "onboard.chooseLang": "Choose your language",
 
-  "onboard.step1Kicker": "Step 1 of 4",
-  "onboard.step1Title": "Drop in your documents",
+  "onboard.step1Kicker": "Step 1: Prepare Materials",
+  "onboard.step1Title": "Drop In Your Documents",
   "onboard.step1Body": "Add your resume and the job description. Upload a file, paste a link, or type it in — whatever's fastest. The more real your materials, the sharper the coaching.",
 
-  "onboard.step2Kicker": "Step 2 of 4",
-  "onboard.step2Title": "Build your practice set",
+  "onboard.step2Kicker": "Step 2: Generate Practice",
+  "onboard.step2Title": "Build Your Practice Set",
   "onboard.step2Body": "Pick focus themes, add any must-ask questions, then hit Build. AI generates interview Q&A tailored to your real story — with a mindmap for every answer.",
 
-  "onboard.step3Kicker": "Step 3 of 4",
-  "onboard.step3Title": "Practice out loud & export",
+  "onboard.step3Kicker": "Step 3: Practice & Export",
+  "onboard.step3Title": "Practice Out Loud & Export",
   "onboard.step3Body": "Tap Play to hear each Q&A read aloud like a real interviewer. Export the whole set as one MP3 for commutes and gym sessions, or download a formatted PDF for offline review.",
 
-  "onboard.step4Kicker": "Step 4 of 4",
-  "onboard.step4Title": "Memorize with mindmaps",
+  "onboard.step4Kicker": "Step 4: Memorize Key Points",
+  "onboard.step4Title": "Memorize with Mindmaps",
   "onboard.step4Body": "Every answer gets a visual mindmap — the amber center is the specific claim of your answer, and color-coded branches capture the real facts, names, and metrics. Use it as an anchor so you never blank mid-answer.",
 
   "onboard.visualResume": "Resume",
@@ -352,10 +355,13 @@ const en = {
   "onboard.visualExportPdf": "Export PDF",
   "onboard.visualAiAnswer": "AI-crafted answer…",
   "onboard.visualPracticeHint": "Select questions, then practice or export",
+  "onboard.genQ1": "Tell me about yourself",
+  "onboard.genQ2": "Why this role?",
+  "onboard.genQ3": "A challenge you faced",
 
   /* Mindmap visual — realistic example data */
-  "onboard.mmTopic": "Led SAP→Odoo migration",
-  "onboard.mmTopicZh": "主导 SAP→Odoo 迁移",
+  "onboard.mmTopic": "Led SAP → Odoo Migration",
+  "onboard.mmTopicZh": "主导 SAP → Odoo 迁移",
   "onboard.mmBranch1Label": "5-person APAC team",
   "onboard.mmBranch1LabelZh": "5人亚太团队",
   "onboard.mmBranch1Detail": "Cross-region delivery in 3 months",
@@ -502,6 +508,8 @@ const zh = {
 
   "doc.ready": "{title} 已就绪",
   "doc.roleReady": "完整职位描述已保存，可用于生成回答",
+  "doc.positionLabel": "职位",
+  "doc.companyLabel": "公司",
   "doc.fromUpload": "来自你的上传",
   "doc.fromLink": "来自职位链接",
   "doc.fromPaste": "来自粘贴",
@@ -669,22 +677,23 @@ const zh = {
   "onboard.step0Kicker": "欢迎",
   "onboard.step0Title": "你的面试教练已就绪",
   "onboard.step0Body": "把简历变成能说出口的面试回答——反复练习、导出音频/PDF、用思维导图加深记忆。",
+  "onboard.chooseLang": "选择你的语言",
 
-  "onboard.step1Kicker": "第 1 步（共 4 步）",
-  "onboard.step1Title": "放入你的材料",
-  "onboard.step1Body": "加入简历和职位描述。上传文件、粘贴链接或直接输入——怎么快怎么来。材料越真实，教练给的反馈越精准。",
+  "onboard.step1Kicker": "第 1 步：准备材料",
+  "onboard.step1Title": "上传简历与岗位信息",
+  "onboard.step1Body": "添加你的简历和目标职位描述。支持上传文件、粘贴链接或直接输入文本——怎么方便怎么来。材料越详实，AI 教练的建议越精准。",
 
-  "onboard.step2Kicker": "第 2 步（共 4 步）",
-  "onboard.step2Title": "生成你的练习清单",
-  "onboard.step2Body": "选好重点方向，补上你心里没底的题目，然后点生成。AI 会根据你的真实经历定制面试问答——每题都配思维导图。",
+  "onboard.step2Kicker": "第 2 步：生成练习",
+  "onboard.step2Title": "定制你的面试题库",
+  "onboard.step2Body": "选择重点方向，添加想练习的难题，然后一键生成。AI 会基于你的真实经历定制面试问答——每道题都配有思维导图帮你记忆。",
 
-  "onboard.step3Kicker": "第 3 步（共 4 步）",
-  "onboard.step3Title": "大声练 & 导出",
-  "onboard.step3Body": "点播放，像真实面试一样听问答朗读。整套导出为一个 MP3 通勤健身时练，也可以下载排版好的 PDF 离线复习。",
+  "onboard.step3Kicker": "第 3 步：练习与导出",
+  "onboard.step3Title": "大声朗读 & 导出音频/PDF",
+  "onboard.step3Body": "点击播放，像真实面试一样听问答朗读。整套导出为 MP3，通勤健身时反复练；或下载排版精美的 PDF 离线复习。",
 
-  "onboard.step4Kicker": "第 4 步（共 4 步）",
-  "onboard.step4Title": "用思维导图记住要点",
-  "onboard.step4Body": "每道题都配有思维导图——琥珀色中心是你回答的核心主张，彩色分支记录真实的事实、名字和数据。用它锚定表达框架，面试时不再忘词。",
+  "onboard.step4Kicker": "第 4 步：记忆要点",
+  "onboard.step4Title": "用思维导图锚定表达框架",
+  "onboard.step4Body": "每道题都配有专属思维导图——琥珀色中心是你回答的核心主张，彩色分支记录真实的事实、名字和数据。用它锚定表达框架，面试时不再忘词。",
 
   "onboard.visualResume": "简历",
   "onboard.visualResumeHint": "PDF、Word、截图或粘贴",
@@ -702,10 +711,13 @@ const zh = {
   "onboard.visualExportPdf": "导出 PDF",
   "onboard.visualAiAnswer": "AI 定制回答…",
   "onboard.visualPracticeHint": "勾选题目，然后练习或导出",
+  "onboard.genQ1": "介绍一下你自己",
+  "onboard.genQ2": "为什么申请这个职位？",
+  "onboard.genQ3": "你遇到过的一个挑战",
 
   /* Mindmap visual — realistic example data */
-  "onboard.mmTopic": "主导 SAP→Odoo 迁移",
-  "onboard.mmTopicZh": "Led SAP→Odoo migration",
+  "onboard.mmTopic": "主导 SAP → Odoo 迁移",
+  "onboard.mmTopicZh": "Led SAP → Odoo Migration",
   "onboard.mmBranch1Label": "5人亚太团队",
   "onboard.mmBranch1LabelZh": "5-person APAC team",
   "onboard.mmBranch1Detail": "跨区域 3 个月交付",

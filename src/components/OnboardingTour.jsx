@@ -26,7 +26,7 @@ const ONBOARDING_KEY = "briefroom_onboarding_done_v1";
  * Covers: documents, generation, practice/export audio/PDF, and mindmap.
  */
 export default function OnboardingTour({ onFinish }) {
-  const { t } = useI18n();
+  const { t, uiLang, setUiLang } = useI18n();
   const reduce = useReducedMotion();
   const [step, setStep] = useState(0);
 
@@ -97,7 +97,7 @@ export default function OnboardingTour({ onFinish }) {
               transition={{ duration: 0.22, ease }}
             >
               <div className="onboard-visual-wrap">
-                <OnboardingVisual kind={current.visual} t={t} />
+                <OnboardingVisual kind={current.visual} t={t} uiLang={uiLang} setUiLang={setUiLang} />
               </div>
               <div className="onboard-text">
                 <p className="onboard-kicker">{current.kicker}</p>
@@ -135,7 +135,8 @@ export default function OnboardingTour({ onFinish }) {
 
 const BRANCH_COLORS = ["#c49a3c", "#4a7ff8", "#ff7648", "#c5b4e3", "#4a9ff8"];
 
-function OnboardingVisual({ kind, t }) {
+function OnboardingVisual({ kind, t, uiLang, setUiLang }) {
+  const isZh = uiLang === "zh";
   if (kind === "welcome") {
     return (
       <div className="obv obv--welcome">
@@ -143,6 +144,26 @@ function OnboardingVisual({ kind, t }) {
         <BrandLogo size={72} className="obv-logo" title={t("brand.name")} />
         <p className="obv-welcome-brand display">{t("brand.name")}</p>
         <p className="obv-welcome-sub">{t("brand.tagline")}</p>
+        {/* Language selector */}
+        <div className="obv-welcome-lang">
+          <span className="obv-lang-label">{t("onboard.chooseLang")}</span>
+          <div className="obv-lang-buttons">
+            <button
+              type="button"
+              className={`obv-lang-btn ${!isZh ? "obv-lang-btn--active" : ""}`}
+              onClick={() => setUiLang("en")}
+            >
+              English
+            </button>
+            <button
+              type="button"
+              className={`obv-lang-btn ${isZh ? "obv-lang-btn--active" : ""}`}
+              onClick={() => setUiLang("zh")}
+            >
+              中文
+            </button>
+          </div>
+        </div>
         <div className="obv-welcome-feats">
           <span className="obv-feat obv-feat--blue"><SpeakerHigh size={14} weight="fill" />{t("onboard.featAudio")}</span>
           <span className="obv-feat obv-feat--amber"><FilePdf size={14} weight="fill" />{t("onboard.featPdf")}</span>
@@ -190,9 +211,9 @@ function OnboardingVisual({ kind, t }) {
         </div>
         <div className="obv-gen-cards">
           {[
-            { q: "Tell me about yourself", color: "#c49a3c" },
-            { q: "Why this role?", color: "#4a7ff8" },
-            { q: "A challenge you faced", color: "#ff7648" },
+            { q: t("onboard.genQ1"), color: "#c49a3c" },
+            { q: t("onboard.genQ2"), color: "#4a7ff8" },
+            { q: t("onboard.genQ3"), color: "#ff7648" },
           ].map((item, i) => (
             <div key={i} className="obv-gen-card" style={{ animationDelay: `${i * 0.18}s`, "--card-accent": item.color }}>
               <span className="obv-gen-card-dot" style={{ background: item.color }} />
@@ -242,26 +263,31 @@ function OnboardingVisual({ kind, t }) {
       <div className="obv obv--mindmap">
         {/* Accurate mindmap replica */}
         <div className="obv-mm">
-          {/* SVG connections */}
-          <svg className="obv-mm-svg" aria-hidden viewBox="0 0 340 180">
-            <path d="M 90 90 C 130 90, 130 30, 170 30" stroke="#c49a3c" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.6" />
-            <path d="M 90 90 C 130 90, 130 70, 170 70" stroke="#4a7ff8" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.6" />
-            <path d="M 90 90 C 130 90, 130 110, 170 110" stroke="#ff7648" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.6" />
-            <path d="M 90 90 C 130 90, 130 150, 170 150" stroke="#c5b4e3" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.6" />
-          </svg>
-
           {/* Center node — amber gradient like real mindmap */}
           <div className="obv-mm-center">
             <span className="obv-mm-center-text">{t("onboard.mmTopic")}</span>
-            <span className="obv-mm-center-zh">{t("onboard.mmTopicZh")}</span>
+          </div>
+
+          {/* Connector column */}
+          <div className="obv-mm-connectors" aria-hidden>
+            {[
+              { color: "#c49a3c" },
+              { color: "#4a7ff8" },
+              { color: "#ff7648" },
+              { color: "#c5b4e3" },
+            ].map((c, i) => (
+              <div key={i} className="obv-mm-connector" style={{ "--connector-color": c.color }}>
+                <div className="obv-mm-connector-h" />
+              </div>
+            ))}
           </div>
 
           {/* Branch cards — matching real MindmapTree structure */}
           <div className="obv-mm-branches">
             {[
-              { label: t("onboard.mmBranch1Label"), labelZh: t("onboard.mmBranch1LabelZh"), detail: t("onboard.mmBranch1Detail"), color: "#c49a3c" },
-              { label: t("onboard.mmBranch2Label"), labelZh: t("onboard.mmBranch2LabelZh"), detail: t("onboard.mmBranch2Detail"), color: "#4a7ff8" },
-              { label: t("onboard.mmBranch3Label"), labelZh: t("onboard.mmBranch3LabelZh"), detail: t("onboard.mmBranch3Detail"), color: "#ff7648" },
+              { label: t("onboard.mmBranch1Label"), detail: t("onboard.mmBranch1Detail"), color: "#c49a3c" },
+              { label: t("onboard.mmBranch2Label"), detail: t("onboard.mmBranch2Detail"), color: "#4a7ff8" },
+              { label: t("onboard.mmBranch3Label"), detail: t("onboard.mmBranch3Detail"), color: "#ff7648" },
               { label: t("onboard.mmBranch4Label"), detail: t("onboard.mmBranch4Detail"), color: "#c5b4e3" },
             ].map((b, i) => (
               <div key={i} className="obv-mm-branch" style={{ "--branch-color": b.color }}>
@@ -269,7 +295,6 @@ function OnboardingVisual({ kind, t }) {
                   <span className="obv-mm-branch-dot" style={{ background: b.color }} />
                   <span className="obv-mm-branch-label">{b.label}</span>
                 </div>
-                {b.labelZh ? <span className="obv-mm-branch-zh">{b.labelZh}</span> : null}
                 <span className="obv-mm-branch-detail">{b.detail}</span>
               </div>
             ))}

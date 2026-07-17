@@ -11,6 +11,7 @@ import {
   Brain,
 } from "@phosphor-icons/react";
 import { useI18n } from "../lib/I18nContext";
+import { getCategoryConfig } from "../lib/interviewModes";
 import GenerateLoading from "./GenerateLoading";
 import MindmapTree from "./MindmapTree";
 
@@ -27,7 +28,7 @@ export default function QaList({
   loadingCount = 6,
   exportingAudio,
 }) {
-  const { t } = useI18n();
+  const { t, uiLang } = useI18n();
   const reduce = useReducedMotion();
   const [open, setOpen] = useState(() => new Set());
   const [copiedIdx, setCopiedIdx] = useState(-1);
@@ -175,6 +176,19 @@ export default function QaList({
                               {String(i + 1).padStart(2, "0")}
                             </span>
                           )}
+                          {item.category ? (
+                            <span
+                              className="qa-category-badge"
+                              style={{
+                                color: getCategoryConfig(item.category).color,
+                                background: getCategoryConfig(item.category).bg,
+                              }}
+                            >
+                              {uiLang === "zh"
+                                ? getCategoryConfig(item.category).labelZh
+                                : getCategoryConfig(item.category).label}
+                            </span>
+                          ) : null}
                           {pinned ? (
                             <span className="pin-badge">
                               <PushPin size={10} weight="fill" />

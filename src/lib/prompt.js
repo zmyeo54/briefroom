@@ -21,7 +21,7 @@ export const INVENT_COUNTS = [3, 5, 7, 10];
 export const DEFAULT_INVENT_COUNT = 3;
 
 /** Cap pasted docs — long resume+JD dominates input tokens. */
-export const MAX_DOC_CHARS = 6000;
+export const MAX_DOC_CHARS = 4500;
 
 export function clipDoc(text, max = MAX_DOC_CHARS) {
   const t = String(text || "").trim();
@@ -58,68 +58,38 @@ export function normalizeInventCount(raw) {
 }
 
 /** Bump this string when DEFAULT_SYSTEM changes so stored settings auto-upgrade. */
-export const SYSTEM_PROMPT_VERSION = "linecheck-job-interview-v6";
+export const SYSTEM_PROMPT_VERSION = "linecheck-job-interview-v8";
 
-export const DEFAULT_SYSTEM = `You are Line Check (对词间), a senior job-interview coach preparing a real hiring-process rehearsal.
+export const DEFAULT_SYSTEM = `You are Line Check (对词间), a senior interview coach. Produce spoken Q&A a candidate can rehearse and memorize.
 
-Mission:
-- Help the candidate rehearse spoken answers for a live job interview (phone screen, hiring manager, or panel).
-- Write answers the candidate can say out loud from memory — natural speech, not essay prose.
-- Sound calm, confident, and specific. Prefer ownership language ("I led…", "I decided…") over buzzwords.
-- Stay strictly truthful to the resume: never invent employers, titles, degrees, dates, metrics, tools, or achievements.
-- Align every answer to the job description's priorities, level, and vocabulary when the resume supports it.
-- If there is a gap (title mismatch, short tenure, missing skill), address it honestly and reframe with transferable evidence — never fake experience.
-- Prefer concrete examples with situation → action → result when helpful; quantify only when the resume supports numbers.
-- Obey answer-length, language, identity, and QUESTION DIRECTIONS in the user prompt — selected themes must shape invented questions and answer framing.
-- Answer length mode is hard: Brief / Standard / Deep budgets in the user prompt apply to every "a". Do not ignore them.
+Rules:
+- Truthful to resume only — never invent employers, titles, degrees, dates, metrics, or tools.
+- Answers must sound natural spoken aloud: short sentences, ownership language ("I led…"), one point per beat.
+- Align answers to JD priorities where resume supports it. Address gaps honestly with transferable evidence.
+- Use situation → action → result when helpful. Quantify only when resume has numbers.
+- No empty claims ("passionate", "synergy") without concrete examples. No lying, bluffing, or attacking ex-employers.
+- Obey answer-length budget, language, identity, and QUESTION DIRECTIONS from the user prompt exactly.
 
-Interview craft:
-- Questions should sound like a real interviewer for this role — clear, professional, not trick questions.
-- Answers should be rehearse-ready: short sentences, spoken rhythm, one clear point per beat.
-- Avoid empty claims ("passionate", "synergy", "results-driven") unless tied to a concrete example.
-- Do not coach the candidate to lie, bluff credentials, or attack previous employers.
-- Prefer evidence a hiring manager can trust: ownership, stakes, trade-offs, result — over vague strengths lists.
+Mindmap per answer — extract THIS answer's actual facts into "map":
+- topic: the specific claim (e.g. "Led Odoo migration for 3 APAC teams", NOT "Leadership experience").
+- branches: 3-5 concrete points from the answer — project names, metrics, stakeholders, tools, results. Each has label + detail + example.
+- Extract only what's in the answer. Never generalize or add advice.
+- Bilingual/Mix: provide topicZh and labelZh for every branch.
 
-Mindmap (per answer) — MUST be a specific summary of THIS answer's content:
-- For every item, also produce a "map" field. This is NOT generic advice — it must capture the actual facts, names, metrics, situations, and actions stated in the answer.
-- Shape: {"topic":"...","topicZh":"...","branches":[{"label":"...","labelZh":"...","detail":"...","example":"..."}]}
-- topic: The specific central claim of THIS answer (e.g. "Led Odoo migration for 3 APAC teams" — NOT "Leadership experience").
-- topicZh: Chinese translation of topic (required for bilingual/Mix mode).
-- branches: 3-5 concrete points FROM THIS ANSWER. Rules:
-  - "label": Must reference something specific in the answer — a project name, a metric, a stakeholder, a tool, a result. NOT generic phrases like "Team collaboration" or "Problem solving".
-  - "labelZh": Chinese translation of label (required for bilingual/Mix mode).
-  - "detail": The specific context from the answer — what happened, who was involved, what was the outcome.
-  - "example": A concrete number, name, or quote pulled directly from the answer.
-- CRITICAL: If the answer says "I led a team of 5 to migrate from SAP to Odoo in 3 months", the mindmap must say exactly that — NOT "Led a team" or "System migration". Be specific.
-- Extract ONLY what is in the answer. Never generalize, never add advice, never create categories the answer doesn't mention.
-- For bilingual/Mix mode: provide BOTH English and Chinese for topic and every branch label.
-
-Output rules (strict):
-- Return valid JSON only — no markdown fences, no commentary outside JSON.
-- Exact shape: {"items":[{"q":"...","a":"...","map":{"topic":"...","topicZh":"...","branches":[{"label":"...","labelZh":"...","detail":"...","example":"..."}]}}]}
-- Order: (1) mandatory questions first, (2) user target add-ons next, (3) invented extras last.
-- Invented extras must cover the selected QUESTION DIRECTIONS as specified in the user prompt.
-- Every "q" and "a" must obey the interview-language rules in the user prompt.
-- Every "map" must be in the same language as the answer. For bilingual/Mix mode: topic and branch labels must include BOTH English ("topic"/"label") and Chinese ("topicZh"/"labelZh").
-- [${SYSTEM_PROMPT_VERSION}]`;
+JSON output (strict, no markdown fences):
+{"items":[{"q":"...","a":"...","category":"...","map":{"topic":"...","topicZh":"...","branches":[{"label":"...","labelZh":"...","detail":"...","example":"..."}]}}]}
+Category: "foundation" (mandatory 1-3), "addon" (user targets), or direction id ("leadership"/"delivery"/"customer"/"rolefit"/"gaps"/"stakeholder"/"culture"/"domain") for invented extras.
+Order: foundation → addon → extras. Extras must cover selected QUESTION DIRECTIONS.
+[${SYSTEM_PROMPT_VERSION}]`;
 
 function languageBlock(lang) {
   if (lang === "zh") {
-    return `INTERVIEW LANGUAGE (strict): 中文 only.
-- 每一道题的 "q" 必须用自然、口语化的中文写（真实面试官会怎么问）。
-- 每一道题的 "a" 必须用自然、专业、口语化的中文写，适合当场口述背诵。
-- Do not include English in q or a (except unavoidable proper nouns / company names / tech terms).`;
+    return `LANGUAGE: 中文 only. Questions and answers in natural spoken Chinese. English only for proper nouns/tech terms.`;
   }
   if (lang === "both") {
-    return `INTERVIEW LANGUAGE (strict): Bilingual mix — English first, then Chinese.
-- For every "q": English question first, then " / ", then the Chinese question.
-- For every "a": write the full English answer first, then a blank line, then the full Chinese answer.
-- Both languages must be complete, parallel in meaning, and speakable — do not leave either half empty or abbreviated.`;
+    return `LANGUAGE: Bilingual. q = English / Chinese. a = full English answer, blank line, full Chinese answer. Both complete and parallel.`;
   }
-  return `INTERVIEW LANGUAGE (strict): English only.
-- Write every "q" in natural professional English, as a hiring interviewer would ask it.
-- Write every "a" in natural professional English suitable for spoken rehearsal.
-- Do not include Chinese in q or a.`;
+  return `LANGUAGE: English only. Natural professional English for spoken rehearsal. No Chinese.`;
 }
 
 export function buildUserPrompt({
@@ -146,24 +116,14 @@ export function buildUserPrompt({
     .map((line) => line.trim())
     .filter(Boolean);
   const skillsBlock = skillLines.length
-    ? `SKILL SET:
-- Use these skills to shape interview questions and answers where the resume supports it.
-${skillLines.map((line) => `- ${line}`).join("\n")}`
+    ? `SKILLS (shape Q&A where resume supports):\n${skillLines.join("\n")}`
     : "";
   const g = String(gender || "").toLowerCase() === "female" ? "female" : "male";
   const name = String(candidateName || "").trim();
 
   const identityBlock = name
-    ? `CANDIDATE IDENTITY (strict):
-- Name on resume: ${name}
-- Gender: ${g}
-- When the candidate states their name (intro / self-intro), use exactly "${name}" — never invent another name.
-- Keep answers in first person. If a third-person pronoun is needed, use ${g === "female" ? "she/her" : "he/him"}.
-- Do not invent a different spelling or nickname.`
-    : `CANDIDATE IDENTITY:
-- Gender: ${g}
-- Do not invent a personal name. If a name is required, use only what appears on the resume.
-- Keep answers in first person. If a third-person pronoun is needed, use ${g === "female" ? "she/her" : "he/him"}.`;
+    ? `CANDIDATE: ${name} (${g}). Use this exact name in intros. First person. Pronouns: ${g === "female" ? "she/her" : "he/him"}.`
+    : `CANDIDATE: ${g}. Do not invent a name. First person. Pronouns: ${g === "female" ? "she/her" : "he/him"}.`;
 
   const mandatory = mandatoryQuestionText(lang);
   const mandatoryBlock = mandatory
@@ -191,7 +151,7 @@ ${skillLines.map((line) => `- ${line}`).join("\n")}`
 
   let addonBlock = "";
   if (addons.length) {
-    addonBlock = `TARGET ADD-ONS — user-requested extras. They MUST appear immediately after the mandatory 3 (items 4–${3 + addons.length}), pinned in this order. Rewrite into the interview language if needed, then answer in that same language. Do NOT drop any of them:\n${addons
+    addonBlock = `ADD-ONS (items 4–${3 + addons.length}, pinned order, do NOT drop):\n${addons
       .map((q, i) => `${i + 4}. ${q}`)
       .join("\n")}`;
   }
@@ -199,21 +159,15 @@ ${skillLines.map((line) => `- ${line}`).join("\n")}`
   let inventBlock = "";
   if (autoQuestions) {
     inventBlock = addons.length
-      ? `Then invent exactly ${extras} more realistic job-interview questions for THIS role AFTER the target add-ons (starting at item ${startExtra}). Each invented question must clearly map to one of the SELECTED QUESTION DIRECTIONS below (cover as many directions as practical; label the intent in your reasoning but do NOT put labels in the JSON). Prefer questions ${asker} would actually ask for this JD. ${inventLang}`
-      : `Then invent exactly ${extras} more realistic job-interview questions for THIS role (after the mandatory 3). Each invented question must clearly map to one of the SELECTED QUESTION DIRECTIONS below (cover as many directions as practical; at least one per direction when extras ≥ focus count). Prefer questions ${asker} would actually ask for this JD. ${inventLang}`;
+      ? `Invent ${extras} more questions after add-ons (item ${startExtra}+). Map to QUESTION DIRECTIONS below. Sound like ${asker}. ${inventLang}`
+      : `Invent ${extras} more questions after mandatory 3. Map to QUESTION DIRECTIONS (≥1 per direction when extras ≥ directions). Sound like ${asker}. ${inventLang}`;
   } else if (!addons.length) {
-    inventBlock = `Then invent exactly 3 additional realistic job-interview questions for THIS role after the mandatory 3. Map each invented question to a SELECTED QUESTION DIRECTION below. Prefer questions ${asker} would actually ask for this JD. ${inventLang}`;
+    inventBlock = `Invent 3 more questions after mandatory 3. Map to QUESTION DIRECTIONS. Sound like ${asker}. ${inventLang}`;
   }
 
   const roleBlock = role.prompt ? `${role.prompt}\n` : "";
 
-  return `Prepare spoken job-interview Q&A for this candidate applying to the role in the job description.
-
-Context:
-- This is rehearsal for a real hiring interview, not a generic chat or essay.
-- Ground every answer in the resume. Mirror the JD's priorities only where the resume supports them.
-- Invented questions must be role-relevant (scope, stakeholders, delivery, judgment) — not trivia.
-- The interviewer persona for invented questions is: ${role.label}${role.id === "any" ? " (no specific bias)" : ""}.
+  return `Interview rehearsal Q&A. Ground answers in resume. Mirror JD priorities where resume supports.
 
 ${languageBlock(lang)}
 
@@ -223,24 +177,16 @@ ${length.prompt}
 
 ${roleBlock}${skillsBlock ? `${skillsBlock}\n\n` : ""}${focusPromptBlock(focusIds)}
 
-MANDATORY — these 3 questions MUST be items 1–3 in the JSON, in this exact order (keep this wording / language):
+MANDATORY (items 1–3, exact order, keep wording):
 ${mandatoryBlock}
 
 ${addonBlock}
 
 ${inventBlock}
 
-Quality bar:
-- Target questions are ADD-ONS on top of the mandatory set — never replace the mandatory 3.
-- LENGTH IS MANDATORY: every "a" must match ${length.label} (~${length.speakSeconds}, ≤~${length.maxWords} words${lang === "both" ? " per language" : ""}). Brief stays short; Deep uses the fuller budget; do not blur modes.
-- Invented extras MUST reflect the selected QUESTION DIRECTIONS (coverage + answer craft above).
-- Invented "q" lines MUST sound like ${asker} — not a generic chatbot.
-- Frame answers toward the matching direction when relevant; keep mandatory answers truthful and speakable.
-- Tone: calm, clear, ownership-focused${role.id === "exec" ? "; senior-executive presence" : role.id === "hr" ? "; screen-friendly clarity" : ""}.
-- No overselling, no empty buzzwords, no fabricated metrics.
-- Every "map" must extract 3-5 memorable key points from the answer — short labels, no new claims.
-- Return STRICT JSON only: {"items":[{"q":"...","a":"...","map":{"topic":"...","branches":[...]}}]}
-- Every item's "q", "a", and "map" must obey INTERVIEW LANGUAGE above.
+LENGTH HARD: every "a" = ${length.label} (≤${length.maxWords} words${lang === "both" ? " per lang" : ""}). Do not blur modes.
+Tone: calm, ownership${role.id === "exec" ? ", exec presence" : role.id === "hr" ? ", screen-friendly" : ""}. No buzzwords or fabricated metrics.
+Maps: 3-5 key points per answer, short labels, no new claims. Every item needs "category".
 
 RESUME:
 ${clipDoc(resume)}

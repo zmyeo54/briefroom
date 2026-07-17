@@ -1,0 +1,1 @@
+Flat workspace that wires a React PWA, Vercel serverless API routes, and local dev helpers into one interview-coaching application sharing the `/api/*` HTTP contract.

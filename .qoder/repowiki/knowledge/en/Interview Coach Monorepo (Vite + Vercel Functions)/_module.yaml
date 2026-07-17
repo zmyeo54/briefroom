@@ -1,6 +1,6 @@
 schema_version: 1
 module_path: ""
-title: Interview Coach Monorepo (Vite PWA + Vercel Functions + Dev Helpers)
+title: Interview Coach Monorepo (Vite + Vercel Functions)
 scope:
     - README.md
     - .gitignore
