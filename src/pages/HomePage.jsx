@@ -364,7 +364,13 @@ export default function HomePage() {
         return;
       }
       if (!res.ok) {
-        throw new Error(data?.error?.message || res.statusText || "API error");
+        const detail =
+          data?.error?.message ||
+          data?.error?.status ||
+          (typeof data?.error === "string" ? data.error : "") ||
+          res.statusText ||
+          `HTTP ${res.status}`;
+        throw new Error(detail);
       }
 
       const content = data.choices?.[0]?.message?.content || "";
