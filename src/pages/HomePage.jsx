@@ -4,7 +4,6 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   MagicWand,
   SpeakerHigh,
-  Stop,
   DownloadSimple,
   FilePdf,
   SpinnerGap,
@@ -1233,16 +1232,6 @@ export default function HomePage() {
           </button>
           <button
             type="button"
-            className="action-dock-stop"
-            aria-label={t("home.stop")}
-            title={t("home.stop")}
-            disabled={!speaking}
-            onClick={haltPlayback}
-          >
-            <Stop size={18} weight="fill" />
-          </button>
-          <button
-            type="button"
             className="action-dock-save"
             disabled={!qa.length || exportingAudio || exportingPdf || speaking}
             onClick={() => exportAudio()}
@@ -1365,15 +1354,6 @@ export default function HomePage() {
               ) : (
                 <Pause size={20} weight="fill" />
               )}
-            </button>
-            <button
-              type="button"
-              className="playback-fab-btn playback-fab-stop"
-              aria-label={t("home.stop")}
-              title={t("home.stop")}
-              onClick={haltPlayback}
-            >
-              <Stop size={18} weight="fill" />
             </button>
           </motion.div>
         ) : null}

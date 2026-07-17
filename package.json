@@ -4,12 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "npm run tts & npm run dev:web",
+    "dev": "npm run tts & npm run dev:api & npm run dev:web",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
     "tts": ".venv/bin/python scripts/tts_server.py",
-    "dev:web": "vite --host 127.0.0.1 --port 8787",
+    "dev:api": "node scripts/dev-api-server.mjs",
+    "dev:web": "vite --host 0.0.0.0 --port 8787",
     "test:tts": "node scripts/tts_regression.mjs"
   },
   "dependencies": {

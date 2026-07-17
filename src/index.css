@@ -1678,9 +1678,10 @@ html[lang="zh-CN"] .app-dialog-body {
 .playback-fab {
   position: fixed;
   z-index: 40;
-  left: 50%;
+  left: auto;
+  right: max(0.75rem, env(safe-area-inset-right, 0px));
   bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
-  transform: translateX(-50%);
+  transform: none;
   display: flex;
   touch-action: none;
   cursor: grab;

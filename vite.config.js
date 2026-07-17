@@ -7,10 +7,14 @@ export default defineConfig({
   server: {
     port: 8787,
     strictPort: true,
-    host: "127.0.0.1",
+    host: "0.0.0.0",
     // Do not open the browser automatically
     open: false,
     proxy: {
+      "/api/chat": {
+        target: "http://127.0.0.1:8791",
+        changeOrigin: true,
+      },
       // Health before /api/tts so it isn't swallowed by the speak proxy prefix
       "/api/tts-health": {
         target: "http://127.0.0.1:8790",

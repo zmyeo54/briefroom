@@ -453,6 +453,10 @@ function playBlob(blob, token, { onStart } = {}) {
       resolve();
     };
     audio.onerror = () => {
+      if (token !== playToken) {
+        resolve();
+        return;
+      }
       cleanup();
       reject(new Error("Audio playback failed"));
     };
@@ -462,6 +466,10 @@ function playBlob(blob, token, { onStart } = {}) {
         if (token === playToken) onStart?.();
       })
       .catch((e) => {
+        if (token !== playToken) {
+          resolve();
+          return;
+        }
         cleanup();
         reject(e);
       });
