@@ -76,49 +76,26 @@ export function keysForProvider(provider, userKey, env = process.env) {
   return out;
 }
 
-/** Settings Greater China OR Vercel IP CN/HK → DeepSeek. Else Gemini. */
+/** DeepSeek only for now — Gemini disabled until quota/routing is stable. */
 export function pickProvider(req, env = process.env) {
-  const hasGemini = collectServerKeys(env).length > 0;
   const hasDeepseek = collectDeepSeekKeys(env).length > 0;
-  const region = parseAiRegion(req);
-  const country = String(
-    req.headers?.["x-vercel-ip-country"] || ""
-  ).toUpperCase();
-  const wantDeepseek =
-    region === "greater-china" || isGreaterChinaCountry(country);
-
-  if (wantDeepseek) {
-    if (hasDeepseek) return "deepseek";
-    if (hasGemini) return "gemini";
-    return null;
-  }
-  // global (or unset): Gemini first
-  if (hasGemini) return "gemini";
+  const hasGemini = collectServerKeys(env).length > 0;
   if (hasDeepseek) return "deepseek";
+  if (hasGemini) return "gemini"; // last resort if DeepSeek key missing
   return null;
 }
 
 export function otherProvider(provider, env = process.env) {
-  const alt = provider === "deepseek" ? "gemini" : "deepseek";
-  const has =
-    alt === "deepseek"
-      ? collectDeepSeekKeys(env).length > 0
-      : collectServerKeys(env).length > 0;
-  return has ? alt : null;
+  // ponytail: Gemini off — no cross-provider fallback
+  void provider;
+  void env;
+  return null;
 }
 
-/**
- * Greater China / IP: DeepSeek, then Gemini if needed.
- * Global: Gemini only — client asks user to retry with DeepSeek after a failure.
- */
+/** DeepSeek-only order (Gemini ignored while disabled). */
 export function providersToTry(req, env = process.env) {
   const primary = pickProvider(req, env);
-  if (!primary) return [];
-  if (primary === "gemini") return [primary];
-  const out = [primary];
-  const alt = otherProvider(primary, env);
-  if (alt && alt !== primary) out.push(alt);
-  return out;
+  return primary ? [primary] : [];
 }
 
 export function bodyForProvider(body, provider) {
@@ -303,17 +280,10 @@ if (typeof process !== "undefined" && process.argv?.[1]?.endsWith("chat.js")) {
   );
   console.assert(
     pickProvider(
-      { headers: { [AI_REGION_HEADER]: "global", "x-vercel-ip-country": "CN" } },
+      { headers: { [AI_REGION_HEADER]: "global", "x-vercel-ip-country": "US" } },
       env
     ) === "deepseek",
-    "CN IP forces deepseek even if setting is global"
-  );
-  console.assert(
-    pickProvider(
-      { headers: { [AI_REGION_HEADER]: "global", "x-vercel-ip-country": "HK" } },
-      env
-    ) === "deepseek",
-    "HK IP → deepseek"
+    "global / US still deepseek while Gemini disabled"
   );
   console.assert(
     pickProvider({ headers: { [AI_REGION_HEADER]: "greater-china" } }, env) ===
@@ -325,22 +295,11 @@ if (typeof process !== "undefined" && process.argv?.[1]?.endsWith("chat.js")) {
     "greater china countries"
   );
   console.assert(
-    pickProvider({ headers: { "x-vercel-ip-country": "US" } }, env) ===
-      "gemini",
-    "US → gemini"
+    JSON.stringify(providersToTry({ headers: {} }, env)) ===
+      JSON.stringify(["deepseek"]),
+    "deepseek only"
   );
-  console.assert(
-    JSON.stringify(
-      providersToTry({ headers: { [AI_REGION_HEADER]: "global" } }, env)
-    ) === JSON.stringify(["gemini"]),
-    "global tries gemini only"
-  );
-  console.assert(
-    JSON.stringify(
-      providersToTry({ headers: { [AI_REGION_HEADER]: "greater-china" } }, env)
-    ) === JSON.stringify(["deepseek", "gemini"]),
-    "greater-china tries deepseek then gemini"
-  );
+  console.assert(otherProvider("deepseek", env) === null, "no gemini fallback");
   console.assert(shouldTryOtherProvider(404, { error: { message: "not found" } }), "404 falls back");
   console.assert(!shouldTryOtherProvider(400, {}), "400 stays");
   console.assert(

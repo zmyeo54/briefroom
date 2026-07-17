@@ -64,18 +64,13 @@ function collectDeepSeekKeys(env = process.env) {
 }
 
 function pickProvider(region, country, env = process.env) {
-  const hasGemini = collectServerKeys(env).length > 0;
+  // ponytail: DeepSeek only — location ignored for now
+  void region;
+  void country;
   const hasDeepseek = collectDeepSeekKeys(env).length > 0;
-  const cc = String(country || '').toUpperCase();
-  const wantDeepseek =
-    region === 'greater-china' || cc === 'CN' || cc === 'HK';
-  if (wantDeepseek) {
-    if (hasDeepseek) return 'deepseek';
-    if (hasGemini) return 'gemini';
-    return null;
-  }
-  if (hasGemini) return 'gemini';
+  const hasGemini = collectServerKeys(env).length > 0;
   if (hasDeepseek) return 'deepseek';
+  if (hasGemini) return 'gemini';
   return null;
 }
 

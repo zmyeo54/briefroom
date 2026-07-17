@@ -583,12 +583,14 @@ export default function HomePage() {
 
       if (!res.ok) {
         if (offerDeepseekRetry()) return;
-        if (lastStatus === 429) {
-          flash(t("home.flash.rateLimited"), "error");
-          return;
-        }
-        if (lastStatus === 404) {
-          flash(t("home.flash.modelUnavailable"), "error");
+        if (lastStatus === 429 || lastStatus === 404) {
+          setUseDeepseekRetry(true);
+          flash(
+            lastStatus === 429
+              ? t("home.flash.rateLimited")
+              : t("home.flash.modelUnavailable"),
+            "error"
+          );
           return;
         }
         const detail =

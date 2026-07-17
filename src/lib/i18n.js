@@ -139,7 +139,7 @@ const en = {
   "home.flash.rateLimited":
     "Too many requests right now. Wait a minute and try again — or add your own Gemini key in Settings.",
   "home.flash.modelUnavailable":
-    "That AI model isn’t available right now. Wait a moment and try again.",
+    "The AI route is busy or out of quota. Wait a minute and tap Build again — we’ll switch routes. Tip: fewer extras (3–5) burns less quota.",
   "home.flash.retryDeepseek":
     "Build didn’t go through. Tap Build My Questions again — we’ll switch routes and retry.",
   "home.flash.needDocs": "Add your resume and the role first — then we’ll coach from your real story.",
@@ -499,7 +499,7 @@ const zh = {
   "home.flash.rateLimited":
     "请求太频繁了。请稍等一分钟再试——或在设置里填入你自己的 Gemini 密钥。",
   "home.flash.modelUnavailable":
-    "当前 AI 模型暂不可用。请稍后再试。",
+    "当前线路繁忙或额度用尽。请稍等一分钟再点生成——我们会换线路重试。提示：额外题选 3–5 道更省额度。",
   "home.flash.retryDeepseek":
     "这次生成没成功。请再点一次「生成我的题目」——我们会换一条线路重试。",
   "home.flash.needDocs": "先放上简历和岗位——我们要基于你的真实经历来练。",
