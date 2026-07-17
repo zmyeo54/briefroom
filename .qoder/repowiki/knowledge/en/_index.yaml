@@ -3,11 +3,11 @@ schema_version: 1
 locale: en-US
 branch: main
 nodes_managed: true
-exported_at: "2026-07-17T19:57:21Z"
+exported_at: "2026-07-17T20:56:41Z"
 modules:
     "":
-        dir_name: LineCheck — React + Vite Web App with Edge TTS & Gemini_DeepSeek Proxy
-        title: LineCheck — React + Vite Web App with Edge TTS & Gemini/DeepSeek Proxy
+        dir_name: LineCheck — React PWA + Dual-Provider Chat_TTS App
+        title: LineCheck — React PWA + Dual-Provider Chat/TTS App
         scope: []
         source_files: []
         children: []

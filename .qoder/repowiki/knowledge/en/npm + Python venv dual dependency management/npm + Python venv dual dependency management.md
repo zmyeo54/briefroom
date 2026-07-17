@@ -8,24 +8,28 @@ source_files:
     - package.json
     - package-lock.json
     - .gitignore
-    - scripts/tts_server.py
 ---
 
-This repository manages dependencies across two runtimes with separate toolchains and lockfiles.
+This project uses two independent package managers for its JavaScript and Python layers, with no cross-language lockfile or unified tooling.
 
-**Node.js (frontend + dev tooling)**
-- Package manager: **npm** (v3 lockfile via `package-lock.json`).
-- All runtime and dev dependencies are declared in `package.json` under `dependencies` and `devDependencies`, using caret (`^`) ranges so minor/patch updates are accepted automatically.
-- No vendoring — packages are installed into `node_modules` at install time; the directory is not committed.
-- Build/dev scripts in `package.json` orchestrate three concurrent processes: a Python TTS server, a Node dev API proxy, and Vite (`npm run dev`).
-- Playwright is listed as a dependency (not devDependency) and is used by `scripts/tts_regression.mjs` for regression tests that drive real browser instances.
+**JavaScript (Node.js) — npm**
+- `package.json` declares runtime dependencies (`react`, `framer-motion`, `msedge-tts`, `pdfjs-dist`, `tesseract.js`, etc.) and dev dependencies (`vite`, `@vitejs/plugin-react`, `tailwindcss`, `oxlint`). All versions use caret ranges (`^x.y.z`) allowing minor/patch upgrades within the major version.
+- `package-lock.json` (lockfileVersion 3) pins every transitive dependency to an exact tarball URL and sha512 integrity hash from `https://registry.npmjs.org`. This is committed to the repo, so CI and local installs resolve deterministically without network variance.
+- `node_modules/` is gitignored. There is no vendoring strategy; packages are installed on-demand into a per-project `node_modules` tree.
+- No `.npmrc`, `.yarnrc`, or private registry configuration exists — all packages come from the public npm registry.
+- The project is marked `"type": "module"`, so imports use ESM throughout.
 
-**Python (Edge TTS sidecar server)**
-- Runtime: Python 3 with a local virtual environment (`.venv/`, ignored via `.gitignore`).
-- The TTS server (`scripts/tts_server.py`) depends on the third-party package `edge_tts`, which is expected to be installed inside `.venv` before running `npm run tts`.
-- There is no `requirements.txt`, `pyproject.toml`, or `setup.py` checked in; the Python dependency list is implicit in the source imports. The `.python-version` file is also gitignored, so the exact interpreter version is not pinned in the repo.
-- A separate Node wrapper (`api/tts.js`) uses the npm package `msedge-tts` to call Edge's TTS directly from the Vercel-deployed API routes, while the local dev path goes through the Python server.
+**Python — virtual environment (.venv)**
+- A local `.venv/` directory is created by the developer and gitignored. The TTS server is invoked via `"tts": ".venv/bin/python scripts/tts_server.py"`, meaning the Python runtime and its packages must be bootstrapped manually before running that script.
+- There is **no** `requirements.txt`, `pyproject.toml`, `Pipfile`, `poetry.lock`, or any other pinned Python dependency manifest in the repository. The `.python-version` file is also gitignored, so no explicit CPython version is enforced at the repo level.
+- The only Python code shipped is `scripts/tts_server.py` plus `__pycache__/` artifacts (also ignored).
 
-**Cross-cutting conventions**
-- Lockfiles are committed (`package-lock.json`) but the Python venv is intentionally excluded, meaning each developer must create their own `.venv` and install `edge_tts` manually.
-- No private registry or scoped npm configuration is present; all packages resolve from the public npm registry.
+**Build/dev orchestration**
+- `npm run dev` launches three parallel processes: the Python TTS server, a Node dev API proxy (`scripts/dev-api-server.mjs`), and the Vite dev server. This couples the JS and Python dependency trees at runtime but not at install time.
+- Playwright and Puppeteer are declared as runtime dependencies (not dev-only), which means their native binaries are installed during normal `npm ci`/`npm install` runs.
+
+**Conventions / rules developers should follow**
+- Add new JS dependencies only through `package.json`; never edit `package-lock.json` by hand. Commit both files together after `npm i`.
+- Do not commit `node_modules/` or `.venv/`.
+- If you add Python packages, document them outside this repo (e.g., in a README note) since there is no checked-in manifest to enforce pinning.
+- Keep `"type": "module"` consistency — all source files import/export using ESM syntax.

@@ -1,0 +1,1 @@
+A Vercel-deployed React PWA that generates interview Q&A from job descriptions, with streaming chat via Gemini/DeepSeek and Edge TTS audio playback.
