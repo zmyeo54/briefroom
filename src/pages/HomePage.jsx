@@ -1319,7 +1319,7 @@ export default function HomePage() {
           <motion.div
             key="playback-fab"
             ref={fabElementRef}
-            className={`playback-fab ${fabDragging ? "dragging" : ""}`}
+            className={`playback-fab ${fabDragging ? "dragging" : ""} ${fabPos.dragged ? "playback-fab--placed" : ""}`}
             role="group"
             aria-label={t("home.playbackControls")}
             style={
@@ -1328,15 +1328,14 @@ export default function HomePage() {
                     left: fabPos.left,
                     top: fabPos.top,
                     bottom: "auto",
-                    transform: "translate(0, 0)",
                   }
                 : undefined
             }
             onPointerDown={onFabPointerDown}
             initial={reduce ? false : { opacity: 0, y: 18, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
+            animate={fabPos.dragged ? false : { opacity: 1, y: 0, scale: 1 }}
             exit={reduce ? undefined : { opacity: 0, y: 12, scale: 0.96 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            transition={fabPos.dragged ? { duration: 0 } : { duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
           >
             <span className="playback-fab-label">
               {!audioReady && !audioPaused ? (

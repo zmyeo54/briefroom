@@ -1680,6 +1680,10 @@ html[lang="zh-CN"] .app-dialog-body {
   opacity: 0.92;
   transition: none;
 }
+.playback-fab--placed {
+  transform: none !important;
+  opacity: 1 !important;
+}
 .playback-fab-btn {
   display: inline-flex;
   align-items: center;
