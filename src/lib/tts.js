@@ -429,6 +429,17 @@ export async function exportQaAudioFiles(items, options = {}) {
   return exportMergedQaAudio(items, options);
 }
 
+/** Shared hidden container for audio elements (avoids appending to <body>). */
+let audioContainer = null;
+function getAudioContainer() {
+  if (!audioContainer) {
+    audioContainer = document.createElement("div");
+    audioContainer.style.cssText = "position:fixed;left:-9999px;width:0;height:0;overflow:hidden";
+    document.body.appendChild(audioContainer);
+  }
+  return audioContainer;
+}
+
 function playBlob(blob, token, { onStart } = {}) {
   return new Promise((resolve, reject) => {
     if (token !== playToken) {
@@ -445,9 +456,9 @@ function playBlob(blob, token, { onStart } = {}) {
     audio.setAttribute("playsinline", "");
     audio.setAttribute("webkit-playsinline", "");
     audio.crossOrigin = "anonymous";
-    audio.style.display = "none";
+    audio.style.cssText = "display:none;width:0;height:0";
     currentAudio = audio;
-    document.body.appendChild(audio);
+    getAudioContainer().appendChild(audio);
     audio.onended = () => {
       if (token === playToken) cleanup();
       resolve();
@@ -578,11 +589,6 @@ export function isSpeechPaused() {
 
 export function stopSpeech() {
   playToken += 1;
-  if (currentAudio) {
-    currentAudio.pause();
-    currentAudio.src = "";
-    currentAudio = null;
-  }
   cleanup();
   try {
     speechSynthesis.cancel();
@@ -591,16 +597,26 @@ export function stopSpeech() {
   }
 }
 
+/**
+ * Remove the current <audio> element from the DOM and revoke its blob URL.
+ * Must be called BEFORE setting currentAudio to null so the element is
+ * actually removed — otherwise orphaned <audio> tags accumulate in <body>
+ * and can trigger unwanted browser media overlays on mobile.
+ */
 function cleanup() {
-  if (currentAudio) {
+  const el = currentAudio;
+  if (el) {
     try {
-      if (currentAudio.parentNode) {
-        currentAudio.parentNode.removeChild(currentAudio);
+      el.pause();
+      el.src = "";
+      if (el.parentNode) {
+        el.parentNode.removeChild(el);
       }
     } catch {
       /* ignore */
     }
   }
+  currentAudio = null;
   if (currentUrl) {
     URL.revokeObjectURL(currentUrl);
     currentUrl = null;

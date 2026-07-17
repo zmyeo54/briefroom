@@ -111,7 +111,7 @@ export async function extractTextFromUrl(input, _onProgress) {
   const url = normalizeUrl(input);
   const linkedin = isLinkedInJobUrl(url);
 
-  // LinkedIn must use the local guest-API helper for accurate title + JD
+  // First try the local API (now has Jina → Google cache → Browser fallback chain)
   try {
     return await viaLocalHelper(url);
   } catch (e) {
@@ -120,11 +120,18 @@ export async function extractTextFromUrl(input, _onProgress) {
         `Couldn’t open this LinkedIn job. Try pasting the description instead. (${e.message})`
       );
     }
+    // For non-LinkedIn URLs, try direct Jina and AllOrigins as fallbacks
   }
 
   try {
     return await viaJina(url);
   } catch {
-    return await viaAllOrigins(url);
+    try {
+      return await viaAllOrigins(url);
+    } catch {
+      throw new Error(
+        `Could not extract text from this URL. The site may be behind a firewall (e.g. Cloudflare). Try pasting the job description directly.`
+      );
+    }
   }
 }

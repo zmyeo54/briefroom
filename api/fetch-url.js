@@ -95,7 +95,7 @@ function parseReaderMeta(text) {
   return { title, company };
 }
 
-async function fetchGeneric(url) {
+async function fetchJina(url) {
   const reader = `https://r.jina.ai/${url}`;
   const res = await fetch(reader, { headers: { Accept: "text/plain" } });
   if (!res.ok) throw new Error(`Reader failed (${res.status})`);
@@ -103,6 +103,78 @@ async function fetchGeneric(url) {
   if (text.length < 80) throw new Error("Could not extract enough text from this link");
   const meta = parseReaderMeta(text);
   return { text, title: meta.title, company: meta.company, source: "reader" };
+}
+
+/** Fetch via Google cache — works for most job boards behind Cloudflare. */
+async function fetchGoogleCache(url) {
+  const cacheUrl = `https://webcache.googleusercontent.com/search?q=cache:${encodeURIComponent(url)}`;
+  const res = await fetch(cacheUrl, {
+    headers: { "User-Agent": UA, "Accept-Language": "en-US,en;q=0.9" },
+  });
+  const html = await res.text();
+  // Fall back to a simple text extraction from the cached HTML
+  const text = html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (text.length < 100) throw new Error("Google cache returned too little text");
+  const title = text.match(/(?:^|\s)([A-Z][A-Za-z\s]{10,80}?)(?:\s[–-]\s|\s+\|)/)?.[1]?.trim() || "";
+  return { text, title, company: "", source: "cache" };
+}
+
+/** Fetch via Playwright headless browser — handles JS-rendered pages. */
+async function fetchBrowser(url) {
+  const { chromium } = require("playwright");
+  const browser = await chromium.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-blink-features=AutomationControlled"],
+  });
+  try {
+    const ctx = await browser.newContext({
+      userAgent: UA,
+      locale: "en-US",
+      viewport: { width: 1440, height: 900 },
+    });
+    await ctx.addInitScript(() => {
+      Object.defineProperty(navigator, "webdriver", { get: () => false });
+    });
+    const page = await ctx.newPage();
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
+    await page.waitForTimeout(4000);
+    const text = (await page.locator("body").innerText()).trim();
+    if (text.length < 80) throw new Error("Browser page had too little text");
+    const title = await page.title();
+    await browser.close();
+    return { text, title: title || "", company: "", source: "browser" };
+  } catch (e) {
+    await browser.close().catch(() => {});
+    throw e;
+  }
+}
+
+async function fetchGeneric(url) {
+  const strategies = [
+    { name: "Jina reader", fn: () => fetchJina(url) },
+    { name: "Google cache", fn: () => fetchGoogleCache(url) },
+    { name: "Browser render", fn: () => fetchBrowser(url) },
+  ];
+  let lastErr;
+  for (const { name, fn } of strategies) {
+    try {
+      return await fn();
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw new Error(
+    `Could not fetch this URL. Tried Jina, Google cache, and browser render. (${lastErr?.message || "All methods failed"})`
+  );
 }
 
 export default async function handler(req, res) {

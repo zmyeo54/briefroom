@@ -1855,9 +1855,106 @@ html[lang="zh-CN"] .app-dialog-body {
   text-transform: uppercase;
 }
 
-.qa-row-playing { background: rgba(74, 127, 248, 0.12); }
+/* ─── Q&A row states ─── */
+
+.qa-row {
+  position: relative;
+}
+
+/* Left accent bar — slides in when playing */
+.qa-row-bar {
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: #4a7ff8;
+  transform: scaleY(0);
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.2s ease;
+  opacity: 0;
+  transform-origin: top center;
+}
+
+.qa-row-playing .qa-row-bar {
+  transform: scaleY(1);
+  opacity: 1;
+}
+
+.qa-row-playing {
+  background: linear-gradient(
+    90deg,
+    rgba(74, 127, 248, 0.1) 0%,
+    rgba(74, 127, 248, 0.04) 100%
+  );
+  animation: qa-playing-pulse 2.4s ease-in-out infinite;
+}
+
+.qa-row-playing .qa-number {
+  color: #4a7ff8;
+}
+
+.qa-row-playing .title {
+  color: #1a3d9c;
+}
+
+.qa-row-playing .title::after {
+  content: " · Now reading";
+  font-weight: 400;
+  font-size: 0.65rem;
+  color: #4a7ff8;
+  opacity: 0.8;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+@keyframes qa-playing-pulse {
+  0%, 100% { background: linear-gradient(90deg, rgba(74, 127, 248, 0.1) 0%, rgba(74, 127, 248, 0.04) 100%); }
+  50% { background: linear-gradient(90deg, rgba(74, 127, 248, 0.14) 0%, rgba(74, 127, 248, 0.06) 100%); }
+}
+
 .qa-row-selected { background: rgba(74, 127, 248, 0.06); }
 .qa-row-pinned { background: rgba(255, 199, 87, 0.18); }
+
+/* ─── Speaking indicator (animated audio bars) ─── */
+
+.speaking-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 16px;
+  padding: 0 2px;
+}
+
+.speaking-bar {
+  display: block;
+  width: 3px;
+  border-radius: 2px;
+  background: #4a7ff8;
+  animation: speaking-bar 0.6s ease-in-out infinite alternate;
+}
+
+.speaking-bar--1 {
+  height: 8px;
+  animation-delay: 0s;
+}
+
+.speaking-bar--2 {
+  height: 14px;
+  animation-delay: 0.2s;
+}
+
+.speaking-bar--3 {
+  height: 10px;
+  animation-delay: 0.4s;
+}
+
+@keyframes speaking-bar {
+  0% { transform: scaleY(0.4); }
+  100% { transform: scaleY(1); }
+}
+
 
 .accent-check {
   accent-color: #4a7ff8;

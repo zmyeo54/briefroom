@@ -104,6 +104,7 @@ const en = {
   "home.stop": "Stop",
   "home.pause": "Pause",
   "home.resumePlay": "Resume",
+  "home.restart": "Restart",
   "home.preparingAudio": "Preparing voice…",
   "home.playingAudio": "Playing",
   "home.paused": "Paused",

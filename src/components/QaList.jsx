@@ -115,7 +115,7 @@ export default function QaList({
                         damping: 18,
                       }
                 }
-                className={`px-3 py-2.5 transition md:px-4 md:py-3 ${
+                className={`qa-row group relative px-3 py-2.5 transition md:px-4 md:py-3 ${
                   playing
                     ? "qa-row-playing"
                     : on
@@ -125,6 +125,9 @@ export default function QaList({
                         : "bg-white"
                 }`}
               >
+                {/* Left accent bar for playing state */}
+                <span className="qa-row-bar" aria-hidden />
+
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
@@ -149,9 +152,17 @@ export default function QaList({
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="qa-number faint font-mono text-xs font-medium tabular-nums">
-                            {String(i + 1).padStart(2, "0")}
-                          </span>
+                          {playing ? (
+                            <span className="speaking-indicator" aria-label="Playing" role="status">
+                              <span className="speaking-bar speaking-bar--1" />
+                              <span className="speaking-bar speaking-bar--2" />
+                              <span className="speaking-bar speaking-bar--3" />
+                            </span>
+                          ) : (
+                            <span className="qa-number faint font-mono text-xs font-medium tabular-nums">
+                              {String(i + 1).padStart(2, "0")}
+                            </span>
+                          )}
                           {pinned ? (
                             <span className="pin-badge">
                               <PushPin size={10} weight="fill" />

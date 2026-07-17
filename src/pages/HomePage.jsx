@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   MagicWand,
@@ -71,7 +70,6 @@ function readSettings() {
 
 export default function HomePage() {
   const { t, uiLang } = useI18n();
-  const navigate = useNavigate();
   const reduce = useReducedMotion();
   // One example set per visit — no rotating loop
   const [targetPh, setTargetPh] = useState(() => pickTargetPlaceholder(uiLang));
@@ -550,8 +548,10 @@ export default function HomePage() {
         lastStatus = res.status;
         if (res.ok) break;
         if (res.status === 503) {
-          flash(t("home.flash.needKey"), "error");
-          navigate("/settings");
+          const msg =
+            data?.error?.message ||
+            t("home.flash.needKey");
+          flash(msg, "error");
           return;
         }
         // Quota / missing model → try next; other errors stop immediately.
@@ -1221,14 +1221,23 @@ export default function HomePage() {
         <motion.div layout className="action-dock">
           <button
             type="button"
-            className="action-dock-speak"
-            aria-label={t("home.speakLabel")}
-            title={t("home.speakLabel")}
-            disabled={!qa.length || speaking}
+            className={`action-dock-speak ${speaking ? "action-dock-speak--active" : ""}`}
+            aria-label={speaking ? t("home.restart") : t("home.speakLabel")}
+            title={speaking ? t("home.restart") : t("home.speakLabel")}
+            disabled={!qa.length}
             onClick={playSelected}
           >
-            <Play size={18} weight="bold" />
-            <span className="action-dock-badge">{selected.size}</span>
+            {speaking ? (
+              <>
+                <ArrowCounterClockwise size={16} weight="bold" />
+                <span className="action-dock-badge">{selected.size}</span>
+              </>
+            ) : (
+              <>
+                <Play size={18} weight="bold" />
+                <span className="action-dock-badge">{selected.size}</span>
+              </>
+            )}
           </button>
           <button
             type="button"
@@ -1354,6 +1363,15 @@ export default function HomePage() {
               ) : (
                 <Pause size={20} weight="fill" />
               )}
+            </button>
+            <button
+              type="button"
+              className="playback-fab-btn playback-fab-stop"
+              aria-label={t("home.stop")}
+              title={t("home.stop")}
+              onClick={haltPlayback}
+            >
+              <Square size={16} weight="fill" />
             </button>
           </motion.div>
         ) : null}

@@ -5,6 +5,7 @@ from __future__ import annotations
 import html as html_lib
 import re
 import urllib.error
+import urllib.parse
 import urllib.request
 from urllib.parse import urlparse
 
@@ -178,19 +179,49 @@ def _parse_reader_meta(text: str) -> dict[str, str]:
     return {"title": title, "company": company}
 
 
+def _fetch_google_cache(url: str) -> str | None:
+    """Try Google Web Cache as a fallback for Cloudflare-protected sites."""
+    try:
+        cache_url = f"https://webcache.googleusercontent.com/search?q=cache:{urllib.parse.quote(url)}"
+        req = urllib.request.Request(
+            cache_url,
+            headers={
+                "User-Agent": UA,
+                "Accept-Language": "en-US,en;q=0.9",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=20) as res:
+            html = res.read().decode("utf-8", errors="replace")
+        # Clean the cached HTML
+        text = re.sub(r"(?is)<(script|style|noscript|svg|iframe)[^>]*>.*?</\1>", " ", html)
+        text = re.sub(r"<[^>]+>", " ", text)
+        text = html_lib.unescape(text)
+        text = re.sub(r"\s+", " ", text).strip()
+        if len(text) >= 100 and "Just a moment" not in text:
+            return text
+    except Exception:
+        pass
+    return None
+
+
 def fetch_generic_page(url: str) -> dict[str, str]:
-    # Prefer Jina reader from the server (no browser CORS)
+    # 1) Try Jina reader
     jina = f"https://r.jina.ai/{url}"
     try:
         text = _http_get(jina, timeout=40).strip()
-        if len(text) >= 80 and "AbuseAlleviationError" not in text:
+        if len(text) >= 80 and "AbuseAlleviationError" not in text and "AuthenticationRequiredError" not in text:
             meta = _parse_reader_meta(text)
             return {"text": text, "sourceUrl": url, **meta}
     except Exception:
         pass
 
+    # 2) Try Google cache (works for Cloudflare-protected sites like JobsDB)
+    cache_text = _fetch_google_cache(url)
+    if cache_text:
+        return {"text": cache_text, "sourceUrl": url, "title": "", "company": ""}
+
+    # 3) Try direct HTTP fetch
     html = _http_get(url, timeout=30)
-    # crude title
     title = _first([r"<title>(.*?)</title>"], html)
     body = re.sub(
         r"(?is)<(script|style|noscript|svg|iframe)[^>]*>.*?</\1>",
