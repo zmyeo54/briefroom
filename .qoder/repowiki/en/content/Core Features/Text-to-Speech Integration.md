@@ -11,6 +11,13 @@
 - [scripts/tts_regression.mjs](file://scripts/tts_regression.mjs)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated Edge TTS integration section to reflect enhanced stability and defensive import mechanisms
+- Added documentation for static imports of msedge-tts instead of dynamic imports
+- Enhanced error handling patterns for Vercel TTS functions and module loading improvements
+- Updated implementation examples to reflect improved stability measures
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -31,7 +38,7 @@
 
 The Text-to-Speech (TTS) integration system provides audio playback capabilities for interview questions and content within the LineCheck application. This system leverages Microsoft Edge TTS technology to convert text content into high-quality speech audio, enabling users to listen to interview questions and other textual content through natural-sounding voices.
 
-The implementation follows a client-server architecture where the frontend handles user interactions and audio playback, while the backend processes TTS requests and manages voice configurations. The system supports multiple languages, customizable voice options, and optimized audio streaming for smooth playback experiences.
+The implementation follows a client-server architecture where the frontend handles user interactions and audio playback, while the backend processes TTS requests and manages voice configurations. The system supports multiple languages, customizable voice options, and optimized audio streaming for smooth playback experiences. Recent enhancements have focused on improved stability, defensive import mechanisms, and static imports for the msedge-tts library to ensure more reliable module loading and error handling.
 
 ## Project Structure
 
@@ -76,13 +83,13 @@ F --> H
 The frontend component handles user interactions, audio playback control, and communication with the TTS API. It manages audio state, caching strategies, and error recovery mechanisms.
 
 ### Backend TTS Service
-The backend service processes TTS requests, manages voice configurations, and interfaces with the Edge TTS engine. It includes health monitoring and performance optimization features.
+The backend service processes TTS requests, manages voice configurations, and interfaces with the Edge TTS engine. It includes health monitoring and performance optimization features with enhanced error handling for Vercel deployment environments.
 
 ### Edge TTS Integration
-The core TTS engine wrapper that handles Microsoft Edge TTS API calls, voice selection, and audio format conversion.
+The core TTS engine wrapper that handles Microsoft Edge TTS API calls, voice selection, and audio format conversion. **Updated** Now uses static imports for msedge-tts instead of dynamic imports, providing improved stability and defensive import mechanisms for better error handling during module loading.
 
 ### Health Monitoring
-Dedicated endpoint for monitoring TTS service availability and performance metrics.
+Dedicated endpoint for monitoring TTS service availability and performance metrics with enhanced error tracking and resilience.
 
 **Section sources**
 - [src/lib/tts.js](file://src/lib/tts.js)
@@ -173,6 +180,13 @@ Core wrapper around Microsoft Edge TTS functionality:
 - Handles different output formats (MP3, WAV)
 - Manages audio quality settings
 - Implements streaming for large text inputs
+
+#### Enhanced Stability Features
+**Updated** The integration now employs static imports for the msedge-tts library instead of dynamic imports, providing several key improvements:
+- Improved module loading reliability
+- Better error handling during initialization
+- Defensive import mechanisms to prevent runtime failures
+- Enhanced compatibility with various deployment environments including Vercel
 
 **Section sources**
 - [lib/edgeTts.js](file://lib/edgeTts.js)
@@ -365,6 +379,14 @@ G --> H[Browser Playback]
 - **Service Errors**: TTS engine unavailability, API quota exceeded
 - **Validation Errors**: Invalid text input, unsupported voice selection
 - **Processing Errors**: Text too long, encoding issues
+- **Module Loading Errors**: Import failures, dependency resolution issues
+
+### Enhanced Error Handling for Module Loading
+**Updated** The system now includes comprehensive error handling for module loading scenarios:
+- Defensive import mechanisms to catch initialization failures
+- Static import fallbacks when dynamic imports fail
+- Graceful degradation when msedge-tts module is unavailable
+- Comprehensive logging for module loading diagnostics
 
 ### Error Response Format
 ```json
@@ -494,6 +516,29 @@ const advancedTTS = new TTSClient({
 });
 ```
 
+### Enhanced Error Handling Example
+**Updated** Example demonstrating improved error handling for module loading and service errors:
+```javascript
+const enhancedTTS = new TTSClient({
+  apiUrl: '/api/tts',
+  defaultVoice: 'en-US-GuyNeural',
+  onError: (error) => {
+    if (error.code === 'MODULE_LOAD_FAILED') {
+      // Handle msedge-tts module loading failure
+      console.warn('TTS module not available, falling back to basic mode');
+      useFallbackMode();
+    } else if (error.code === 'VERCEL_TTS_ERROR') {
+      // Handle Vercel-specific TTS errors
+      console.error('Vercel TTS error:', error.message);
+      retryWithBackoff();
+    } else {
+      // Handle other TTS errors
+      console.error('TTS error:', error);
+    }
+  }
+});
+```
+
 **Section sources**
 - [src/lib/tts.js](file://src/lib/tts.js)
 
@@ -518,6 +563,13 @@ const advancedTTS = new TTSClient({
 - **Monitor Error Logs**: Review server logs for detailed error information
 - **Verify API Keys**: Ensure proper authentication credentials
 - **Check Rate Limits**: Confirm not exceeding API usage limits
+
+#### Module Loading Issues
+**Updated** New troubleshooting steps for module loading problems:
+- **Static Import Failures**: Verify msedge-tts package is properly installed
+- **Dynamic Import Fallbacks**: Check if fallback mechanisms are working correctly
+- **Environment Compatibility**: Ensure deployment environment supports required Node.js features
+- **Dependency Resolution**: Clear node_modules and reinstall dependencies if needed
 
 #### Performance Issues
 - **Enable Caching**: Implement client-side caching for repeated requests
@@ -551,6 +603,9 @@ curl -X POST http://localhost:3000/api/tts \
 
 # Check service dependencies
 curl -X GET http://localhost:3000/api/tts-health | jq .
+
+# Test module loading (Node.js)
+node -e "try { require('msedge-tts'); console.log('Module loaded successfully'); } catch(e) { console.error('Module load failed:', e.message); }"
 ```
 
 **Section sources**
@@ -560,6 +615,8 @@ curl -X GET http://localhost:3000/api/tts-health | jq .
 ## Conclusion
 
 The Text-to-Speech integration system provides a robust, scalable solution for converting interview questions and content into natural-sounding audio. By leveraging Microsoft Edge TTS technology and implementing comprehensive error handling, caching, and performance optimization strategies, the system delivers reliable audio playback capabilities across various devices and browsers.
+
+Recent enhancements have significantly improved system stability through the adoption of static imports for the msedge-tts library, defensive import mechanisms, and enhanced error handling for Vercel deployment environments. These improvements ensure more reliable module loading, better error recovery, and improved compatibility across different deployment scenarios.
 
 The modular architecture ensures easy maintenance and extension, while the comprehensive API reference and troubleshooting guide enable developers to integrate TTS functionality effectively. The system's focus on user experience, through features like automatic caching, progress feedback, and graceful error handling, makes it suitable for production deployment in interview preparation applications.
 

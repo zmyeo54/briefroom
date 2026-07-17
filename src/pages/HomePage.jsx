@@ -3,7 +3,6 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   MagicWand,
   SpeakerHigh,
-  DownloadSimple,
   FilePdf,
   SpinnerGap,
   ArrowCounterClockwise,
@@ -832,15 +831,18 @@ export default function HomePage() {
 
   return (
     <Shell>
-      <header className="page-hero mb-6 md:mb-10">
-        <p className="label mb-2 md:mb-3">{t("home.eyebrow")}</p>
-        <h1 className="display text-[1.75rem] title sm:text-3xl md:text-4xl">
-          {t("brand.name")}
-        </h1>
-        <p className="line-responsive mt-2 max-w-[36ch] text-sm leading-relaxed mute md:mt-3 md:max-w-[48ch] md:text-base">
-          {t("home.tagline")}
-        </p>
-      </header>
+      <div className="settings-page">
+        <div className="settings-grid-bg" aria-hidden />
+        <header className="settings-hero mb-6 md:mb-10">
+          <p className="settings-eyebrow">{t("home.eyebrow")}</p>
+          <h1 className="settings-title">
+            {t("brand.name")}
+            <span className="settings-title-accent">.</span>
+          </h1>
+          <p className="line-responsive mt-2 max-w-[36ch] text-sm leading-relaxed mute md:mt-3 md:max-w-[48ch] md:text-base">
+            {t("home.tagline")}
+          </p>
+        </header>
 
       <section className="panel mb-4 space-y-5 p-4 sm:p-5 md:mb-5 md:space-y-6 md:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1251,7 +1253,7 @@ export default function HomePage() {
             ) : (
               <>
                 <span className="action-dock-export-body">
-                  <DownloadSimple size={15} weight="bold" />
+                  <SpeakerHigh size={16} weight="bold" />
                   <span className="action-dock-export-label">
                     <span>{t("home.exportLine1")}</span>
                     <span>{t("home.exportAudioLabel")}</span>
@@ -1275,7 +1277,7 @@ export default function HomePage() {
             ) : (
               <>
                 <span className="action-dock-export-body">
-                  <FilePdf size={15} weight="bold" />
+                  <FilePdf size={16} weight="bold" />
                   <span className="action-dock-export-label">
                     <span>{t("home.exportLine1")}</span>
                     <span>{t("home.exportPdfLabel")}</span>
@@ -1423,6 +1425,7 @@ export default function HomePage() {
           </motion.div>
         ) : null}
       </AnimatePresence>
+      </div>
     </Shell>
   );
 }

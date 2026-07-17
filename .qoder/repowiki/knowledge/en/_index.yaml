@@ -3,11 +3,11 @@ schema_version: 1
 locale: en-US
 branch: main
 nodes_managed: true
-exported_at: "2026-07-17T13:58:16Z"
+exported_at: "2026-07-17T14:27:30Z"
 modules:
     "":
-        dir_name: LineCheck Interview Coach Monorepo
-        title: LineCheck Interview Coach Monorepo
+        dir_name: Interview Coach Monorepo (Vite PWA + Vercel Functions + Dev Helpers)
+        title: Interview Coach Monorepo (Vite PWA + Vercel Functions + Dev Helpers)
         scope:
             - README.md
             - .gitignore
@@ -36,8 +36,8 @@ modules:
             - path: frontend_app
             - path: scripts_and_tools
     frontend_app:
-        dir_name: Line Check Interview Coach (React PWA)
-        title: Line Check Interview Coach (React PWA)
+        dir_name: Interview Coach PWA (React Frontend)
+        title: Interview Coach PWA (React Frontend)
         scope:
             - src/
             - public/
@@ -46,6 +46,7 @@ modules:
         depends_on: []
         related_to:
             - path: api_routes
+            - path: scripts_and_tools
     scripts_and_tools:
         dir_name: Local Dev Servers, TTS Regression & Job-Text Scraping Utilities
         title: Local Dev Servers, TTS Regression & Job-Text Scraping Utilities
@@ -57,3 +58,4 @@ modules:
         depends_on: []
         related_to:
             - path: api_routes
+            - path: frontend_app
