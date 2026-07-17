@@ -77,6 +77,10 @@ const en = {
   "home.targetQs": "Questions you want to nail",
   "home.targetQsHint":
     "Add the questions that make you nervous. They sit under your three foundations — and never replace them.",
+  "home.skills": "Skills to highlight",
+  "home.skillsHint":
+    "List the skills, tools, or specialties you want the coach to use when drafting questions and answers.",
+  "home.skillsPlaceholder": "e.g. React, product strategy, stakeholder communication",
   "home.autoInvent": "Also draft likely questions from my resume and this role",
   "home.inventCount": "How many extras",
   "home.inventCountOption": "{n}",

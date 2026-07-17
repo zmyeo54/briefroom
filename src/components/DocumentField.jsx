@@ -17,6 +17,7 @@ export default function DocumentField({
   title,
   hint,
   value,
+  sourceMeta = null,
   onChange,
   placeholder,
   allowUrl = false,
@@ -62,7 +63,8 @@ export default function DocumentField({
     setSourceUrl("");
     setPasteOpen(false);
     const names = files.map((f) => f.name);
-    setFileName(names.length === 1 ? names[0] : t("doc.multiFiles", { n: names.length }));
+    const activeName = names.length === 1 ? names[0] : t("doc.multiFiles", { n: names.length });
+    setFileName(activeName);
     setStatus(t("doc.reading"));
     try {
       const parts = [];
@@ -83,12 +85,15 @@ export default function DocumentField({
       if (!parts.length) {
         throw new Error("No text extracted. Try a clearer scan or paste manually.");
       }
-      applyValue(parts.join("\n\n"));
+      applyValue(parts.join("\n\n"), {
+        source: "upload",
+        fileName: activeName,
+      });
       setStatus("Ready");
     } catch (e) {
       setError(e.message || "Upload failed");
       setStatus("");
-      applyValue("");
+      applyValue("", null);
     } finally {
       setBusy(false);
     }
@@ -150,10 +155,11 @@ export default function DocumentField({
     setPasteDraft("");
   }
 
-  const sourceFriendly = fileName
-    ? t("doc.fromUpload")
+  const uploadName = fileName || (sourceMeta?.source === "upload" ? sourceMeta.fileName : "");
+  const sourceFriendly = uploadName
+    ? `${t("doc.fromUpload")} · ${uploadName}`
     : sourceUrl
-      ? t("doc.fromLink")
+      ? `${t("doc.fromLink")} · ${sourceUrl}`
       : loaded
         ? t("doc.fromPaste")
         : "";
@@ -205,7 +211,7 @@ export default function DocumentField({
                 ) : null}
                 {displaySubtitle?.trim() ? (
                   <p className="mute mt-0.5 text-xs">{displaySubtitle}</p>
-                ) : sourceFriendly ? (
+                ) : displayTitle?.trim() ? null : sourceFriendly ? (
                   <p className="mute mt-1 text-xs">{sourceFriendly}</p>
                 ) : null}
                 {displayTitle?.trim() && sourceFriendly ? (

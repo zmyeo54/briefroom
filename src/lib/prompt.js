@@ -111,6 +111,7 @@ export function buildUserPrompt({
   resume,
   jd,
   questions,
+  skills,
   lang,
   autoQuestions,
   inventCount = DEFAULT_INVENT_COUNT,
@@ -124,6 +125,16 @@ export function buildUserPrompt({
   const role = interviewerRoleById(normalizeInterviewerRole(interviewerRole));
   const focusIds = normalizeFocuses(focuses);
   const extras = normalizeInventCount(inventCount);
+  const skillLines = String(skills || "")
+    .trim()
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const skillsBlock = skillLines.length
+    ? `SKILL SET:
+- Use these skills to shape interview questions and answers where the resume supports it.
+${skillLines.map((line) => `- ${line}`).join("\n")}`
+    : "";
   const g = String(gender || "").toLowerCase() === "female" ? "female" : "male";
   const name = String(candidateName || "").trim();
 
@@ -195,7 +206,7 @@ ${identityBlock}
 
 ${length.prompt}
 
-${roleBlock}${focusPromptBlock(focusIds)}
+${roleBlock}${skillsBlock ? `${skillsBlock}\n\n` : ""}${focusPromptBlock(focusIds)}
 
 MANDATORY — these 3 questions MUST be items 1–3 in the JSON, in this exact order (keep this wording / language):
 ${mandatoryBlock}
@@ -227,5 +238,6 @@ export function previewPrompt(opts) {
     ...opts,
     resume: opts.resume?.trim() ? opts.resume : "[resume will be inserted here]",
     jd: opts.jd?.trim() ? opts.jd : "[job description will be inserted here]",
+    skills: opts.skills || "",
   });
 }
