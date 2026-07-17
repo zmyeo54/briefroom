@@ -94,9 +94,6 @@ export default function HomePage() {
   const [questionsRaw, setQuestionsRaw] = useState(
     () => loadJson("draft", {}).questions || ""
   );
-  const [skillsRaw, setSkillsRaw] = useState(
-    () => loadJson("draft", {}).skills || ""
-  );
   const [autoQuestions, setAutoQuestions] = useState(
     () => loadJson("draft", {}).autoQuestions !== false
   );
@@ -114,7 +111,6 @@ export default function HomePage() {
       jobTitle,
       jobCompany,
       questions: questionsRaw,
-      skills: skillsRaw,
       autoQuestions,
       inventCount,
     };
@@ -123,7 +119,7 @@ export default function HomePage() {
       clearTimeout(id);
       saveJson("draft", payload);
     };
-  }, [resume, jd, jobTitle, jobCompany, questionsRaw, skillsRaw, autoQuestions, inventCount]);
+  }, [resume, jd, jobTitle, jobCompany, questionsRaw, autoQuestions, inventCount]);
 
   const [qa, setQa] = useState(() => {
     const stored = loadJson("qa", []);
@@ -246,7 +242,6 @@ export default function HomePage() {
     setJobTitle("");
     setJobCompany("");
     setQuestionsRaw("");
-    setSkillsRaw("");
     setAutoQuestions(true);
     setInventCount(DEFAULT_INVENT_COUNT);
     setQa([]);
@@ -259,7 +254,6 @@ export default function HomePage() {
       jobTitle: "",
       jobCompany: "",
       questions: "",
-      skills: "",
       autoQuestions: true,
       inventCount: DEFAULT_INVENT_COUNT,
     });
@@ -398,7 +392,6 @@ export default function HomePage() {
       resume,
       jd,
       questions: questionsRaw,
-      skills: skillsRaw,
       autoQuestions,
       inventCount,
     });
@@ -409,7 +402,6 @@ export default function HomePage() {
       resume,
       jd,
       questions,
-      skills: skillsRaw,
       lang: latest.lang,
       autoQuestions,
       inventCount,
@@ -999,18 +991,8 @@ export default function HomePage() {
           placeholder={targetPh}
           aria-label={t("home.targetQs")}
         />
-        <textarea
-          className="field mt-3 min-h-[82px] md:mt-4 md:min-h-[100px]"
-          value={skillsRaw}
-          onChange={(e) => setSkillsRaw(e.target.value)}
-          placeholder={t("home.skillsPlaceholder")}
-          aria-label={t("home.skills")}
-        />
-        <p className="text-xs leading-relaxed mute md:text-sm">
-          {t("home.skillsHint")}
-        </p>
-          <div className="mt-3 flex flex-col gap-2.5 md:mt-4">
-            <label className="flex items-center gap-2 text-sm ink">
+        <div className="mt-3 flex flex-col gap-2.5 md:mt-4">
+          <label className="flex items-center gap-2 text-sm ink">
               <input
                 type="checkbox"
                 checked={autoQuestions}
@@ -1178,14 +1160,13 @@ export default function HomePage() {
           <button
             type="button"
             className="action-dock-speak"
+            aria-label={t("home.speakLabel")}
+            title={t("home.speakLabel")}
             disabled={!qa.length || speaking}
             onClick={playSelected}
           >
-            <SpeakerHigh size={17} weight="bold" />
-            <span className="action-dock-speak-label">
-              {t("home.speakLabel")}
-              <span className="action-dock-badge">{selected.size}</span>
-            </span>
+            <Play size={18} weight="bold" />
+            <span className="action-dock-badge">{selected.size}</span>
           </button>
           <button
             type="button"
