@@ -1,7 +1,6 @@
-const CACHE = "linecheck-v6";
+/** Bump on every release that must invalidate stale shells (TTS client, etc.). */
+const CACHE = "linecheck-v7";
 const ASSETS = [
-  "/",
-  "/index.html",
   "/manifest.json",
   "/icon-192.png",
   "/icon-512.png",
@@ -30,6 +29,26 @@ self.addEventListener("fetch", (e) => {
   if (url.origin !== self.location.origin) return;
   // Never cache API — hasKey / TTS must stay live
   if (url.pathname.startsWith("/api/")) return;
+
+  // HTML / navigations: network-first so Select-All TTS fixes aren't stuck behind
+  // a cache-first index.html pointing at an old hashed bundle.
+  const isDocument =
+    e.request.mode === "navigate" ||
+    url.pathname === "/" ||
+    url.pathname.endsWith(".html");
+  if (isDocument) {
+    e.respondWith(
+      fetch(e.request)
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copy));
+          return res;
+        })
+        .catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
   e.respondWith(
     caches.match(e.request).then((cached) => {
       const fetched = fetch(e.request)

@@ -32,8 +32,8 @@ import {
   INVENT_COUNTS,
   normalizeInventCount,
   DEFAULT_INVENT_COUNT,
-  estimateMaxTokens,
   parseModelJson,
+  planBuildBatches,
 } from "../lib/prompt";
 import {
   extractCandidateName,
@@ -462,19 +462,26 @@ export default function HomePage() {
     setLoading(true);
     haltPlayback();
 
-    const userContent = buildUserPrompt({
+    const promptBase = {
       resume,
       jd,
       questions,
       lang: latest.lang,
       autoQuestions,
-      inventCount,
       answerLength: latest.answerLength,
       focuses: latest.focuses,
       interviewerRole: latest.interviewerRole,
       candidateName:
         String(latest.name || "").trim() || extractCandidateName(resume),
       gender: latest.gender,
+    };
+    const addonCount = questions.filter((q) => q.trim()).length;
+    const batches = planBuildBatches({
+      inventCount,
+      autoQuestions,
+      lang: latest.lang,
+      answerLength: latest.answerLength,
+      addonCount,
     });
 
     try {
@@ -488,25 +495,8 @@ export default function HomePage() {
       const providersQueue =
         useAltProviderRetry && order.length > 1 ? [order[1]] : [...order];
       const enabledHeader = order.join(",");
-      const body = {
-        temperature: 0.6,
-        max_tokens: estimateMaxTokens({
-          lang: latest.lang,
-          answerLength: latest.answerLength,
-          inventCount,
-          addonCount: questions.filter((q) => q.trim()).length,
-          autoQuestions,
-        }),
-        messages: [
-          { role: "system", content: latest.systemPrompt || DEFAULT_SYSTEM },
-          { role: "user", content: userContent },
-        ],
-      };
 
       let provider = providersQueue[0];
-      let res;
-      let data;
-      let lastStatus = 0;
 
       // Prefer /api/chat (user key + Vercel keys rotate there). Local Vite has no
       // chat proxy — fall back to direct Gemini with the pasted key only.
@@ -586,7 +576,7 @@ export default function HomePage() {
         return { res, data };
       }
 
-      async function callChatWithModel(model) {
+      async function callChatWithModel(model, body) {
         let { res, data } = await callChat({
           ...body,
           model,
@@ -601,95 +591,112 @@ export default function HomePage() {
         return { res, data };
       }
 
-      const models = geminiModelsToTry(latest.model);
-      providerLoop: for (let pi = 0; pi < providersQueue.length; pi++) {
-        provider = providersQueue[pi];
-        for (let i = 0; i < models.length; i++) {
-          ({ res, data } = await callChatWithModel(models[i]));
-          lastStatus = res.status;
-          if (res.ok) break providerLoop;
-          if (res.status === 503) {
-            if (pi < providersQueue.length - 1) {
-              setUseAltProviderRetry(true);
-              flash(t("home.flash.retryAltProvider"), "error");
-              continue providerLoop;
+      /** One batch through provider/model failover. Returns parsed items + meta. */
+      async function runBatch(batch, queue) {
+        const userContent = buildUserPrompt({
+          ...promptBase,
+          inventCount: batch.inventCount,
+          extrasOnly: batch.extrasOnly,
+        });
+        const body = {
+          temperature: 0.6,
+          max_tokens: batch.maxTokens,
+          messages: [
+            { role: "system", content: latest.systemPrompt || DEFAULT_SYSTEM },
+            { role: "user", content: userContent },
+          ],
+        };
+        const models = geminiModelsToTry(latest.model);
+        let batchRes;
+        let batchData;
+        let batchStatus = 0;
+        providerLoop: for (let pi = 0; pi < queue.length; pi++) {
+          provider = queue[pi];
+          for (let i = 0; i < models.length; i++) {
+            ({ res: batchRes, data: batchData } = await callChatWithModel(
+              models[i],
+              body
+            ));
+            batchStatus = batchRes.status;
+            if (batchRes.ok) break providerLoop;
+            if (batchRes.status === 503) {
+              if (pi < queue.length - 1) continue providerLoop;
+              throw new Error(
+                batchData?.error?.message || t("home.flash.needKey")
+              );
             }
-            flash(data?.error?.message || t("home.flash.needKey"), "error");
-            return;
-          }
-          if (res.status === 504 || res.status === 502) {
-            if (pi < providersQueue.length - 1) {
-              setUseAltProviderRetry(true);
-              flash(t("home.flash.retryAltProvider"), "error");
-              continue providerLoop;
+            if (batchRes.status === 504 || batchRes.status === 502) {
+              if (pi < queue.length - 1) continue providerLoop;
+              throw new Error(
+                batchData?.error?.message ||
+                  t("home.flash.timeout", {
+                    provider:
+                      provider === "deepseek"
+                        ? t("settings.aiProvider.deepseek")
+                        : t("settings.aiProvider.gemini"),
+                  })
+              );
             }
-            flash(
-              data?.error?.message ||
-                t("home.flash.timeout", {
-                  provider:
-                    provider === "deepseek"
-                      ? t("settings.aiProvider.deepseek")
-                      : t("settings.aiProvider.gemini"),
-                }),
-              "error"
-            );
-            return;
+            if (
+              shouldTryNextGeminiModel(batchRes.status, batchData) &&
+              i < models.length - 1
+            ) {
+              continue;
+            }
+            break;
           }
-          // Quota / missing model → try next; other errors stop this provider.
-          if (
-            shouldTryNextGeminiModel(res.status, data) &&
-            i < models.length - 1
-          ) {
-            continue;
-          }
+          if (!batchRes.ok && pi < queue.length - 1) continue;
           break;
         }
-        if (!res.ok && pi < providersQueue.length - 1) {
-          setUseAltProviderRetry(true);
-          flash(t("home.flash.retryAltProvider"), "error");
-          continue;
+        if (!batchRes.ok) {
+          if (batchStatus === 429 || batchStatus === 404) {
+            const err = new Error(
+              batchStatus === 429
+                ? t("home.flash.rateLimited")
+                : t("home.flash.modelUnavailable")
+            );
+            err.code = batchStatus;
+            throw err;
+          }
+          const detail =
+            batchData?.error?.message ||
+            batchData?.error?.status ||
+            (typeof batchData?.error === "string" ? batchData.error : "") ||
+            batchRes.statusText ||
+            `HTTP ${batchRes.status}`;
+          throw new Error(detail);
         }
-        break;
-      }
-
-      if (!res.ok) {
-        if (lastStatus === 429 || lastStatus === 404) {
-          setUseAltProviderRetry(true);
-          flash(
-            lastStatus === 429
-              ? t("home.flash.rateLimited")
-              : t("home.flash.modelUnavailable"),
-            "error"
-          );
-          return;
+        const content = batchData.choices?.[0]?.message?.content || "";
+        let parsed;
+        try {
+          parsed = parseModelJson(content);
+        } catch (e) {
+          throw new Error(`Model did not return valid JSON: ${e.message}`);
         }
-        const detail =
-          data?.error?.message ||
-          data?.error?.status ||
-          (typeof data?.error === "string" ? data.error : "") ||
-          res.statusText ||
-          `HTTP ${res.status}`;
-        throw new Error(detail);
+        const raw = (parsed.items || parsed.qa || parsed.answers || [])
+          .map((x) => ({
+            q: String(x.q || x.question || "").trim(),
+            a: String(x.a || x.answer || "").trim(),
+            category: String(x.category || "").trim() || null,
+            map: x.map && typeof x.map === "object" ? x.map : null,
+          }))
+          .filter((x) => x.q && x.a);
+        if (!raw.length) throw new Error("No Q&A parsed from response");
+        return { raw, parsed, data: batchData, provider };
       }
 
-      const content = data.choices?.[0]?.message?.content || "";
-      let parsed;
-      try {
-        parsed = parseModelJson(content);
-      } catch (e) {
-        throw new Error(`Model did not return valid JSON: ${e.message}`);
+      const merged = [];
+      let parsedMeta = null;
+      let modelData = null;
+      // Stick to the provider that won batch 1 for batch 2 (same click budget).
+      let queue = [...providersQueue];
+      for (const batch of batches) {
+        const result = await runBatch(batch, queue);
+        merged.push(...result.raw);
+        if (!parsedMeta) parsedMeta = result.parsed;
+        modelData = result.data;
+        queue = [result.provider];
       }
-
-      const raw = (parsed.items || parsed.qa || parsed.answers || [])
-        .map((x) => ({
-          q: String(x.q || x.question || "").trim(),
-          a: String(x.a || x.answer || "").trim(),
-          category: String(x.category || "").trim() || null,
-          map: x.map && typeof x.map === "object" ? x.map : null,
-        }))
-        .filter((x) => x.q && x.a);
-
-      if (!raw.length) throw new Error("No Q&A parsed from response");
 
       const fromResume = catchNameFromResume(resume);
       const nameForAnswers =
@@ -697,9 +704,9 @@ export default function HomePage() {
         fromResume ||
         extractCandidateName(resume);
 
-      const named = applyCandidateNameToItems(raw, nameForAnswers);
+      const named = applyCandidateNameToItems(merged, nameForAnswers);
       const items = pinMandatoryFirst(named, latest.lang, questions);
-      const modelUsed = String(data.model || latest.model || "").trim();
+      const modelUsed = String(modelData?.model || latest.model || "").trim();
       if (modelUsed) {
         const meta = { model: modelUsed, at: new Date().toISOString() };
         saveJson("genMeta", meta);
@@ -707,9 +714,9 @@ export default function HomePage() {
       }
       // AI often sees the real role name even when LinkedIn scrape polluted jobTitle
       const aiTitle = cleanJobTitle(
-        parsed.jobTitle || parsed.role || parsed.title || ""
+        parsedMeta?.jobTitle || parsedMeta?.role || parsedMeta?.title || ""
       );
-      const aiCompany = cleanJobTitle(parsed.company || "");
+      const aiCompany = cleanJobTitle(parsedMeta?.company || "");
       if (aiTitle) setJobTitle(aiTitle);
       if (aiCompany) setJobCompany(aiCompany);
       setUseAltProviderRetry(false);
@@ -728,7 +735,10 @@ export default function HomePage() {
       );
     } catch (e) {
       const order = enabledAiProviders(latest);
-      if (!useAltProviderRetry && order.length > 1) {
+      if (e?.code === 429 || e?.code === 404) {
+        setUseAltProviderRetry(true);
+        flash(e.message, "error");
+      } else if (!useAltProviderRetry && order.length > 1) {
         setUseAltProviderRetry(true);
         flash(t("home.flash.retryAltProvider"), "error");
       } else {

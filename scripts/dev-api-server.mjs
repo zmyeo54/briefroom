@@ -116,8 +116,8 @@ function bodyForProvider(body, provider) {
     // Match api/chat.js — V4 thinking defaults ON and blows Vercel ~60s.
     const rawMax = Number(body?.max_tokens);
     const max_tokens = Math.min(
-      Number.isFinite(rawMax) && rawMax > 0 ? rawMax : 4096,
-      4096
+      Number.isFinite(rawMax) && rawMax > 0 ? rawMax : 8192,
+      8192
     );
     return {
       ...body,

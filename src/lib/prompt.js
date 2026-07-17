@@ -36,13 +36,15 @@ export function estimateMaxTokens({
   inventCount,
   addonCount = 0,
   autoQuestions = true,
+  extrasOnly = false,
 }) {
   const extras = autoQuestions
     ? normalizeInventCount(inventCount)
     : addonCount
       ? 0
       : 3;
-  const items = 3 + Number(addonCount || 0) + extras;
+  const foundation = extrasOnly ? 0 : 3 + Number(addonCount || 0);
+  const items = foundation + extras;
   const length = answerLengthById(answerLength);
   // ~1.35 tokens/word + short "q"; Mix doubles answer body
   const words = Number(length.maxWords) || 160;
@@ -50,6 +52,67 @@ export function estimateMaxTokens({
   const mult = lang === "both" ? 2 : 1;
   const floor = answerLength === "brief" ? 512 : 768;
   return Math.min(8192, Math.max(floor, Math.ceil(items * perItem * mult) + 64));
+}
+
+/**
+ * Big Mix/long Builds truncate mid-JSON on one shot — split extras across 2–3 calls.
+ * 7 → 2 batches, 10 → 3 batches. Returns [{ inventCount, extrasOnly, maxTokens }, ...].
+ */
+export function planBuildBatches({
+  inventCount,
+  autoQuestions = true,
+  lang,
+  answerLength,
+  addonCount = 0,
+}) {
+  const extras = autoQuestions
+    ? normalizeInventCount(inventCount)
+    : addonCount
+      ? 0
+      : 3;
+  const base = {
+    lang,
+    answerLength,
+    addonCount,
+    autoQuestions: true,
+  };
+  if (!autoQuestions || extras < 7) {
+    return [
+      {
+        inventCount: autoQuestions ? extras : DEFAULT_INVENT_COUNT,
+        extrasOnly: false,
+        maxTokens: estimateMaxTokens({
+          ...base,
+          inventCount: autoQuestions ? extras : DEFAULT_INVENT_COUNT,
+          autoQuestions,
+          addonCount,
+        }),
+      },
+    ];
+  }
+
+  // 7 → 2 builds, 10 → 3 builds (nearly even chunks)
+  const parts = extras >= 10 ? 3 : 2;
+  const chunk = Math.floor(extras / parts);
+  const rem = extras % parts;
+  const sizes = Array.from(
+    { length: parts },
+    (_, i) => chunk + (i < rem ? 1 : 0)
+  );
+
+  return sizes.map((n, i) => {
+    const extrasOnly = i > 0;
+    return {
+      inventCount: n,
+      extrasOnly,
+      maxTokens: estimateMaxTokens({
+        ...base,
+        inventCount: n,
+        addonCount: extrasOnly ? 0 : addonCount,
+        extrasOnly,
+      }),
+    };
+  });
 }
 
 export function normalizeInventCount(raw) {
@@ -106,6 +169,7 @@ export function buildUserPrompt({
   interviewerRole = DEFAULT_INTERVIEWER_ROLE,
   candidateName = "",
   gender = "male",
+  extrasOnly = false,
 }) {
   const length = answerLengthById(answerLength);
   const role = interviewerRoleById(normalizeInterviewerRole(interviewerRole));
@@ -167,6 +231,34 @@ export function buildUserPrompt({
   }
 
   const roleBlock = role.prompt ? `${role.prompt}\n` : "";
+  const sharedTail = `LENGTH HARD: every "a" = ${length.label} (≤${length.maxWords} words${lang === "both" ? " per lang" : ""}). Do not blur modes.
+Tone: calm, ownership${role.id === "exec" ? ", exec presence" : role.id === "hr" ? ", screen-friendly" : ""}. No buzzwords or fabricated metrics.
+Maps: 3-5 key points per answer, short labels, no new claims. Every item needs "category".
+Also set top-level jobTitle (short role name only) and company from the JD — strip LinkedIn chrome (applicants, Apply, Save, etc).
+
+RESUME:
+${clipDoc(resume)}
+
+JOB DESCRIPTION:
+${clipDoc(jd)}`;
+
+  // Second half of a split Build — only new extras (foundation already drafted).
+  if (extrasOnly) {
+    return `Interview rehearsal Q&A — EXTRA QUESTIONS ONLY (batch 2). Ground answers in resume.
+
+${languageBlock(lang)}
+
+${identityBlock}
+
+${length.prompt}
+
+${roleBlock}${skillsBlock ? `${skillsBlock}\n\n` : ""}${focusPromptBlock(focusIds)}
+
+Invent exactly ${extras} NEW questions. Do NOT include intro / leave previous role / why join us — those already exist. No duplicates. Sound like ${asker}. ${inventLang}
+Every item needs category = a QUESTION DIRECTION id.
+
+${sharedTail}`;
+  }
 
   return `Interview rehearsal Q&A. Ground answers in resume. Mirror JD priorities where resume supports.
 
@@ -185,16 +277,7 @@ ${addonBlock}
 
 ${inventBlock}
 
-LENGTH HARD: every "a" = ${length.label} (≤${length.maxWords} words${lang === "both" ? " per lang" : ""}). Do not blur modes.
-Tone: calm, ownership${role.id === "exec" ? ", exec presence" : role.id === "hr" ? ", screen-friendly" : ""}. No buzzwords or fabricated metrics.
-Maps: 3-5 key points per answer, short labels, no new claims. Every item needs "category".
-Also set top-level jobTitle (short role name only) and company from the JD — strip LinkedIn chrome (applicants, Apply, Save, etc).
-
-RESUME:
-${clipDoc(resume)}
-
-JOB DESCRIPTION:
-${clipDoc(jd)}`;
+${sharedTail}`;
 }
 
 /**

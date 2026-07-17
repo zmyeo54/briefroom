@@ -18,8 +18,8 @@ export const HANDLER_BUDGET_MS = 55_000;
 export const UPSTREAM_CALL_MS = 50_000;
 /** Min remaining budget before attempting the other provider after a timeout. */
 export const FAILOVER_MIN_MS = 20_000;
-/** Cap DeepSeek completion size so bilingual Builds stay inside the budget. */
-export const DEEPSEEK_MAX_TOKENS = 4096;
+/** DeepSeek output cap (API max for chat-family; V4 allows more but 8k keeps Builds inside Vercel time). */
+export const DEEPSEEK_MAX_TOKENS = 8192;
 
 /** User setting: global → Gemini, greater-china → DeepSeek. */
 export function parseAiRegion(req) {
