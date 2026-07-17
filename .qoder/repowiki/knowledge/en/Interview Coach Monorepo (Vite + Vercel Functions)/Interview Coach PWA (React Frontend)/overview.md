@@ -1,1 +1,0 @@
-A React-based progressive web app that ingests a resume and job description, calls Gemini/OpenAI-compatible APIs to generate interview Q&A, and provides TTS playback plus PDF export.

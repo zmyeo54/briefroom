@@ -142,6 +142,12 @@ const en = {
     "The AI route is busy or out of quota. Wait a minute and tap Build again — we’ll switch routes. Tip: fewer extras (3–5) burns less quota.",
   "home.flash.retryDeepseek":
     "Build didn’t go through. Tap Build My Questions again — we’ll switch routes and retry.",
+  "home.flash.retryAltProvider":
+    "Build didn’t go through. Tap Build My Questions again — we’ll try the other AI route.",
+  "home.flash.timeout":
+    "{provider} took too long (Vercel stops at ~60s). Turn it off or switch provider in Settings, then Build again.",
+  "home.flash.noProvider":
+    "Both AI providers are off. Enable Gemini and/or DeepSeek in Settings.",
   "home.flash.needDocs": "Add your resume and the role first — then we’ll coach from your real story.",
   "home.flash.generating": "Crafting answers you can actually say…",
   "home.flash.generated":
@@ -223,6 +229,14 @@ const en = {
   "settings.aiRegion.greaterChina": "Greater China",
   "settings.aiRegionHint":
     "Greater China (or a Hong Kong / mainland China IP) uses DeepSeek. Global uses Gemini first; if Build fails once, tap again and we’ll retry on DeepSeek.",
+  "settings.aiProviders": "AI providers",
+  "settings.aiProvidersHint":
+    "Turn each route on or off. At least one must stay on. DeepSeek often hits Vercel’s ~60s limit on long Builds — use Gemini if that happens.",
+  "settings.aiProvider": "Prefer",
+  "settings.aiProvider.gemini": "Gemini",
+  "settings.aiProvider.deepseek": "DeepSeek",
+  "settings.aiProviderHint":
+    "Which route to try first. If Build fails once, tap again and we’ll try the other enabled route.",
   "settings.interviewLang": "Practice language",
   "settings.interviewLangHint":
     "Questions and answers will be written in this language.",
@@ -502,6 +516,12 @@ const zh = {
     "当前线路繁忙或额度用尽。请稍等一分钟再点生成——我们会换线路重试。提示：额外题选 3–5 道更省额度。",
   "home.flash.retryDeepseek":
     "这次生成没成功。请再点一次「生成我的题目」——我们会换一条线路重试。",
+  "home.flash.retryAltProvider":
+    "这次生成没成功。请再点一次「生成我的题目」——我们会换另一条 AI 线路重试。",
+  "home.flash.timeout":
+    "{provider} 响应超时（Vercel 约 60 秒会中断）。请在设置里关掉它或换线路，再生成一次。",
+  "home.flash.noProvider":
+    "两个 AI 线路都关着。请在设置里开启 Gemini 和／或 DeepSeek。",
   "home.flash.needDocs": "先放上简历和岗位——我们要基于你的真实经历来练。",
   "home.flash.generating": "正在写出你能说出口的回答…",
   "home.flash.generated":
@@ -583,6 +603,14 @@ const zh = {
   "settings.aiRegion.greaterChina": "大中华区",
   "settings.aiRegionHint":
     "大中华区（或香港／大陆 IP）走 DeepSeek。全球先走 Gemini；若首次生成失败，再点一次会换 DeepSeek 重试。",
+  "settings.aiProviders": "AI 线路",
+  "settings.aiProvidersHint":
+    "可分别开关。至少保留一条。DeepSeek 长生成常撞上 Vercel 约 60 秒限制——若超时请改用 Gemini。",
+  "settings.aiProvider": "优先使用",
+  "settings.aiProvider.gemini": "Gemini",
+  "settings.aiProvider.deepseek": "DeepSeek",
+  "settings.aiProviderHint":
+    "先走哪条线路。若生成失败一次，再点生成会改试另一条已开启的线路。",
   "settings.interviewLang": "练习语言",
   "settings.interviewLangHint": "问题与回答都会按此语言生成。",
   "settings.gender": "你的性别",

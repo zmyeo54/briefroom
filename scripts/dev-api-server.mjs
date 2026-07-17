@@ -34,7 +34,10 @@ function parseBody(req) {
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Linecheck-AI-Region');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Content-Type,Authorization,X-Linecheck-AI-Region,X-Linecheck-AI-Provider,X-Linecheck-AI-Enabled'
+  );
 }
 
 function bearerFrom(req) {
@@ -63,15 +66,48 @@ function collectDeepSeekKeys(env = process.env) {
   return k ? [k] : [];
 }
 
-function pickProvider(region, country, env = process.env) {
-  // ponytail: DeepSeek only — location ignored for now
-  void region;
-  void country;
+function parseProvider(req) {
+  const raw = String(req.headers['x-linecheck-ai-provider'] || '').toLowerCase();
+  if (raw === 'deepseek' || raw === 'gemini') return raw;
+  const regionRaw = String(req.headers['x-linecheck-ai-region'] || '').toLowerCase();
+  if (
+    regionRaw === 'greater-china' ||
+    regionRaw === 'greaterchina' ||
+    regionRaw === 'china' ||
+    regionRaw === 'cn' ||
+    regionRaw === 'hk'
+  ) {
+    return 'deepseek';
+  }
+  if (regionRaw === 'global') return 'gemini';
+  return '';
+}
+
+function parseEnabled(req) {
+  const raw = String(req.headers['x-linecheck-ai-enabled'] || '').trim();
+  if (!raw) return null;
+  const set = new Set();
+  for (const part of raw.split(/[\s,]+/)) {
+    const p = part.trim().toLowerCase();
+    if (p === 'gemini' || p === 'deepseek') set.add(p);
+  }
+  return set.size ? set : null;
+}
+
+function providersToTry(req, env = process.env) {
+  const enabled = parseEnabled(req);
   const hasDeepseek = collectDeepSeekKeys(env).length > 0;
-  const hasGemini = collectServerKeys(env).length > 0;
-  if (hasDeepseek) return 'deepseek';
-  if (hasGemini) return 'gemini';
-  return null;
+  const hasGemini = collectServerKeys(env).length > 0 || Boolean(bearerFrom(req));
+  const allow = (p) => {
+    if (enabled && !enabled.has(p)) return false;
+    return p === 'deepseek' ? hasDeepseek : hasGemini;
+  };
+  let preferred = parseProvider(req) || 'gemini';
+  const order = [];
+  if (allow(preferred)) order.push(preferred);
+  const alt = preferred === 'deepseek' ? 'gemini' : 'deepseek';
+  if (allow(alt)) order.push(alt);
+  return order;
 }
 
 function bodyForProvider(body, provider) {
@@ -136,22 +172,10 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  const regionRaw = String(req.headers['x-linecheck-ai-region'] || '').toLowerCase();
-  const region =
-    regionRaw === 'greater-china' ||
-    regionRaw === 'greaterchina' ||
-    regionRaw === 'china' ||
-    regionRaw === 'cn' ||
-    regionRaw === 'hk'
-      ? 'greater-china'
-      : regionRaw === 'global'
-        ? 'global'
-        : '';
-  const country = String(req.headers['x-vercel-ip-country'] || '').toUpperCase();
   const userKey = bearerFrom(req);
-  const provider = pickProvider(region, country);
+  const order = providersToTry(req);
 
-  if (!provider) {
+  if (!order.length) {
     json(res, 503, {
       error: {
         message: 'No API key configured for local dev. Set GEMINI_API_KEY or DEEPSEEK_API_KEY in your shell, or paste a key in Settings.',
@@ -160,26 +184,24 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  const keys = [];
-  if (userKey) keys.push(userKey);
-  const pool = provider === 'deepseek' ? collectDeepSeekKeys() : collectServerKeys();
-  for (const key of pool) {
-    if (!keys.includes(key)) keys.push(key);
-  }
-
-  if (!keys.length) {
-    json(res, 503, { error: { message: 'No API key available' } });
-    return;
-  }
-
   let lastResponse;
-  for (const key of keys) {
-    const { upstream, data } = await callProvider(provider, key, body);
-    lastResponse = { upstream, data };
-    if (upstream.ok) {
-      res.writeHead(upstream.status, { 'Content-Type': 'application/json; charset=utf-8' });
-      res.end(JSON.stringify(data));
-      return;
+  for (const provider of order) {
+    const keys = [];
+    if (userKey) keys.push(userKey);
+    const pool = provider === 'deepseek' ? collectDeepSeekKeys() : collectServerKeys();
+    for (const key of pool) {
+      if (!keys.includes(key)) keys.push(key);
+    }
+    if (!keys.length) continue;
+
+    for (const key of keys) {
+      const { upstream, data } = await callProvider(provider, key, body);
+      lastResponse = { upstream, data };
+      if (upstream.ok) {
+        res.writeHead(upstream.status, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify(data));
+        return;
+      }
     }
   }
 

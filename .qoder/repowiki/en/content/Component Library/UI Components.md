@@ -15,12 +15,11 @@
 
 ## Update Summary
 **Changes Made**
-- Updated all component documentation to reflect major CSS styling enhancements with improved visual design and responsive behavior
-- Enhanced GenerateLoading component documentation with detailed information about sophisticated CSS keyframe animations and floating action button system
-- Added comprehensive coverage of new theme support and accessibility improvements across all components
-- Updated styling customization sections to reflect enhanced CSS variable usage and design token integration
+- Updated CSS layout improvements documentation to reflect enhanced .doc-card and .doc-card-body selectors for better responsiveness and alignment across screen sizes
+- Enhanced DocumentField component documentation with improved form input handling and responsive design patterns
+- Updated styling customization sections to reflect new CSS custom properties and design token integration
 - Expanded responsive design patterns documentation to cover improved mobile-first approach and cross-device compatibility
-- Enhanced troubleshooting guide with new animation-related issues and performance optimization tips
+- Enhanced troubleshooting guide with new layout-related issues and performance optimization tips
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -34,10 +33,10 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document provides comprehensive documentation for LineCheck's core UI components: BrandLogo, DocumentField, FocusBubbles, GenerateLoading, and InstallPrompt. Following recent major CSS styling updates, these components now feature enhanced visual design, sophisticated animations, improved responsive behavior, and better theme support. The documentation covers prop specifications, event handling, advanced styling customization, accessibility features, responsive design patterns, and practical usage examples with code snippet paths to guide proper implementation and integration.
+This document provides comprehensive documentation for LineCheck's core UI components: BrandLogo, DocumentField, FocusBubbles, GenerateLoading, and InstallPrompt. Following recent significant CSS layout improvements and DocumentField component updates, these components now feature enhanced visual design, sophisticated animations, improved responsive behavior, and better theme support. The documentation covers prop specifications, event handling, advanced styling customization, accessibility features, responsive design patterns, and practical usage examples with code snippet paths to guide proper implementation and integration.
 
 ## Project Structure
-The UI components are implemented as React functional components under src/components. They are consumed by pages and the application shell. Global styles are defined in src/index.css with extensive CSS custom properties, keyframe animations, and responsive breakpoints supporting modern design patterns.
+The UI components are implemented as React functional components under src/components. They are consumed by pages and the application shell. Global styles are defined in src/index.css with extensive CSS custom properties, keyframe animations, and responsive breakpoints supporting modern design patterns. Recent updates have significantly improved CSS layout systems with enhanced .doc-card and .doc-card-body selectors for better responsiveness and alignment across screen sizes.
 
 ```mermaid
 graph TB
@@ -58,6 +57,7 @@ CSS["index.css"]
 Animations["CSS Keyframes"]
 Themes["Design Tokens"]
 Responsive["Media Queries"]
+DocCards[".doc-card System"]
 end
 App --> HomePage
 App --> SettingsPage
@@ -78,6 +78,7 @@ InstallPrompt -.-> CSS
 CSS -.-> Animations
 CSS -.-> Themes
 CSS -.-> Responsive
+CSS -.-> DocCards
 ```
 
 **Diagram sources**
@@ -103,10 +104,10 @@ CSS -.-> Responsive
 - [index.css](file://src/index.css)
 
 ## Core Components
-This section summarizes each component's purpose and typical responsibilities within the app, reflecting the recent CSS styling enhancements and improved visual design systems.
+This section summarizes each component's purpose and typical responsibilities within the app, reflecting the recent CSS layout improvements and enhanced visual design systems.
 
 - BrandLogo: Renders brand identity visuals (logo or text) with enhanced scaling capabilities, improved accessibility features, and responsive sizing variants.
-- DocumentField: A controlled form input wrapper with sophisticated validation states, enhanced error messaging, improved focus indicators, and theme-aware styling.
+- DocumentField: A controlled form input wrapper with sophisticated validation states, enhanced error messaging, improved focus indicators, theme-aware styling, and improved responsive design patterns.
 - FocusBubbles: Visual focus indicator with enhanced animation effects, improved keyboard navigation visibility, and better accessibility support for assistive technologies.
 - GenerateLoading: Loading indicator with sophisticated floating action button animations, enhanced visual feedback systems, improved accessibility features, and optimized performance for hardware-accelerated animations.
 - InstallPrompt: PWA installation prompt with improved visual design, enhanced user experience, better responsive behavior, and accessible interaction patterns.
@@ -114,7 +115,7 @@ This section summarizes each component's purpose and typical responsibilities wi
 [No sources needed since this section provides a high-level overview]
 
 ## Architecture Overview
-The components are presented by page-level views and styled via global CSS with enhanced design tokens, keyframe animations, and responsive breakpoints. The following diagram shows how pages compose these components and where the enhanced global styles apply.
+The components are presented by page-level views and styled via global CSS with enhanced design tokens, keyframe animations, and responsive breakpoints. The following diagram shows how pages compose these components and where the enhanced global styles apply, including the new .doc-card system for improved layout management.
 
 ```mermaid
 graph TB
@@ -135,6 +136,7 @@ Tokens["CSS Variables"]
 Animations["Keyframe Animations"]
 Responsive["Media Queries"]
 Accessibility["A11y Support"]
+DocCards[".doc-card System"]
 end
 HP --> BL
 HP --> DF
@@ -154,6 +156,7 @@ CSS -.-> Tokens
 CSS -.-> Animations
 CSS -.-> Responsive
 CSS -.-> Accessibility
+CSS -.-> DocCards
 ```
 
 **Diagram sources**
@@ -235,7 +238,7 @@ Events
 Styling Customization
 - Apply className/style to customize container, label, input, and error states.
 - Use CSS variables for theme-aware colors and spacing.
-- **Updated**: Enhanced CSS custom properties including --input-border-color, --input-focus-ring, --error-text-color, and --helper-text-color for consistent theming across all form elements.
+- **Updated**: Enhanced CSS custom properties including --input-border-color, --input-focus-ring, --error-text-color, and --helper-text-color for consistent theming across all form elements. Improved integration with the new .doc-card system for better layout consistency.
 
 Accessibility
 - Associate label with input via htmlFor/id.
@@ -246,12 +249,12 @@ Accessibility
 Validation and Error Handling
 - Display error messages when error prop is provided.
 - Integrate with external validation libraries if needed.
-- **Updated**: Enhanced error state animations with smooth transitions and improved visual hierarchy.
+- **Updated**: Enhanced error state animations with smooth transitions and improved visual hierarchy. Better integration with responsive card layouts.
 
 Responsive Design Patterns
 - Full-width inputs on small screens; inline layout on larger screens.
 - Adjust font sizes and spacing for readability.
-- **Updated**: Improved responsive behavior with better touch targets on mobile devices and enhanced spacing consistency across breakpoints.
+- **Updated**: Improved responsive behavior with better touch targets on mobile devices and enhanced spacing consistency across breakpoints. Enhanced integration with .doc-card-body selectors for improved alignment and layout stability across different screen sizes.
 
 Usage Examples
 - Controlled text input with validation: [DocumentField usage example](file://src/pages/HomePage.jsx)
@@ -387,7 +390,7 @@ Usage Examples
 - [index.css](file://src/index.css)
 
 ## Dependency Analysis
-The components rely on React primitives and enhanced global styles with improved design tokens and animation systems. Pages orchestrate their usage and manage state.
+The components rely on React primitives and enhanced global styles with improved design tokens and animation systems. Pages orchestrate their usage and manage state. The new .doc-card system provides improved layout consistency across all components.
 
 ```mermaid
 graph LR
@@ -410,6 +413,7 @@ InstallPrompt --- CSS
 CSS --- Animations["Enhanced Animations"]
 CSS --- Tokens["Design Tokens"]
 CSS --- Responsive["Responsive System"]
+CSS --- DocCards[".doc-card System"]
 ```
 
 **Diagram sources**
@@ -443,6 +447,7 @@ CSS --- Responsive["Responsive System"]
 - **Updated**: Enhanced floating action button animations are designed for optimal performance with reduced motion support and efficient CSS transitions that minimize repaint and reflow operations. All animations now use GPU acceleration where possible and respect user preferences for reduced motion.
 - **New**: Implement lazy loading for heavy animations and use CSS containment for isolated component rendering.
 - **New**: Utilize CSS Grid and Flexbox for improved layout performance and reduced reflow operations.
+- **New**: Leverage the enhanced .doc-card system for improved layout performance and better responsive behavior across different screen sizes.
 
 [No sources needed since this section provides general guidance]
 
@@ -456,6 +461,8 @@ CSS --- Responsive["Responsive System"]
 - **New**: CSS variable inheritance problems: Ensure CSS custom properties are properly scoped and inherited throughout the component tree.
 - **New**: Animation performance issues: Check for layout thrashing and ensure animations use transform and opacity properties for optimal performance.
 - **New**: Responsive design conflicts: Verify media query breakpoints don't conflict with component-specific responsive styles.
+- **New**: .doc-card layout issues: Check that .doc-card and .doc-card-body selectors are properly applied and that responsive alignment is working correctly across different screen sizes. Verify CSS custom properties related to card layouts are properly defined.
+- **New**: DocumentField responsive alignment problems: Ensure the component integrates properly with the enhanced .doc-card system and that form fields maintain proper alignment across different viewport sizes.
 
 **Section sources**
 - [BrandLogo.jsx](file://src/components/BrandLogo.jsx)
@@ -465,6 +472,6 @@ CSS --- Responsive["Responsive System"]
 - [InstallPrompt.jsx](file://src/components/InstallPrompt.jsx)
 
 ## Conclusion
-These five components form the backbone of LineCheck's user interface, providing consistent branding, robust form handling, enhanced accessibility, clear loading feedback, and guided PWA installation. Following the recent major CSS styling updates, these components now feature sophisticated animations, improved responsive behavior, enhanced theme support, and better accessibility compliance. By following the prop specifications, event patterns, advanced styling approaches, and responsive strategies outlined here, developers can integrate and extend these components effectively while maintaining a high-quality user experience.
+These five components form the backbone of LineCheck's user interface, providing consistent branding, robust form handling, enhanced accessibility, clear loading feedback, and guided PWA installation. Following the recent significant CSS layout improvements and DocumentField component updates, these components now feature sophisticated animations, improved responsive behavior, enhanced theme support, better accessibility compliance, and improved layout consistency through the new .doc-card system. By following the prop specifications, event patterns, advanced styling approaches, and responsive strategies outlined here, developers can integrate and extend these components effectively while maintaining a high-quality user experience.
 
-**Updated**: The recent enhancements demonstrate our commitment to delivering smooth, performant animations while maintaining accessibility standards and cross-browser compatibility. The improved animation system provides better visual feedback, enhanced support for assistive technologies, respects user preferences for reduced motion, and ensures an inclusive experience for all users. The comprehensive CSS styling updates have significantly improved the overall visual design, responsiveness, and maintainability of the component system.
+**Updated**: The recent enhancements demonstrate our commitment to delivering smooth, performant animations while maintaining accessibility standards and cross-browser compatibility. The improved animation system provides better visual feedback, enhanced support for assistive technologies, respects user preferences for reduced motion, and ensures an inclusive experience for all users. The comprehensive CSS layout improvements, particularly the enhanced .doc-card and .doc-card-body selectors, have significantly improved the overall visual design, responsiveness, alignment, and maintainability of the component system across all screen sizes.

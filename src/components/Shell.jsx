@@ -5,7 +5,7 @@ import { useI18n } from "../lib/I18nContext";
 import { UI_LANGS } from "../lib/i18n";
 import { loadJson, saveJson } from "../lib/storage";
 import {
-  aiRegionForGeo,
+  aiProviderForGeo,
   getSavedApiKey,
   normalizeSettings,
   resolveApiKey,
@@ -44,11 +44,11 @@ export default function Shell({ children }) {
         const country = data?.country;
         if (!country) return;
         const current = normalizeSettings(loadJson("settings", {}));
-        const nextRegion = aiRegionForGeo(country, current);
-        if (nextRegion === current.aiRegion) return;
+        const nextProvider = aiProviderForGeo(country, current);
+        if (nextProvider === current.aiProvider) return;
         saveJson(
           "settings",
-          normalizeSettings({ ...current, aiRegion: nextRegion })
+          normalizeSettings({ ...current, aiProvider: nextProvider })
         );
       })
       .catch(() => {

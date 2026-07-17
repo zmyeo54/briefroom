@@ -1,6 +1,0 @@
-- User preferences and draft data are persisted as named JSON blobs via `loadJson(key)` / `saveJson(key, value)` from `lib/storage.js` rather than scattered `localStorage` calls.
-- All user-visible strings go through the `useI18n()` hook's `t(key, vars)` function; there are no hardcoded English strings in JSX.
-- Settings are always read through `normalizeSettings(loadJson('settings', {}))` before use, ensuring defaults and cross-field normalization are applied consistently.
-- Cross-tab setting changes are synchronized by listening to both `window.storage` and a custom `briefroom-storage` event, then rehydrating state via `readSettings()`.
-- API-key resolution follows a fixed precedence: user-pasted `settings.apiKey` > build-time `import.meta.env.VITE_GEMINI_API_KEY` > server-side `/api/chat` `hasKey` probe.
-- Each Q&A item carries an optional `map` node-tree field (parsed from model JSON) that `QaList` renders under a per-item "mindmap" tab via `MindmapTree`, keeping the diagram co-located with its answer.

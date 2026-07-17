@@ -3,59 +3,13 @@ schema_version: 1
 locale: en-US
 branch: main
 nodes_managed: true
-exported_at: "2026-07-17T17:28:01Z"
+exported_at: "2026-07-17T18:57:09Z"
 modules:
     "":
-        dir_name: Interview Coach Monorepo (Vite + Vercel Functions)
-        title: Interview Coach Monorepo (Vite + Vercel Functions)
-        scope:
-            - README.md
-            - .gitignore
-            - .oxlintrc.json
-            - index.html
-            - package.json
-            - package-lock.json
-            - vercel.json
-            - vite.config.js
+        dir_name: LineCheck — React PWA with Edge TTS & AI Chat
+        title: LineCheck — React PWA with Edge TTS & AI Chat
+        scope: []
         source_files: []
-        children:
-            - api_routes
-            - frontend_app
-            - scripts_and_tools
+        children: []
         depends_on: []
         related_to: []
-    api_routes:
-        dir_name: Vercel Serverless API Routes (Chat, TTS, URL Fetcher)
-        title: Vercel Serverless API Routes (Chat, TTS, URL Fetcher)
-        scope:
-            - api/
-        source_files: []
-        children: []
-        depends_on: []
-        related_to:
-            - path: frontend_app
-            - path: scripts_and_tools
-    frontend_app:
-        dir_name: Interview Coach PWA (React Frontend)
-        title: Interview Coach PWA (React Frontend)
-        scope:
-            - src/
-            - public/
-        source_files: []
-        children: []
-        depends_on: []
-        related_to:
-            - path: api_routes
-            - path: scripts_and_tools
-    scripts_and_tools:
-        dir_name: Local Dev Servers, TTS Regression & Job-Text Scraping Utilities
-        title: Local Dev Servers, TTS Regression & Job-Text Scraping Utilities
-        scope:
-            - scripts/
-            - _legacy_flat/
-        source_files: []
-        children: []
-        depends_on: []
-        related_to:
-            - path: api_routes
-            - path: frontend_app

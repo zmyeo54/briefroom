@@ -433,25 +433,76 @@ export default function SettingsPage() {
               </div>
               <div className="settings-row">
                 <span className="settings-row-label">
-                  {t("settings.aiRegion")}
+                  {t("settings.aiProviders")}
+                </span>
+                <div className="flex flex-col gap-2.5 mt-1">
+                  <label className="flex items-center gap-2 text-sm ink">
+                    <input
+                      type="checkbox"
+                      className="accent-check"
+                      checked={settings.geminiEnabled !== false}
+                      onChange={(e) => {
+                        const on = e.target.checked;
+                        if (!on && settings.deepseekEnabled === false) return;
+                        const next = { geminiEnabled: on, aiProviderManual: true };
+                        if (!on && settings.aiProvider === "gemini") {
+                          next.aiProvider = "deepseek";
+                        }
+                        patch(next);
+                      }}
+                    />
+                    {t("settings.aiProvider.gemini")}
+                  </label>
+                  <label className="flex items-center gap-2 text-sm ink">
+                    <input
+                      type="checkbox"
+                      className="accent-check"
+                      checked={settings.deepseekEnabled !== false}
+                      onChange={(e) => {
+                        const on = e.target.checked;
+                        if (!on && settings.geminiEnabled === false) return;
+                        const next = { deepseekEnabled: on, aiProviderManual: true };
+                        if (!on && settings.aiProvider === "deepseek") {
+                          next.aiProvider = "gemini";
+                        }
+                        patch(next);
+                      }}
+                    />
+                    {t("settings.aiProvider.deepseek")}
+                  </label>
+                </div>
+                <p className="settings-row-hint">{t("settings.aiProvidersHint")}</p>
+              </div>
+              <div className="settings-row">
+                <span className="settings-row-label">
+                  {t("settings.aiProvider")}
                 </span>
                 <div className="settings-field-wrap">
                   <select
                     className="field"
-                    value={settings.aiRegion}
+                    value={settings.aiProvider || "gemini"}
                     onChange={(e) =>
-                      patch({ aiRegion: e.target.value, aiRegionManual: true })
+                      patch({
+                        aiProvider: e.target.value,
+                        aiProviderManual: true,
+                      })
                     }
                   >
-                    <option value="global">
-                      {t("settings.aiRegion.global")}
+                    <option
+                      value="gemini"
+                      disabled={settings.geminiEnabled === false}
+                    >
+                      {t("settings.aiProvider.gemini")}
                     </option>
-                    <option value="greater-china">
-                      {t("settings.aiRegion.greaterChina")}
+                    <option
+                      value="deepseek"
+                      disabled={settings.deepseekEnabled === false}
+                    >
+                      {t("settings.aiProvider.deepseek")}
                     </option>
                   </select>
                 </div>
-                <p className="settings-row-hint">{t("settings.aiRegionHint")}</p>
+                <p className="settings-row-hint">{t("settings.aiProviderHint")}</p>
               </div>
             </div>
           </div>

@@ -108,6 +108,13 @@ export const GEMINI_MODELS = [{ id: PINNED_GEMINI_MODEL, label: "2.5 Flash-Lite"
 export const DEFAULT_MODEL = PINNED_GEMINI_MODEL;
 
 /** Which server-side LLM to prefer (sent on each /api/chat request). */
+export const AI_PROVIDERS = [
+  { id: "gemini" },
+  { id: "deepseek" },
+];
+export const DEFAULT_AI_PROVIDER = "gemini";
+
+/** @deprecated region was a proxy for provider — kept for stored settings / headers */
 export const AI_REGIONS = [
   { id: "global" },
   { id: "greater-china" },
@@ -126,20 +133,54 @@ export function normalizeAiRegion(raw) {
     id === "greaterchina" ||
     id === "china" ||
     id === "cn" ||
-    id === "hk"
+    id === "hk" ||
+    id === "deepseek"
   ) {
     return "greater-china";
   }
   return "global";
 }
 
-/** Auto-pick Greater China for CN/HK unless the user chose manually. */
-export function aiRegionForGeo(country, settings = {}) {
-  if (settings.aiRegionManual) {
-    return normalizeAiRegion(settings.aiRegion);
+export function normalizeAiProvider(raw) {
+  const id = String(raw || "").toLowerCase();
+  if (id === "deepseek") return "deepseek";
+  if (id === "gemini") return "gemini";
+  return normalizeAiRegion(raw) === "greater-china" ? "deepseek" : "gemini";
+}
+
+export function providerToRegion(provider) {
+  return normalizeAiProvider(provider) === "deepseek"
+    ? "greater-china"
+    : "global";
+}
+
+/** Enabled providers in preference order (preferred first). */
+export function enabledAiProviders(settings = {}) {
+  const preferred = normalizeAiProvider(settings.aiProvider);
+  const on = [];
+  if (settings.geminiEnabled !== false) on.push("gemini");
+  if (settings.deepseekEnabled !== false) on.push("deepseek");
+  if (!on.length) return [];
+  if (on.includes(preferred)) {
+    return [preferred, ...on.filter((p) => p !== preferred)];
   }
-  if (isGreaterChinaCountry(country)) return "greater-china";
-  return normalizeAiRegion(settings.aiRegion || DEFAULT_AI_REGION);
+  return on;
+}
+
+/** Auto-pick DeepSeek for CN/HK unless the user chose manually. */
+export function aiProviderForGeo(country, settings = {}) {
+  if (settings.aiProviderManual || settings.aiRegionManual) {
+    return normalizeAiProvider(settings.aiProvider || settings.aiRegion);
+  }
+  if (isGreaterChinaCountry(country)) return "deepseek";
+  return normalizeAiProvider(
+    settings.aiProvider || settings.aiRegion || DEFAULT_AI_PROVIDER
+  );
+}
+
+/** @deprecated use aiProviderForGeo */
+export function aiRegionForGeo(country, settings = {}) {
+  return providerToRegion(aiProviderForGeo(country, settings));
 }
 
 /** Single pinned model — no silent fallback to a costlier tier. */
@@ -193,6 +234,11 @@ export const defaultSettings = {
   interviewerRole: DEFAULT_INTERVIEWER_ROLE,
   focuses: [...DEFAULT_FOCUSES],
   systemPrompt: DEFAULT_SYSTEM,
+  aiProvider: DEFAULT_AI_PROVIDER,
+  aiProviderManual: false,
+  geminiEnabled: true,
+  deepseekEnabled: true,
+  // synced from aiProvider — legacy clients / geo still read these
   aiRegion: DEFAULT_AI_REGION,
   aiRegionManual: false,
 };
@@ -238,8 +284,20 @@ export function normalizeSettings(raw) {
   }
   merged.interviewerRole = normalizeInterviewerRole(merged.interviewerRole);
   merged.focuses = normalizeFocuses(merged.focuses);
-  merged.aiRegion = normalizeAiRegion(merged.aiRegion);
-  merged.aiRegionManual = Boolean(merged.aiRegionManual);
+  // Prefer explicit aiProvider; else migrate from legacy aiRegion
+  if (incoming.aiProvider != null && String(incoming.aiProvider).trim()) {
+    merged.aiProvider = normalizeAiProvider(incoming.aiProvider);
+  } else {
+    merged.aiProvider = normalizeAiProvider(merged.aiRegion);
+  }
+  merged.aiProviderManual = Boolean(
+    merged.aiProviderManual || merged.aiRegionManual
+  );
+  merged.geminiEnabled = merged.geminiEnabled !== false;
+  merged.deepseekEnabled = merged.deepseekEnabled !== false;
+  // Keep region in sync so geo / old headers stay consistent
+  merged.aiRegion = providerToRegion(merged.aiProvider);
+  merged.aiRegionManual = merged.aiProviderManual;
 
   // Keep apiKey as the user override only — empty means "use env / server key".
   // (Previously we refilled from VITE_ here, which made Clear impossible.)

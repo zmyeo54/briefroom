@@ -10,6 +10,8 @@ const GEMINI_BASE =
 const DEEPSEEK_BASE = "https://api.deepseek.com";
 export const DEEPSEEK_MODEL = "deepseek-v4-flash";
 export const AI_REGION_HEADER = "x-linecheck-ai-region";
+export const AI_PROVIDER_HEADER = "x-linecheck-ai-provider";
+export const AI_ENABLED_HEADER = "x-linecheck-ai-enabled";
 
 /** User setting: global → Gemini, greater-china → DeepSeek. */
 export function parseAiRegion(req) {
@@ -25,6 +27,28 @@ export function parseAiRegion(req) {
   }
   if (raw === "global") return "global";
   return "";
+}
+
+/** Explicit provider header, else derive from legacy region header. */
+export function parseAiProvider(req) {
+  const raw = String(req.headers?.[AI_PROVIDER_HEADER] || "").toLowerCase();
+  if (raw === "deepseek" || raw === "gemini") return raw;
+  const region = parseAiRegion(req);
+  if (region === "greater-china") return "deepseek";
+  if (region === "global") return "gemini";
+  return "";
+}
+
+/** Comma-separated enabled providers from client. null = both allowed. */
+export function parseEnabledProviders(req) {
+  const raw = String(req.headers?.[AI_ENABLED_HEADER] || "").trim();
+  if (!raw) return null;
+  const set = new Set();
+  for (const part of raw.split(/[\s,]+/)) {
+    const p = part.trim().toLowerCase();
+    if (p === "gemini" || p === "deepseek") set.add(p);
+  }
+  return set.size ? set : null;
 }
 
 function isGreaterChinaCountry(country) {
@@ -76,26 +100,46 @@ export function keysForProvider(provider, userKey, env = process.env) {
   return out;
 }
 
-/** DeepSeek only for now — Gemini disabled until quota/routing is stable. */
+/** Prefer client choice; fall back to geo; respect on/off + key presence. */
 export function pickProvider(req, env = process.env) {
-  const hasDeepseek = collectDeepSeekKeys(env).length > 0;
-  const hasGemini = collectServerKeys(env).length > 0;
-  if (hasDeepseek) return "deepseek";
-  if (hasGemini) return "gemini"; // last resort if DeepSeek key missing
-  return null;
+  const order = providersToTry(req, env);
+  return order[0] || null;
 }
 
 export function otherProvider(provider, env = process.env) {
-  // ponytail: Gemini off — no cross-provider fallback
-  void provider;
-  void env;
-  return null;
+  const alt = provider === "deepseek" ? "gemini" : "deepseek";
+  const hasAlt =
+    alt === "deepseek"
+      ? collectDeepSeekKeys(env).length > 0
+      : collectServerKeys(env).length > 0;
+  return hasAlt ? alt : null;
 }
 
-/** DeepSeek-only order (Gemini ignored while disabled). */
+/**
+ * Preference order for this request.
+ * Client sends preferred provider + which are enabled; missing keys are skipped.
+ */
 export function providersToTry(req, env = process.env) {
-  const primary = pickProvider(req, env);
-  return primary ? [primary] : [];
+  const enabled = parseEnabledProviders(req);
+  const hasDeepseek = collectDeepSeekKeys(env).length > 0;
+  const hasGemini = collectServerKeys(env).length > 0 || Boolean(bearerFromReq(req));
+
+  const allow = (p) => {
+    if (enabled && !enabled.has(p)) return false;
+    return p === "deepseek" ? hasDeepseek : hasGemini;
+  };
+
+  let preferred = parseAiProvider(req);
+  if (!preferred) {
+    const country = req.headers?.["x-vercel-ip-country"];
+    preferred = isGreaterChinaCountry(country) ? "deepseek" : "gemini";
+  }
+
+  const order = [];
+  if (allow(preferred)) order.push(preferred);
+  const alt = preferred === "deepseek" ? "gemini" : "deepseek";
+  if (allow(alt)) order.push(alt);
+  return order;
 }
 
 export function bodyForProvider(body, provider) {
@@ -282,24 +326,55 @@ if (typeof process !== "undefined" && process.argv?.[1]?.endsWith("chat.js")) {
     pickProvider(
       { headers: { [AI_REGION_HEADER]: "global", "x-vercel-ip-country": "US" } },
       env
-    ) === "deepseek",
-    "global / US still deepseek while Gemini disabled"
+    ) === "gemini",
+    "global → gemini"
   );
   console.assert(
-    pickProvider({ headers: { [AI_REGION_HEADER]: "greater-china" } }, env) ===
+    pickProvider({ headers: { [AI_PROVIDER_HEADER]: "deepseek" } }, env) ===
       "deepseek",
-    "greater-china → deepseek"
+    "explicit deepseek"
+  );
+  console.assert(
+    pickProvider(
+      {
+        headers: {
+          [AI_PROVIDER_HEADER]: "deepseek",
+          [AI_ENABLED_HEADER]: "gemini",
+        },
+      },
+      env
+    ) === "gemini",
+    "preferred off → other enabled"
+  );
+  console.assert(
+    pickProvider(
+      {
+        headers: {
+          [AI_PROVIDER_HEADER]: "gemini",
+          [AI_ENABLED_HEADER]: "deepseek",
+        },
+      },
+      env
+    ) === "deepseek",
+    "gemini off → deepseek"
   );
   console.assert(
     isGreaterChinaCountry("HK") && isGreaterChinaCountry("CN"),
     "greater china countries"
   );
   console.assert(
-    JSON.stringify(providersToTry({ headers: {} }, env)) ===
-      JSON.stringify(["deepseek"]),
-    "deepseek only"
+    JSON.stringify(
+      providersToTry(
+        { headers: { [AI_PROVIDER_HEADER]: "gemini" } },
+        env
+      )
+    ) === JSON.stringify(["gemini", "deepseek"]),
+    "gemini first then deepseek"
   );
-  console.assert(otherProvider("deepseek", env) === null, "no gemini fallback");
+  console.assert(
+    otherProvider("deepseek", env) === "gemini",
+    "deepseek alt → gemini"
+  );
   console.assert(shouldTryOtherProvider(404, { error: { message: "not found" } }), "404 falls back");
   console.assert(!shouldTryOtherProvider(400, {}), "400 stays");
   console.assert(

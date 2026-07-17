@@ -53,6 +53,9 @@ import {
   geminiModelsToTry,
   shouldTryNextGeminiModel,
   voicesForInterviewLang,
+  enabledAiProviders,
+  normalizeAiProvider,
+  providerToRegion,
 } from "../lib/settingsConfig";
 import { useI18n } from "../lib/I18nContext";
 import { pickTargetPlaceholder } from "../lib/i18n";
@@ -135,8 +138,8 @@ export default function HomePage() {
   const [qaEpoch, setQaEpoch] = useState(0);
   const [selected, setSelected] = useState(() => new Set());
   const [loading, setLoading] = useState(false);
-  // Global region: after first Build failure, next attempt forces DeepSeek
-  const [useDeepseekRetry, setUseDeepseekRetry] = useState(false);
+  // After first Build failure, next attempt forces the alternate enabled provider
+  const [useAltProviderRetry, setUseAltProviderRetry] = useState(false);
   const [status, setStatus] = useState({ text: "", kind: "" });
   const [playingIndex, setPlayingIndex] = useState(-1);
   const [speaking, setSpeaking] = useState(false);
@@ -349,12 +352,13 @@ export default function HomePage() {
 
   const genSecretLabel = useMemo(() => {
     if (!genMeta?.model) return "";
-    const region =
-      settings.aiRegion === "greater-china"
-        ? t("settings.aiRegion.greaterChina")
-        : t("settings.aiRegion.global");
-    return `${region} · ${genMeta.model}`;
-  }, [genMeta, settings.aiRegion, t]);
+    const provider = normalizeAiProvider(settings.aiProvider);
+    const label =
+      provider === "deepseek"
+        ? t("settings.aiProvider.deepseek")
+        : t("settings.aiProvider.gemini");
+    return `${label} · ${genMeta.model}`;
+  }, [genMeta, settings.aiProvider, t]);
 
   /** Fill Settings → Your name from resume when the field is still empty. */
   const catchNameFromResume = useCallback(
@@ -471,9 +475,16 @@ export default function HomePage() {
     });
 
     try {
-      const region = latest.aiRegion || "global";
-      const forceDeepseek =
-        useDeepseekRetry || region === "greater-china";
+      const order = enabledAiProviders(latest);
+      if (!order.length) {
+        flash(t("home.flash.noProvider"), "error");
+        return;
+      }
+      let provider = order[0];
+      if (useAltProviderRetry && order.length > 1) {
+        provider = order[1];
+      }
+      const enabledHeader = order.join(",");
       const body = {
         temperature: 0.6,
         max_tokens: estimateMaxTokens({
@@ -494,8 +505,10 @@ export default function HomePage() {
       async function callChat(payload) {
         const headers = {
           "Content-Type": "application/json",
-          // Retry after a global failure, or Greater China setting → DeepSeek
-          "X-Linecheck-AI-Region": forceDeepseek ? "greater-china" : region,
+          "X-Linecheck-AI-Provider": provider,
+          "X-Linecheck-AI-Enabled": enabledHeader,
+          // legacy header — kept for older proxies
+          "X-Linecheck-AI-Region": providerToRegion(provider),
         };
         if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
         try {
@@ -509,8 +522,40 @@ export default function HomePage() {
             const data = await res.json().catch(() => ({}));
             return { res, data };
           }
-        } catch {
-          /* offline / no local api */
+          // 504 HTML / gateway timeout — Vercel killed the function (~60s)
+          if (res.status === 504 || res.status === 502) {
+            return {
+              res,
+              data: {
+                error: {
+                  message: t("home.flash.timeout", {
+                    provider:
+                      provider === "deepseek"
+                        ? t("settings.aiProvider.deepseek")
+                        : t("settings.aiProvider.gemini"),
+                  }),
+                },
+              },
+            };
+          }
+        } catch (err) {
+          /* offline / no local api / browser "Failed to fetch" on gateway kill */
+          const msg = String(err?.message || "");
+          if (/failed to fetch|networkerror|load failed/i.test(msg)) {
+            return {
+              res: { ok: false, status: 504, statusText: "Gateway Timeout" },
+              data: {
+                error: {
+                  message: t("home.flash.timeout", {
+                    provider:
+                      provider === "deepseek"
+                        ? t("settings.aiProvider.deepseek")
+                        : t("settings.aiProvider.gemini"),
+                  }),
+                },
+              },
+            };
+          }
         }
         if (!apiKey) {
           return {
@@ -548,11 +593,10 @@ export default function HomePage() {
         return { res, data };
       }
 
-      const offerDeepseekRetry = () => {
-        // Only for Global first failure — next Build switches to DeepSeek
-        if (region === "global" && !useDeepseekRetry) {
-          setUseDeepseekRetry(true);
-          flash(t("home.flash.retryDeepseek"), "error");
+      const offerAltRetry = () => {
+        if (!useAltProviderRetry && order.length > 1) {
+          setUseAltProviderRetry(true);
+          flash(t("home.flash.retryAltProvider"), "error");
           return true;
         }
         return false;
@@ -567,11 +611,25 @@ export default function HomePage() {
         lastStatus = res.status;
         if (res.ok) break;
         if (res.status === 503) {
-          if (offerDeepseekRetry()) return;
+          if (offerAltRetry()) return;
           const msg =
             data?.error?.message ||
             t("home.flash.needKey");
           flash(msg, "error");
+          return;
+        }
+        if (res.status === 504 || res.status === 502) {
+          if (offerAltRetry()) return;
+          flash(
+            data?.error?.message ||
+              t("home.flash.timeout", {
+                provider:
+                  provider === "deepseek"
+                    ? t("settings.aiProvider.deepseek")
+                    : t("settings.aiProvider.gemini"),
+              }),
+            "error"
+          );
           return;
         }
         // Quota / missing model → try next; other errors stop immediately.
@@ -582,9 +640,9 @@ export default function HomePage() {
       }
 
       if (!res.ok) {
-        if (offerDeepseekRetry()) return;
+        if (offerAltRetry()) return;
         if (lastStatus === 429 || lastStatus === 404) {
-          setUseDeepseekRetry(true);
+          setUseAltProviderRetry(true);
           flash(
             lastStatus === 429
               ? t("home.flash.rateLimited")
@@ -642,7 +700,7 @@ export default function HomePage() {
       const aiCompany = cleanJobTitle(parsed.company || "");
       if (aiTitle) setJobTitle(aiTitle);
       if (aiCompany) setJobCompany(aiCompany);
-      setUseDeepseekRetry(false);
+      setUseAltProviderRetry(false);
       setQa(items);
       setQaEpoch((n) => n + 1);
       setSelected(new Set());
@@ -657,10 +715,10 @@ export default function HomePage() {
         "ok"
       );
     } catch (e) {
-      const region = latest.aiRegion || "global";
-      if (region === "global" && !useDeepseekRetry) {
-        setUseDeepseekRetry(true);
-        flash(t("home.flash.retryDeepseek"), "error");
+      const order = enabledAiProviders(latest);
+      if (!useAltProviderRetry && order.length > 1) {
+        setUseAltProviderRetry(true);
+        flash(t("home.flash.retryAltProvider"), "error");
       } else {
         flash(`Generate failed: ${e.message}`, "error");
       }
