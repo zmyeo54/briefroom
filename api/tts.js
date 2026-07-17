@@ -1,12 +1,4 @@
-let MsEdgeTTS, OUTPUT_FORMAT;
-try {
-  const mod = await import("msedge-tts");
-  MsEdgeTTS = mod.MsEdgeTTS;
-  OUTPUT_FORMAT = mod.OUTPUT_FORMAT;
-} catch (e) {
-  console.error("[tts] msedge-tts import failed:", e.message);
-}
-
+import { MsEdgeTTS, OUTPUT_FORMAT } from "msedge-tts";
 import {
   cors,
   rateToEdge,
@@ -121,10 +113,6 @@ export default async function handler(req, res) {
   }
   if (req.method !== "POST") {
     res.status(405).json({ error: "POST only" });
-    return;
-  }
-  if (!MsEdgeTTS) {
-    res.status(503).json({ error: "TTS engine unavailable. Try again later." });
     return;
   }
 
