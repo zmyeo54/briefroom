@@ -492,6 +492,46 @@ function titleCase(text) {
 }
 
 /**
+ * Merge all Q&A into one continuous MP3 blob (same pipeline as export / play-all).
+ */
+export async function synthesizeMergedQaAudio(items, options = {}) {
+  const list = (items || []).filter(
+    (it) => it?.a?.trim() || it?.q?.trim() || it?.preface?.trim()
+  );
+  if (!list.length) throw new Error("Nothing to export");
+
+  const lang = options.lang || "en";
+  const blobs = [];
+  for (let i = 0; i < list.length; i++) {
+    const item = list[i];
+    const preface =
+      item.preface ||
+      (lang === "zh" || lang === "both"
+        ? `第${i + 1}题。`
+        : `Question ${i + 1}.`);
+    let blob = null;
+    let lastErr = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        blob = await synthesizeQaAudio(item.q, item.a, {
+          ...options,
+          preface,
+          lang,
+        });
+        break;
+      } catch (err) {
+        lastErr = err;
+        if (String(err?.message || err) === "Playback cancelled") throw err;
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+      }
+    }
+    if (!blob) throw lastErr || new Error("TTS failed");
+    blobs.push(blob);
+  }
+  return new Blob(blobs, { type: "audio/mpeg" });
+}
+
+/**
  * Merge all Q&A into one continuous MP3 and save to Downloads.
  * Returns number of Q&A pairs included.
  */
@@ -499,19 +539,7 @@ export async function exportMergedQaAudio(items, options = {}) {
   const list = (items || []).filter((it) => it?.a?.trim() || it?.q?.trim());
   if (!list.length) throw new Error("Nothing to export");
 
-  const lang = options.lang || "en";
-  const blobs = await mapPool(list, FETCH_CONCURRENCY, async (item, i) => {
-    const preface =
-      lang === "zh" || lang === "both"
-        ? `第${i + 1}题。`
-        : `Question ${i + 1}.`;
-    return synthesizeQaAudio(item.q, item.a, {
-      ...options,
-      preface,
-    });
-  });
-
-  const merged = new Blob(blobs, { type: "audio/mpeg" });
+  const merged = await synthesizeMergedQaAudio(list, options);
   const stamp = new Date().toISOString().slice(0, 10);
   const parts = ["Line Check"];
   if (options.jobTitle) parts.push(titleCase(options.jobTitle));
@@ -596,7 +624,7 @@ function warmupAudio(token) {
   el.play().catch(() => {});
 }
 
-function playBlob(blob, token, { onStart } = {}) {
+function playBlob(blob, token, { onStart, keepElement = false } = {}) {
   return new Promise((resolve, reject) => {
     if (token !== playToken) {
       resolve();
@@ -630,7 +658,8 @@ function playBlob(blob, token, { onStart } = {}) {
         reject(e);
       });
     el.onended = () => {
-      if (token === playToken) cleanup();
+      // keepElement: play-all reuses this <audio> for the next Q&A
+      if (token === playToken && !keepElement) cleanup();
       resolve();
     };
     el.onerror = () => {
@@ -687,9 +716,9 @@ export async function speakQa(
 }
 
 /**
- * Prefetch every Q&A into one MP3, then play once.
- * Needed for multi-item runs — a second audio.play() after the first ends
- * often fails (Safari gesture), and one TTS error used to abort the rest.
+ * Play every Q&A in order — same synthesis as MP3 export, one clip at a time.
+ * Starts as soon as the first item is ready (like individual play) instead of
+ * waiting to compile the whole playlist first (which failed select-all).
  */
 export async function speakQaSequence(entries, options = {}) {
   const list = (entries || []).filter(
@@ -712,13 +741,7 @@ export async function speakQaSequence(entries, options = {}) {
   // Safari / WeChat doesn't show its own media player overlay.
   warmupAudio(token);
 
-  // Prefetch only — do not call onProgress here. HomePage maps onProgress →
-  // playingIndex → "Now reading"; firing it during prepare made rows pulse/hop
-  // while the FAB stayed on "Preparing voice…".
-  // Sequential items + one retry: one bad Edge turn must not kill the playlist.
-  const blobs = [];
-  for (const e of list) {
-    if (token !== playToken) return;
+  const synthesizeEntry = async (e) => {
     let blob = null;
     let lastErr = null;
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -733,22 +756,62 @@ export async function speakQaSequence(entries, options = {}) {
         break;
       } catch (err) {
         lastErr = err;
-        if (token !== playToken) return;
+        if (token !== playToken) throw new Error("Playback cancelled");
         if (String(err?.message || err) === "Playback cancelled") throw err;
         await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
       }
     }
-    if (blob) blobs.push(blob);
-    else if (lastErr) throw lastErr;
+    if (!blob) throw lastErr || new Error("TTS failed");
+    return blob;
+  };
+
+  // Prefetch the next item while the current one plays (export uses the same
+  // synthesizeQaAudio; we just don't wait for the full merge before audio).
+  let pending = synthesizeEntry(list[0]);
+  let started = false;
+  for (let i = 0; i < list.length; i++) {
+    if (token !== playToken) return;
+    const blob = await pending;
+    if (token !== playToken) return;
+    pending =
+      i + 1 < list.length ? synthesizeEntry(list[i + 1]) : null;
+
+    try {
+      await playBlob(blob, token, {
+        keepElement: i < list.length - 1,
+        onStart: () => {
+          if (!started) {
+            started = true;
+            onStart?.();
+          }
+          onProgress?.(i);
+        },
+      });
+    } catch (err) {
+      if (token !== playToken) return;
+      // playBlob cleanup() wiped the element — re-warm, then one merged MP3
+      // for whatever is left (same pipeline as export).
+      warmupAudio(token);
+      const rest = list.slice(i);
+      const merged = await synthesizeMergedQaAudio(rest, {
+        rate,
+        voiceQ,
+        voiceA,
+        lang,
+      });
+      if (token !== playToken) return;
+      await playBlob(merged, token, {
+        onStart: () => {
+          if (!started) {
+            started = true;
+            onStart?.();
+          }
+          onProgress?.(i);
+        },
+      });
+      return;
+    }
   }
-  if (token !== playToken) return;
-  if (!blobs.length) return;
-  await playBlob(new Blob(blobs, { type: "audio/mpeg" }), token, {
-    onStart: () => {
-      onStart?.();
-      onProgress?.(0);
-    },
-  });
 }
 
 /** Pause current practice audio without cancelling the session. */

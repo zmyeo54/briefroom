@@ -965,12 +965,6 @@ export default function SettingsPage() {
           </div>
 
           {/* Action bar */}
-          <SaveAllBar
-            label={t("settings.saveAll")}
-            savedLabel={t("settings.saved")}
-            onClick={() => saveNow()}
-            className="settings-actions--bottom"
-          />
           <div className="settings-actions">
             <button
               type="button"

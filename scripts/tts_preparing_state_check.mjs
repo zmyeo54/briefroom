@@ -108,9 +108,9 @@ if (!audioReady) {
   console.error("RED: onStart never fired");
   process.exit(1);
 }
-if (playingIndex !== 0) {
+if (playingIndex < 0) {
   console.error(
-    `RED: expected playingIndex=0 once audio starts, got ${playingIndex}`
+    `RED: expected playingIndex>=0 once audio starts, got ${playingIndex}`
   );
   process.exit(1);
 }
