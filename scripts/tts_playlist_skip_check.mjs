@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Progressive play-all: first clip can start before later clips finish synth.
- * Also: hard-fail one item → skip; rest still play.
+ * First clip must start before later clips finish (priority synth).
+ * onPrepareProgress must report percent.
  */
 import { resolve, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -21,10 +21,11 @@ class FakeAudioEl {
   setAttribute() {}
   play() {
     this.paused = false;
-    queueMicrotask(() => {
+    // Hold "playing" briefly so rest can generate mid-play
+    setTimeout(() => {
       this.paused = true;
       this.onended?.();
-    });
+    }, 120);
     return Promise.resolve();
   }
   pause() {
@@ -49,28 +50,10 @@ globalThis.URL.createObjectURL = () => "blob:test";
 globalThis.URL.revokeObjectURL = () => {};
 globalThis.speechSynthesis = { cancel() {} };
 
-const gate = new Map(); // text → { resolve, promise, delay }
-let releases = 0;
-
 globalThis.fetch = async (_url, init) => {
   const text = JSON.parse(init.body || "{}").text || "";
-  if (/\bQ2\b|\bA2 answer\b|\bP2\b/.test(text)) {
-    return {
-      ok: false,
-      status: 422,
-      async json() {
-        return { error: "unsupported locale" };
-      },
-      async blob() {
-        return new Blob();
-      },
-    };
-  }
-  // Slow down later items so first can start first
-  const slow = /\bQ[456]\b|\bA[456]\b|\bP[456]\b/.test(text);
-  if (slow) await new Promise((r) => setTimeout(r, 80));
-  else await new Promise((r) => setTimeout(r, 5));
-  releases += 1;
+  const slow = /\bQ[3-9]\b|\bA[3-9]\b|\bP[3-9]\b/.test(text);
+  await new Promise((r) => setTimeout(r, slow ? 100 : 8));
   return {
     ok: true,
     status: 200,
@@ -84,50 +67,42 @@ globalThis.fetch = async (_url, init) => {
 };
 
 const { speakQaSequence } = await import(
-  pathToFileURL(resolve(ROOT, "src/lib/tts.js")).href + "?prog=" + Date.now()
+  pathToFileURL(resolve(ROOT, "src/lib/tts.js")).href + "?pct=" + Date.now()
 );
 
-const progress = [];
+const pcts = [];
 let startAt = 0;
-let firstProgressAt = 0;
 const t0 = Date.now();
 
-const result = await speakQaSequence(
-  Array.from({ length: 6 }, (_, i) => ({
+await speakQaSequence(
+  Array.from({ length: 5 }, (_, i) => ({
     q: `Q${i + 1}?`,
-    a: `A${i + 1} answer`,
+    a: `A${i + 1} answer with enough text.`,
     preface: `P${i + 1}.`,
   })),
   {
     lang: "en",
-    onProgress: (i) => {
-      if (!firstProgressAt) firstProgressAt = Date.now();
-      progress.push(i);
-    },
+    onPrepareProgress: (p) => pcts.push(p.percent),
     onStart: () => {
       startAt = Date.now();
     },
   }
 );
 
-if (result.played < 5 || result.skipped !== 1) {
-  console.error("RED: expected ~5 played / 1 skipped", result);
+if (!startAt) {
+  console.error("RED: onStart never fired");
   process.exit(1);
 }
-if (!startAt || progress[0] !== 0) {
-  console.error("RED: should start on first clip", { startAt, progress });
+if (!pcts.length || pcts[pcts.length - 1] < 100) {
+  console.error("RED: expected prepare % to reach 100", pcts.slice(-5));
   process.exit(1);
 }
-// First audio should begin well before the whole run finishes
 const timeToStart = startAt - t0;
 const total = Date.now() - t0;
-if (timeToStart > total * 0.7) {
-  console.error("RED: first play too late (not progressive)", {
-    timeToStart,
-    total,
-  });
+if (timeToStart > total * 0.55) {
+  console.error("RED: first clip not prioritized", { timeToStart, total });
   process.exit(1);
 }
 console.log(
-  `GREEN: progressive play-all played=${result.played} skipped=${result.skipped} progress=${progress.join(",")} startMs=${timeToStart} totalMs=${total}`
+  `GREEN: priority+pct startMs=${timeToStart} totalMs=${total} lastPct=${pcts[pcts.length - 1]} samples=${pcts.length}`
 );

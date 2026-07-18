@@ -146,6 +146,8 @@ export default function HomePage() {
   const [speaking, setSpeaking] = useState(false);
   const [audioPaused, setAudioPaused] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
+  const [preparePct, setPreparePct] = useState(0);
+  const [prepareClip, setPrepareClip] = useState({ clip: 0, clips: 0 });
   const [fabPos, setFabPos] = useState({ dragged: false, left: 0, top: 0 });
   const [fabDragging, setFabDragging] = useState(false);
   const fabElementRef = useRef(null);
@@ -165,6 +167,8 @@ export default function HomePage() {
     setSpeaking(false);
     setAudioPaused(false);
     setAudioReady(false);
+    setPreparePct(0);
+    setPrepareClip({ clip: 0, clips: 0 });
     setAudioNote((prev) =>
       prev.kind === "error" || prev.kind === "ok" ? prev : { text: "", kind: "" }
     );
@@ -809,22 +813,33 @@ export default function HomePage() {
     setAudioPaused(false);
     setAudioReady(false);
     setStatus({ text: "", kind: "" });
+    const entries = indices.map((i) => {
+      const preface =
+        latest.lang === "zh"
+          ? `第${i + 1}题。`
+          : latest.lang === "both"
+            ? `Question ${i + 1}. / 第${i + 1}题。`
+            : `Question ${i + 1}.`;
+      return { q: qa[i].q, a: qa[i].a, preface };
+    });
     setAudioNote({ text: t("home.preparingAudio"), kind: "" });
+    setPreparePct(0);
+    setPrepareClip({ clip: 0, clips: entries.length });
     try {
-      const entries = indices.map((i) => {
-        const preface =
-          latest.lang === "zh"
-            ? `第${i + 1}题。`
-            : latest.lang === "both"
-              ? `Question ${i + 1}. / 第${i + 1}题。`
-              : `Question ${i + 1}.`;
-        return { q: qa[i].q, a: qa[i].a, preface };
-      });
       const result = await speakQaSequence(entries, {
         rate: latest.rate,
         voiceQ: latest.voiceQ,
         voiceA: latest.voiceA,
         lang: latest.lang,
+        onPrepareProgress: ({ percent, clip, clips }) => {
+          if (playSessionRef.current !== session) return;
+          setPreparePct(percent);
+          setPrepareClip({ clip, clips });
+          setAudioNote({
+            text: t("home.preparingAudioClip", { n: percent, clip, clips }),
+            kind: "",
+          });
+        },
         onProgress: (j) => {
           if (playSessionRef.current !== session) return;
           setPlayingIndex(j >= 0 ? indices[j] : -1);
@@ -1478,7 +1493,13 @@ export default function HomePage() {
               {!audioReady && !audioPaused ? (
                 <>
                   <SpinnerGap size={16} className="animate-spin" />
-                  {t("home.preparingAudio")}
+                  {preparePct > 0
+                    ? t("home.preparingAudioClip", {
+                        n: preparePct,
+                        clip: prepareClip.clip || 1,
+                        clips: prepareClip.clips || 1,
+                      })
+                    : t("home.preparingAudio")}
                 </>
               ) : audioPaused ? (
                 t("home.paused")

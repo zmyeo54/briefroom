@@ -12,7 +12,7 @@ const FETCH_CONCURRENCY = 3;
  * Max simultaneous Edge TTS turns. Clips are all queued in parallel; this
  * pool is what actually hits the network. >3 historically dropped mid-line.
  */
-const TTS_INFLIGHT_LIMIT = 3;
+const TTS_INFLIGHT_LIMIT = 4;
 const TTS_FETCH_TIMEOUT_MS = 45000;
 const TTS_FETCH_ATTEMPTS = 6;
 let ttsInflight = 0;
@@ -461,6 +461,7 @@ export async function synthesizeQaAudio(
     voiceA = DEFAULT_VOICE_A,
     preface = "",
     lang = "en",
+    onPartComplete,
   } = {}
 ) {
   const parts = buildSpeakParts(question, answer, {
@@ -476,8 +477,11 @@ export async function synthesizeQaAudio(
   const results = await Promise.all(
     parts.map(async (part) => {
       try {
-        return await fetchAudio(part.text, part.voice, rate);
+        const blob = await fetchAudio(part.text, part.voice, rate);
+        onPartComplete?.();
+        return blob;
       } catch (err) {
+        onPartComplete?.();
         if (String(err?.message || err) === "Playback cancelled") throw err;
         return null;
       }
@@ -749,10 +753,13 @@ export async function speakQa(
 }
 
 /**
- * Progressive play-all: start every clip synthesizing in parallel, play each
- * as soon as it is ready (so the first Q&A starts while later ones still build),
- * reuse one <audio> element between clips. If a later play() is blocked, merge
- * whatever remains and play once (export-style fallback).
+ * Progressive play-all:
+ * 1) Finish clip #1 first (exclusive) so audio starts ASAP
+ * 2) While #1 plays, generate the rest in parallel
+ * 3) Chain clips on the same <audio>; merge-fallback if a later play() is blocked
+ *
+ * onPrepareProgress({ done, total, percent, clip, clips }) fires as each TTS
+ * part finishes (cache hits count too).
  */
 export async function speakQaSequence(entries, options = {}) {
   const list = (entries || []).filter(
@@ -769,12 +776,46 @@ export async function speakQaSequence(entries, options = {}) {
     lang = "en",
     onProgress,
     onStart,
+    onPrepareProgress,
   } = options;
 
   warmupAudio(token);
 
-  const synthesizeOne = async (entry) => {
+  const partCount = (entry) =>
+    buildSpeakParts(entry.q, entry.a, {
+      voiceQ,
+      voiceA,
+      preface: entry.preface || "",
+      lang,
+    }).length;
+
+  const totalParts = list.reduce((n, e) => n + Math.max(1, partCount(e)), 0);
+  let doneParts = 0;
+  const bumpPart = (clipIndex) => {
+    doneParts += 1;
+    onPrepareProgress?.({
+      done: doneParts,
+      total: totalParts,
+      percent: Math.min(100, Math.round((doneParts / totalParts) * 100)),
+      clip: clipIndex + 1,
+      clips: list.length,
+    });
+  };
+
+  const synthesizeOne = async (entry, clipIndex) => {
     if (token !== playToken) return null;
+    const parts = buildSpeakParts(entry.q, entry.a, {
+      voiceQ,
+      voiceA,
+      preface: entry.preface || "",
+      lang,
+    });
+    let reported = 0;
+    const reportPart = () => {
+      if (reported >= Math.max(1, parts.length)) return;
+      reported += 1;
+      bumpPart(clipIndex);
+    };
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         return await synthesizeQaAudio(entry.q, entry.a, {
@@ -783,6 +824,7 @@ export async function speakQaSequence(entries, options = {}) {
           voiceA,
           preface: entry.preface || "",
           lang,
+          onPartComplete: reportPart,
         });
       } catch (err) {
         if (token !== playToken) return null;
@@ -792,11 +834,9 @@ export async function speakQaSequence(entries, options = {}) {
         );
       }
     }
+    while (reported < Math.max(1, parts.length)) reportPart();
     return null;
   };
-
-  // Kick off all clips now — play loop awaits them in order.
-  const tasks = list.map((entry) => synthesizeOne(entry));
 
   let started = false;
   let played = 0;
@@ -811,16 +851,51 @@ export async function speakQaSequence(entries, options = {}) {
   };
 
   try {
-    for (let i = 0; i < list.length; i++) {
-      if (token !== playToken) return { played, skipped };
+    // --- Phase A: first clip exclusive (fastest time-to-first-audio) ---
+    const firstBlob = await synthesizeOne(list[0], 0);
+    if (token !== playToken) return { played, skipped };
 
-      const blob = await tasks[i];
+    // --- Phase B: kick off the rest while we play #1 ---
+    const restTasks = list.slice(1).map((entry, j) => synthesizeOne(entry, j + 1));
+
+    if (firstBlob) {
+      try {
+        await playBlob(firstBlob, token, {
+          keepElement: list.length > 1,
+          onStart: () => markStart(0),
+        });
+        played += 1;
+      } catch {
+        if (token !== playToken) return { played, skipped };
+        warmupAudio(token);
+        const rest = [];
+        if (firstBlob) rest.push(firstBlob);
+        for (const t of restTasks) {
+          const b = await t;
+          if (b) rest.push(b);
+          else skipped += 1;
+        }
+        if (rest.length) {
+          await playBlob(new Blob(rest, { type: "audio/mpeg" }), token, {
+            onStart: () => markStart(0),
+          });
+          played += rest.length;
+        }
+        return { played, skipped };
+      }
+    } else {
+      skipped += 1;
+    }
+
+    // --- Phase C: play remaining in order as each finishes ---
+    for (let i = 1; i < list.length; i++) {
+      if (token !== playToken) return { played, skipped };
+      const blob = await restTasks[i - 1];
       if (token !== playToken) return { played, skipped };
       if (!blob) {
         skipped += 1;
         continue;
       }
-
       try {
         await playBlob(blob, token, {
           keepElement: true,
@@ -829,13 +904,12 @@ export async function speakQaSequence(entries, options = {}) {
         played += 1;
       } catch {
         if (token !== playToken) return { played, skipped };
-        // Mobile often blocks a later play() — merge the rest and finish in one go.
         warmupAudio(token);
         const rest = [];
         for (let j = i; j < list.length; j++) {
-          const b = await tasks[j];
+          const b = await restTasks[j - 1];
           if (b) rest.push(b);
-          else if (j > i) skipped += 1;
+          else skipped += 1;
         }
         if (!rest.length) break;
         await playBlob(new Blob(rest, { type: "audio/mpeg" }), token, {
