@@ -3247,6 +3247,11 @@ html[lang="zh-CN"] .app-dialog-body {
   border: 1px solid rgba(32, 32, 32, 0.06);
   border-radius: 0.5rem;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: box-shadow 0.2s ease;
+}
+
+.mindmap-branch-card:hover {
+  box-shadow: 0 4px 14px -6px rgba(32, 32, 32, 0.14);
 }
 
 .mindmap-branch-header {
@@ -4021,6 +4026,7 @@ html[lang="zh-CN"] .app-dialog-body {
   text-align: center;
   min-width: 100px;
   position: relative;
+  animation: onboard-fade-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .obv-mm-center::before {
@@ -4066,7 +4072,14 @@ html[lang="zh-CN"] .app-dialog-body {
   width: 100%;
   height: 2px;
   background: var(--connector-color);
+  transform-origin: left center;
+  animation: obv-mm-draw 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+
+.obv-mm-connector:nth-child(1) .obv-mm-connector-h { animation-delay: 0.18s; }
+.obv-mm-connector:nth-child(2) .obv-mm-connector-h { animation-delay: 0.26s; }
+.obv-mm-connector:nth-child(3) .obv-mm-connector-h { animation-delay: 0.34s; }
+.obv-mm-connector:nth-child(4) .obv-mm-connector-h { animation-delay: 0.42s; }
 
 .obv-mm-branches {
   grid-column: 3;
@@ -4085,6 +4098,17 @@ html[lang="zh-CN"] .app-dialog-body {
   border: 1px solid rgba(32, 32, 32, 0.08);
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  animation: onboard-fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.obv-mm-branch:nth-child(1) { animation-delay: 0.22s; }
+.obv-mm-branch:nth-child(2) { animation-delay: 0.3s; }
+.obv-mm-branch:nth-child(3) { animation-delay: 0.38s; }
+.obv-mm-branch:nth-child(4) { animation-delay: 0.46s; }
+
+@keyframes obv-mm-draw {
+  from { transform: scaleX(0); opacity: 0; }
+  to { transform: scaleX(1); opacity: 1; }
 }
 
 .obv-mm-branch-header {
@@ -4158,6 +4182,11 @@ html[lang="zh-CN"] .app-dialog-body {
 @media (prefers-reduced-motion: reduce) {
   .obv-gen-card { animation: none; }
   .obv-gen-sparkle { animation: none; opacity: 0.5; }
+  .obv-mm-center,
+  .obv-mm-branch,
+  .obv-mm-connector-h {
+    animation: none;
+  }
 }
 
 /* ── Mobile ── */
