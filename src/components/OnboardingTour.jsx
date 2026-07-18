@@ -10,6 +10,7 @@ import {
   FilePdf,
   Brain,
   Play,
+  Pause,
   CheckCircle,
   Link,
   UploadSimple,
@@ -232,12 +233,19 @@ function OnboardingVisual({ kind, t, uiLang, setUiLang }) {
         {/* Simulated action dock */}
         <div className="obv-practice-dock">
           <div className="obv-practice-btn obv-practice-btn--play">
-            <Play size={18} weight="fill" />
+            <span className="obv-practice-icon obv-practice-icon--play" aria-hidden>
+              <Play className="obv-ico-play" size={18} weight="fill" />
+              <Pause className="obv-ico-pause" size={18} weight="fill" />
+            </span>
             <span>{t("onboard.visualPlay")}</span>
             <span className="obv-practice-badge">5</span>
           </div>
           <div className="obv-practice-btn obv-practice-btn--audio">
-            <SpeakerHigh size={16} weight="duotone" />
+            <span className="obv-practice-icon obv-practice-icon--audio" aria-hidden>
+              <SpeakerHigh size={16} weight="duotone" />
+              <span className="obv-speaker-wave obv-speaker-wave--1" />
+              <span className="obv-speaker-wave obv-speaker-wave--2" />
+            </span>
             <div className="obv-practice-export">
               <span>{t("onboard.visualExport")}</span>
               <span className="obv-practice-sub">{t("onboard.visualMp3")}</span>
@@ -245,7 +253,10 @@ function OnboardingVisual({ kind, t, uiLang, setUiLang }) {
             <span className="obv-practice-badge">5</span>
           </div>
           <div className="obv-practice-btn obv-practice-btn--pdf">
-            <FilePdf size={16} weight="duotone" />
+            <span className="obv-practice-icon obv-practice-icon--pdf" aria-hidden>
+              <span className="obv-pdf-tray" />
+              <FilePdf className="obv-pdf-fly" size={16} weight="duotone" />
+            </span>
             <div className="obv-practice-export">
               <span>{t("onboard.visualExport")}</span>
               <span className="obv-practice-sub">{t("onboard.visualPdfLabel")}</span>

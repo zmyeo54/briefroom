@@ -3728,7 +3728,12 @@ html[lang="zh-CN"] .app-dialog-body {
   font-size: 11.5px;
   font-weight: 600;
   border: 1px solid transparent;
+  animation: onboard-fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+
+.obv-feat:nth-child(1) { animation-delay: 0.12s; }
+.obv-feat:nth-child(2) { animation-delay: 0.2s; }
+.obv-feat:nth-child(3) { animation-delay: 0.28s; }
 
 .obv-feat--blue {
   background: rgba(74, 127, 248, 0.1);
@@ -3765,6 +3770,20 @@ html[lang="zh-CN"] .app-dialog-body {
   background: white;
   border: 1px solid var(--color-line);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  animation: onboard-fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition:
+    transform 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.obv-docs-card--resume { animation-delay: 0.05s; }
+.obv-docs-card--jd { animation-delay: 0.22s; }
+
+.obv-docs-card:hover {
+  border-color: rgba(74, 127, 248, 0.28);
+  box-shadow: 0 6px 16px -8px rgba(74, 127, 248, 0.25);
+  transform: translateY(-1px);
 }
 
 .obv-docs-icon {
@@ -3795,12 +3814,15 @@ html[lang="zh-CN"] .app-dialog-body {
   font-size: 16px;
   font-weight: 600;
   flex-shrink: 0;
+  animation: onboard-fade-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.14s both;
 }
 
 .obv-docs-methods {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 2px;
+  justify-content: center;
 }
 
 .obv-method {
@@ -3810,9 +3832,31 @@ html[lang="zh-CN"] .app-dialog-body {
   font-size: 10px;
   font-weight: 500;
   color: var(--color-mute);
-  padding: 3px 8px;
-  border-radius: 6px;
+  padding: 0.4rem 0.7rem;
+  min-height: 2rem;
+  border-radius: 999px;
   background: rgba(0, 0, 0, 0.03);
+  border: 1px solid transparent;
+  animation: onboard-fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition:
+    transform 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.obv-method:nth-child(1) { animation-delay: 0.3s; }
+.obv-method:nth-child(2) { animation-delay: 0.38s; }
+.obv-method:nth-child(3) { animation-delay: 0.46s; }
+
+.obv-method:hover {
+  background: rgba(74, 127, 248, 0.08);
+  border-color: rgba(74, 127, 248, 0.2);
+  color: #3a6ae0;
+}
+
+.obv-method:active {
+  transform: scale(0.96);
 }
 
 /* ── Generate step ── */
@@ -3835,6 +3879,7 @@ html[lang="zh-CN"] .app-dialog-body {
   background: linear-gradient(135deg, #4a7ff8, #6e5ff8);
   color: white;
   box-shadow: 0 4px 16px rgba(74, 127, 248, 0.35);
+  animation: onboard-fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .obv-gen-sparkle {
@@ -3938,20 +3983,169 @@ html[lang="zh-CN"] .app-dialog-body {
   min-width: 88px;
   text-align: center;
   position: relative;
-  transition: transform 0.15s, box-shadow 0.15s;
+  animation: onboard-fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition:
+    transform 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.obv-practice-btn:nth-child(1) { animation-delay: 0.08s; }
+.obv-practice-btn:nth-child(2) { animation-delay: 0.16s; }
+.obv-practice-btn:nth-child(3) { animation-delay: 0.24s; }
+
+.obv-practice-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px -10px rgba(32, 32, 32, 0.22);
+}
+
+.obv-practice-btn:active {
+  transform: scale(0.96) translateY(0);
+  box-shadow: 0 2px 6px -4px rgba(32, 32, 32, 0.15);
 }
 
 .obv-practice-btn--play {
   border-color: rgba(74, 127, 248, 0.3);
   background: linear-gradient(145deg, #f0f5ff, white);
 }
+.obv-practice-btn--play:hover {
+  border-color: rgba(74, 127, 248, 0.5);
+}
 .obv-practice-btn--audio {
   border-color: rgba(255, 118, 72, 0.25);
   background: linear-gradient(145deg, #fff5f0, white);
 }
+.obv-practice-btn--audio:hover {
+  border-color: rgba(255, 118, 72, 0.45);
+}
 .obv-practice-btn--pdf {
   border-color: rgba(196, 154, 60, 0.25);
   background: linear-gradient(145deg, #fdf8ee, white);
+}
+.obv-practice-btn--pdf:hover {
+  border-color: rgba(196, 154, 60, 0.45);
+}
+
+/* Practice icon loops */
+.obv-practice-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 1.4rem;
+  height: 1.4rem;
+  flex-shrink: 0;
+}
+
+.obv-practice-icon--play .obv-ico-play,
+.obv-practice-icon--play .obv-ico-pause {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+}
+
+.obv-practice-icon--play .obv-ico-play {
+  animation: obv-play-swap 2.4s ease-in-out infinite;
+}
+.obv-practice-icon--play .obv-ico-pause {
+  animation: obv-pause-swap 2.4s ease-in-out infinite;
+}
+
+@keyframes obv-play-swap {
+  0%, 42% { opacity: 1; transform: scale(1); }
+  50%, 92% { opacity: 0; transform: scale(0.65); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes obv-pause-swap {
+  0%, 42% { opacity: 0; transform: scale(0.65); }
+  50%, 92% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.65); }
+}
+
+.obv-practice-icon--audio {
+  color: #202020;
+}
+.obv-practice-icon--audio svg {
+  position: relative;
+  z-index: 1;
+  animation: obv-speaker-bob 1.5s ease-in-out infinite;
+}
+.obv-speaker-wave {
+  position: absolute;
+  right: -2px;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  border: 1.5px solid rgba(255, 118, 72, 0.55);
+  border-left: none;
+  border-radius: 0 999px 999px 0;
+  opacity: 0;
+  animation: obv-speaker-wave 1.5s ease-out infinite;
+}
+.obv-speaker-wave--2 {
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
+  right: -5px;
+  animation-delay: 0.35s;
+  border-color: rgba(255, 118, 72, 0.35);
+}
+
+@keyframes obv-speaker-bob {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+@keyframes obv-speaker-wave {
+  0% { opacity: 0; transform: scale(0.6); }
+  35% { opacity: 0.9; }
+  100% { opacity: 0; transform: scale(1.25); }
+}
+
+.obv-practice-icon--pdf {
+  width: 1.5rem;
+  height: 1.55rem;
+  overflow: visible;
+}
+.obv-pdf-tray {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 1.05rem;
+  height: 0.35rem;
+  margin-left: -0.525rem;
+  border: 1.5px solid rgba(196, 154, 60, 0.55);
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  background: rgba(196, 154, 60, 0.12);
+}
+.obv-pdf-fly {
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  margin-left: -8px;
+  color: #202020;
+  animation: obv-pdf-fly 2.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  transform-origin: center bottom;
+}
+
+@keyframes obv-pdf-fly {
+  0%, 12% {
+    opacity: 0.35;
+    transform: translateY(2px) scale(0.8) rotate(0deg);
+  }
+  35% {
+    opacity: 1;
+    transform: translateY(-7px) scale(1) rotate(-8deg);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(-11px) scale(1) rotate(5deg);
+  }
+  80%, 100% {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.9) rotate(12deg);
+  }
 }
 
 .obv-practice-export {
@@ -4180,13 +4374,36 @@ html[lang="zh-CN"] .app-dialog-body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .obv-gen-card { animation: none; }
-  .obv-gen-sparkle { animation: none; opacity: 0.5; }
+  .obv-gen-card,
+  .obv-gen-wand,
+  .obv-feat,
+  .obv-docs-card,
+  .obv-docs-plus,
+  .obv-method,
+  .obv-practice-btn,
   .obv-mm-center,
   .obv-mm-branch,
   .obv-mm-connector-h {
     animation: none;
   }
+  .obv-gen-sparkle { animation: none; opacity: 0.5; }
+  .obv-practice-icon--play .obv-ico-play,
+  .obv-practice-icon--play .obv-ico-pause,
+  .obv-practice-icon--audio svg,
+  .obv-speaker-wave,
+  .obv-pdf-fly {
+    animation: none !important;
+  }
+  .obv-practice-icon--play .obv-ico-pause { opacity: 0; }
+  .obv-practice-icon--play .obv-ico-play { opacity: 1; }
+  .obv-speaker-wave { display: none; }
+  .obv-pdf-fly {
+    opacity: 1;
+    transform: none;
+    position: static;
+    margin-left: 0;
+  }
+  .obv-pdf-tray { display: none; }
 }
 
 /* ── Mobile ── */
