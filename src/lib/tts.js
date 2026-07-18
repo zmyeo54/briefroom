@@ -451,39 +451,80 @@ function getAudioContainer() {
   return audioContainer;
 }
 
+/** Minimal WAV header for ~50ms of silence (8-bit PCM, 8 kHz). */
+let silentBlobUrl = null;
+function getSilentUrl() {
+  if (silentBlobUrl) return silentBlobUrl;
+  // WAV: 44-byte header + 400 samples of silence (50ms at 8 kHz)
+  const len = 44 + 400;
+  const buf = new ArrayBuffer(len);
+  const v = new DataView(buf);
+  const w = (p, s) => { v.setUint32(p, s, true); };
+  const s = (p, val) => { v.setUint16(p, val, true); };
+  v.setUint32(0, 0x52494646, false); // "RIFF"
+  w(4, len - 8);
+  v.setUint32(8, 0x57415645, false); // "WAVE"
+  v.setUint32(12, 0x666D7420, false); // "fmt "
+  w(16, 16);          // chunk size
+  s(20, 1);           // PCM
+  s(22, 1);           // mono
+  w(24, 8000);        // sample rate
+  w(28, 8000);        // byte rate
+  s(32, 1);           // block align
+  s(34, 8);           // bits per sample
+  v.setUint32(36, 0x64617461, false); // "data"
+  w(40, 400);         // data size
+  // samples already zeroed (silence)
+  silentBlobUrl = URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
+  return silentBlobUrl;
+}
+
+/**
+ * Warm up an <audio> element synchronously (from a user gesture) so mobile
+ * Safari / WeChat doesn't hijack playback with its own media overlay.
+ * Uses a real silent WAV blob instead of empty src — some browsers show
+ * a native media player when playing audio with src="".
+ */
+function warmupAudio(token) {
+  cleanup();
+  const el = document.createElement("audio");
+  el.preload = "auto";
+  el.autoplay = true;
+  el.playsInline = true;
+  el.setAttribute("playsinline", "");
+  el.setAttribute("webkit-playsinline", "");
+  el.crossOrigin = "anonymous";
+  el.style.cssText = "display:none;width:0;height:0";
+  el.src = getSilentUrl();
+  currentAudio = el;
+  currentUrl = "";
+  getAudioContainer().appendChild(el);
+  // Start playing a real silent audio to grab the audio context without
+  // triggering any browser media overlay.
+  el.play().catch(() => {});
+}
+
 function playBlob(blob, token, { onStart } = {}) {
   return new Promise((resolve, reject) => {
     if (token !== playToken) {
       resolve();
       return;
     }
-    cleanup();
-    currentUrl = URL.createObjectURL(blob);
-    const audio = document.createElement("audio");
-    audio.src = currentUrl;
-    audio.preload = "auto";
-    audio.autoplay = true;
-    audio.playsInline = true;
-    audio.setAttribute("playsinline", "");
-    audio.setAttribute("webkit-playsinline", "");
-    audio.crossOrigin = "anonymous";
-    audio.style.cssText = "display:none;width:0;height:0";
-    currentAudio = audio;
-    getAudioContainer().appendChild(audio);
-    audio.onended = () => {
-      if (token === playToken) cleanup();
+    // Swap the real audio into the pre-warmed element
+    const url = URL.createObjectURL(blob);
+    const el = currentAudio;
+    if (!el || token !== playToken) {
+      URL.revokeObjectURL(url);
       resolve();
-    };
-    audio.onerror = () => {
-      if (token !== playToken) {
-        resolve();
-        return;
-      }
-      cleanup();
-      reject(new Error("Audio playback failed"));
-    };
-    audio
-      .play()
+      return;
+    }
+    // Revoke old URL
+    if (currentUrl && currentUrl !== url) {
+      URL.revokeObjectURL(currentUrl);
+    }
+    currentUrl = url;
+    el.src = url;
+    el.play()
       .then(() => {
         if (token === playToken) onStart?.();
       })
@@ -495,6 +536,18 @@ function playBlob(blob, token, { onStart } = {}) {
         cleanup();
         reject(e);
       });
+    el.onended = () => {
+      if (token === playToken) cleanup();
+      resolve();
+    };
+    el.onerror = () => {
+      if (token !== playToken) {
+        resolve();
+        return;
+      }
+      cleanup();
+      reject(new Error("Audio playback failed"));
+    };
   });
 }
 
@@ -507,6 +560,7 @@ export async function speakText(
 
   stopSpeech();
   const token = playToken;
+  warmupAudio(token);
   const blob = await fetchAudio(trimmed, voice, rate);
   if (token !== playToken) return;
   await playBlob(blob, token);
@@ -560,6 +614,10 @@ export async function speakQaSequence(entries, options = {}) {
     onProgress,
     onStart,
   } = options;
+
+  // Warm up audio context synchronously (in the user gesture) so mobile
+  // Safari / WeChat doesn't show its own media player overlay.
+  warmupAudio(token);
 
   const blobs = await mapPool(list, FETCH_CONCURRENCY, async (e, i) => {
     if (token !== playToken) return null;
