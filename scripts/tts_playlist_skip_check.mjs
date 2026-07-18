@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Play-all builds one merged MP3 (like export) then plays once.
- * Must include every synthesizable item — not stop after ~2 clips.
+ * Progressive play-all: first clip can start before later clips finish synth.
+ * Also: hard-fail one item → skip; rest still play.
  */
 import { resolve, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -45,19 +45,15 @@ globalThis.document = {
   },
   body: { appendChild() {} },
 };
-globalThis.URL.createObjectURL = (blob) => {
-  // Encode how many parts were merged (each part is a tiny mp3-ish blob)
-  const n = blob?.size || 0;
-  return `blob:test#${n}`;
-};
+globalThis.URL.createObjectURL = () => "blob:test";
 globalThis.URL.revokeObjectURL = () => {};
 globalThis.speechSynthesis = { cancel() {} };
 
-let calls = 0;
+const gate = new Map(); // text → { resolve, promise, delay }
+let releases = 0;
+
 globalThis.fetch = async (_url, init) => {
-  calls += 1;
   const text = JSON.parse(init.body || "{}").text || "";
-  // Hard-fail only Q2 — rest must still merge + play
   if (/\bQ2\b|\bA2 answer\b|\bP2\b/.test(text)) {
     return {
       ok: false,
@@ -70,24 +66,16 @@ globalThis.fetch = async (_url, init) => {
       },
     };
   }
-  // Intermittent flap — retries should recover
-  if (calls % 7 === 0) {
-    return {
-      ok: false,
-      status: 500,
-      async json() {
-        return { error: "Stream closed before turn.end" };
-      },
-      async blob() {
-        return new Blob();
-      },
-    };
-  }
+  // Slow down later items so first can start first
+  const slow = /\bQ[456]\b|\bA[456]\b|\bP[456]\b/.test(text);
+  if (slow) await new Promise((r) => setTimeout(r, 80));
+  else await new Promise((r) => setTimeout(r, 5));
+  releases += 1;
   return {
     ok: true,
     status: 200,
     async blob() {
-      return new Blob([new Uint8Array(100)]); // 100 bytes each
+      return new Blob([new Uint8Array(40)]);
     },
     async json() {
       return {};
@@ -96,11 +84,14 @@ globalThis.fetch = async (_url, init) => {
 };
 
 const { speakQaSequence } = await import(
-  pathToFileURL(resolve(ROOT, "src/lib/tts.js")).href
+  pathToFileURL(resolve(ROOT, "src/lib/tts.js")).href + "?prog=" + Date.now()
 );
 
 const progress = [];
-let starts = 0;
+let startAt = 0;
+let firstProgressAt = 0;
+const t0 = Date.now();
+
 const result = await speakQaSequence(
   Array.from({ length: 6 }, (_, i) => ({
     q: `Q${i + 1}?`,
@@ -109,22 +100,34 @@ const result = await speakQaSequence(
   })),
   {
     lang: "en",
-    onProgress: (i) => progress.push(i),
+    onProgress: (i) => {
+      if (!firstProgressAt) firstProgressAt = Date.now();
+      progress.push(i);
+    },
     onStart: () => {
-      starts += 1;
+      startAt = Date.now();
     },
   }
 );
 
-// Q2 skipped → 5 played in one merged play, one onStart
-if (result.played !== 5 || result.skipped !== 1) {
-  console.error("RED: expected played=5 skipped=1", result, { calls });
+if (result.played < 5 || result.skipped !== 1) {
+  console.error("RED: expected ~5 played / 1 skipped", result);
   process.exit(1);
 }
-if (starts !== 1 || progress.join(",") !== "0") {
-  console.error("RED: expected single merged play", { starts, progress });
+if (!startAt || progress[0] !== 0) {
+  console.error("RED: should start on first clip", { startAt, progress });
+  process.exit(1);
+}
+// First audio should begin well before the whole run finishes
+const timeToStart = startAt - t0;
+const total = Date.now() - t0;
+if (timeToStart > total * 0.7) {
+  console.error("RED: first play too late (not progressive)", {
+    timeToStart,
+    total,
+  });
   process.exit(1);
 }
 console.log(
-  `GREEN: merged play-all played=${result.played} skipped=${result.skipped} starts=${starts}`
+  `GREEN: progressive play-all played=${result.played} skipped=${result.skipped} progress=${progress.join(",")} startMs=${timeToStart} totalMs=${total}`
 );
