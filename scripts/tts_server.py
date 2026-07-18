@@ -75,41 +75,8 @@ def sanitize_speak_text(text: str) -> str:
     return t
 
 
-def escape_xml(text: str) -> str:
-    return (
-        str(text or "")
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-        .replace("'", "&apos;")
-    )
-
-
-def build_multi_voice_ssml(parts: list[dict], rate: float) -> str:
-    rate_str = rate_to_edge(rate)
-    body: list[str] = []
-    for part in parts:
-        text = sanitize_speak_text(part.get("text") or "")
-        if not text:
-            continue
-        edge_name, _ = resolve_voice(part.get("voice") or DEFAULT_VOICE)
-        body.append(
-            f'<voice name="{edge_name}"><prosody rate="{rate_str}">{escape_xml(text)}</prosody></voice>'
-        )
-    if not body:
-        return ""
-    return (
-        '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" '
-        'xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="en-US">'
-        + "".join(body)
-        + "</speak>"
-    )
-
-
 CHUNK_CHARS = 900
 MAX_ATTEMPTS = 3
-MAX_BATCH_PARTS = 12
 
 
 def split_speak_chunks(text: str, max_len: int = CHUNK_CHARS) -> list[str]:
@@ -154,19 +121,6 @@ async def _synthesize_once(text: str, edge_name: str, rate_str: str) -> bytes:
     return audio
 
 
-async def _synthesize_ssml(ssml: str, edge_name: str) -> bytes:
-    # Rate already embedded in <prosody> — don't pass rate= or Edge double-applies.
-    communicate = edge_tts.Communicate(ssml, edge_name)
-    chunks: list[bytes] = []
-    async for item in communicate.stream():
-        if item["type"] == "audio":
-            chunks.append(item["data"])
-    audio = b"".join(chunks)
-    if not audio:
-        raise ValueError("empty audio")
-    return audio
-
-
 async def synthesize(text: str, voice_id: str, rate: float) -> bytes:
     # Plain text only — SSML was being spoken as literal "codes" by Edge TTS.
     edge_name, _style = resolve_voice(voice_id)
@@ -188,30 +142,6 @@ async def synthesize(text: str, voice_id: str, rate: float) -> bytes:
                 await asyncio.sleep(0.35 * (attempt + 1))
         if last is not None:
             raise last
-    return b"".join(buffers)
-
-
-async def synthesize_parts(parts: list[dict], rate: float) -> bytes:
-    cleaned: list[dict] = []
-    for part in parts:
-        if not isinstance(part, dict):
-            continue
-        text = sanitize_speak_text(part.get("text") or "")
-        if not text:
-            continue
-        cleaned.append({"text": text, "voice": part.get("voice") or DEFAULT_VOICE})
-    if not cleaned:
-        return b""
-
-    # Skip multi-voice SSML — Edge often rejects it; retries made batch much
-    # slower than separate POSTs. Small pool of plain synth instead.
-    sem = asyncio.Semaphore(2)
-
-    async def one(part: dict) -> bytes:
-        async with sem:
-            return await synthesize(part["text"], part["voice"], rate)
-
-    buffers = await asyncio.gather(*[one(p) for p in cleaned])
     return b"".join(buffers)
 
 
@@ -245,22 +175,6 @@ class Handler(BaseHTTPRequestHandler):
                     }
                 ).encode()
             )
-            return
-        if path in ("/tts-warm", "/api/tts-warm"):
-            try:
-                asyncio.run(synthesize("Ready.", DEFAULT_VOICE, 1.0))
-            except Exception as e:
-                self.send_response(500)
-                self._cors()
-                self.send_header("Content-Type", "application/json")
-                self.end_headers()
-                self.wfile.write(json.dumps({"ok": False, "error": str(e)}).encode())
-                return
-            self.send_response(200)
-            self._cors()
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(b'{"ok":true,"warm":true}')
             return
         self.send_response(404)
         self.end_headers()
@@ -322,48 +236,6 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(b'{"error":"invalid json"}')
             return
 
-        try:
-            rate = float(body.get("rate") or 1.0)
-        except (TypeError, ValueError):
-            rate = 1.0
-
-        # Batch: one request synthesizes many segments (parity with api/tts.js).
-        parts = body.get("parts")
-        if isinstance(parts, list) and parts:
-            if len(parts) > MAX_BATCH_PARTS:
-                self.send_response(400)
-                self._cors()
-                self.send_header("Content-Type", "application/json")
-                self.end_headers()
-                self.wfile.write(b'{"error":"too many parts"}')
-                return
-
-            try:
-                audio = asyncio.run(synthesize_parts(parts, rate))
-            except Exception as e:
-                self.send_response(500)
-                self._cors()
-                self.send_header("Content-Type", "application/json")
-                self.end_headers()
-                self.wfile.write(json.dumps({"error": str(e)}).encode())
-                return
-
-            if not audio:
-                self.send_response(502)
-                self._cors()
-                self.send_header("Content-Type", "application/json")
-                self.end_headers()
-                self.wfile.write(b'{"error":"empty audio"}')
-                return
-
-            self.send_response(200)
-            self._cors()
-            self.send_header("Content-Type", "audio/mpeg")
-            self.send_header("Cache-Control", "no-store")
-            self.end_headers()
-            self.wfile.write(audio)
-            return
-
         text = (body.get("text") or "").strip()
         if not text:
             self.send_response(400)
@@ -374,6 +246,10 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         voice_id = body.get("voice") or DEFAULT_VOICE
+        try:
+            rate = float(body.get("rate") or 1.0)
+        except (TypeError, ValueError):
+            rate = 1.0
 
         try:
             audio = asyncio.run(synthesize(text, voice_id, rate))

@@ -68,25 +68,10 @@ import {
   pauseSpeech,
   resumeSpeech,
   exportMergedQaAudio,
-  prefetchQaSequence,
-  cancelPrefetch,
-  warmupTts,
 } from "../lib/tts";
 
 function readSettings() {
   return normalizeSettings(loadJson("settings", {}));
-}
-
-function buildSpeakEntries(qaList, indices, lang) {
-  return indices.map((i) => {
-    const preface =
-      lang === "zh"
-        ? `第${i + 1}题。`
-        : lang === "both"
-          ? `Question ${i + 1}. / 第${i + 1}题。`
-          : `Question ${i + 1}.`;
-    return { q: qaList[i].q, a: qaList[i].a, preface };
-  });
 }
 
 export default function HomePage() {
@@ -161,8 +146,6 @@ export default function HomePage() {
   const [speaking, setSpeaking] = useState(false);
   const [audioPaused, setAudioPaused] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
-  const [preparePct, setPreparePct] = useState(0);
-  const [prepareClip, setPrepareClip] = useState({ clip: 0, clips: 0 });
   const [fabPos, setFabPos] = useState({ dragged: false, left: 0, top: 0 });
   const [fabDragging, setFabDragging] = useState(false);
   const fabElementRef = useRef(null);
@@ -182,8 +165,6 @@ export default function HomePage() {
     setSpeaking(false);
     setAudioPaused(false);
     setAudioReady(false);
-    setPreparePct(0);
-    setPrepareClip({ clip: 0, clips: 0 });
     setAudioNote((prev) =>
       prev.kind === "error" || prev.kind === "ok" ? prev : { text: "", kind: "" }
     );
@@ -278,52 +259,6 @@ export default function HomePage() {
     const id = setTimeout(() => setStatus({ text: "", kind: "" }), ms);
     return () => clearTimeout(id);
   }, [status]);
-
-  // Keep TTS lambda warm while practicing; idle-prefetch selected (or all) clips.
-  useEffect(() => {
-    warmupTts();
-    const warmId = setInterval(() => warmupTts(), 4 * 60 * 1000);
-    return () => clearInterval(warmId);
-  }, []);
-
-  useEffect(() => {
-    if (!qa.length || speaking || readSettings().ttsEngine === "browser") {
-      cancelPrefetch();
-      return undefined;
-    }
-    const latest = readSettings();
-    const indices = (
-      selected.size
-        ? [...selected].sort((a, b) => a - b)
-        : qa.map((_, i) => i)
-    )
-      .filter((i) => qa[i]?.a?.trim() || qa[i]?.q?.trim())
-      .slice(0, 2);
-    if (!indices.length) return undefined;
-
-    const handle = setTimeout(() => {
-      prefetchQaSequence(buildSpeakEntries(qa, indices, latest.lang), {
-        rate: latest.rate,
-        voiceQ: latest.voiceQ,
-        voiceA: latest.voiceA,
-        lang: latest.lang,
-      });
-    }, 600);
-    return () => {
-      clearTimeout(handle);
-      cancelPrefetch();
-    };
-  }, [
-    qa,
-    qaEpoch,
-    selected,
-    speaking,
-    settings.lang,
-    settings.voiceQ,
-    settings.voiceA,
-    settings.rate,
-    settings.ttsEngine,
-  ]);
 
   const questions = useMemo(
     () =>
@@ -838,16 +773,15 @@ export default function HomePage() {
       setAudioReady(false);
       setStatus({ text: "", kind: "" });
       setAudioNote({ text: t("home.preparingAudio"), kind: "" });
+      setPlayingIndex(i);
       try {
         await speakQa(qa[i].q, qa[i].a, {
           rate: latest.rate,
           voiceQ: latest.voiceQ,
           voiceA: latest.voiceA,
           lang: latest.lang,
-          ttsEngine: latest.ttsEngine,
           onStart: () => {
             if (playSessionRef.current !== session) return;
-            setPlayingIndex(i);
             setAudioReady(true);
             setAudioNote({ text: "", kind: "" });
           },
@@ -875,28 +809,22 @@ export default function HomePage() {
     setAudioPaused(false);
     setAudioReady(false);
     setStatus({ text: "", kind: "" });
-    const entries = buildSpeakEntries(qa, indices, latest.lang);
     setAudioNote({ text: t("home.preparingAudio"), kind: "" });
-    setPreparePct(0);
-    setPrepareClip({ clip: 0, clips: entries.length });
     try {
-      const result = await speakQaSequence(entries, {
+      const entries = indices.map((i) => {
+        const preface =
+          latest.lang === "zh"
+            ? `第${i + 1}题。`
+            : latest.lang === "both"
+              ? `Question ${i + 1}. / 第${i + 1}题。`
+              : `Question ${i + 1}.`;
+        return { q: qa[i].q, a: qa[i].a, preface };
+      });
+      await speakQaSequence(entries, {
         rate: latest.rate,
         voiceQ: latest.voiceQ,
         voiceA: latest.voiceA,
         lang: latest.lang,
-        ttsEngine: latest.ttsEngine,
-        onPrepareProgress: ({ percent, clip, clips, cached }) => {
-          if (playSessionRef.current !== session) return;
-          setPreparePct(percent);
-          setPrepareClip({ clip, clips });
-          setAudioNote({
-            text: cached
-              ? t("home.preparingAudioCached")
-              : t("home.preparingAudioClip", { n: percent, clip, clips }),
-            kind: "",
-          });
-        },
         onProgress: (j) => {
           if (playSessionRef.current !== session) return;
           setPlayingIndex(j >= 0 ? indices[j] : -1);
@@ -907,7 +835,7 @@ export default function HomePage() {
           setAudioNote({ text: "", kind: "" });
         },
       });
-      finishPlaySession(session, null, result);
+      finishPlaySession(session);
     } catch (e) {
       finishPlaySession(session, e);
     }
@@ -1001,10 +929,6 @@ export default function HomePage() {
     }
 
     const latest = readSettings();
-    if (latest.ttsEngine === "browser") {
-      setAudioNote({ text: t("home.flash.audioNeedsEdge"), kind: "error" });
-      return;
-    }
     setExportingAudio(true);
     setAudioNote({ text: t("home.exportingAudio"), kind: "" });
     try {
@@ -1554,16 +1478,7 @@ export default function HomePage() {
               {!audioReady && !audioPaused ? (
                 <>
                   <SpinnerGap size={16} className="animate-spin" />
-                  {prepareClip.clips > 0
-                    ? preparePct >= 100 &&
-                      prepareClip.clip === prepareClip.clips
-                      ? t("home.preparingAudioCached")
-                      : t("home.preparingAudioClip", {
-                          n: preparePct,
-                          clip: prepareClip.clip || 1,
-                          clips: prepareClip.clips || 1,
-                        })
-                    : t("home.preparingAudio")}
+                  {t("home.preparingAudio")}
                 </>
               ) : audioPaused ? (
                 t("home.paused")

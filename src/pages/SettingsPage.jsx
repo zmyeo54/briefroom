@@ -29,7 +29,7 @@ import {
   voicesForInterviewLang,
 } from "../lib/settingsConfig";
 import { loadJson, saveJson } from "../lib/storage";
-import { speakQa, speakText, TTS_VOICES, TTS_ENGINES, voicesForLang } from "../lib/tts";
+import { speakQa, speakText, TTS_VOICES, voicesForLang } from "../lib/tts";
 import { useI18n } from "../lib/I18nContext";
 import Shell from "../components/Shell";
 import { resetOnboarding } from "../components/OnboardingTour";
@@ -152,7 +152,6 @@ export default function SettingsPage() {
       await speakText(voicePreviewLine(voice, role), {
         rate: settings.rate,
         voice,
-        ttsEngine: settings.ttsEngine,
       });
       setStatus(t("settings.testDone"));
       setTtsOk(true);
@@ -620,7 +619,6 @@ export default function SettingsPage() {
                           voiceQ: settings.voiceQ,
                           voiceA: settings.voiceA,
                           lang: settings.lang,
-                          ttsEngine: settings.ttsEngine,
                         }
                       );
                       setStatus(t("settings.testDone"));
@@ -896,44 +894,12 @@ export default function SettingsPage() {
               <span className="settings-card-icon">
                 <SpeakerHigh size={16} weight="bold" />
               </span>
-              <span className="settings-card-label">
-                {t("settings.ttsEngine")}
-              </span>
+              <span className="settings-card-label">TTS Engine</span>
             </div>
             <div className="settings-card-body">
               <div className="settings-row">
-                <span className="settings-row-label">
-                  {t("settings.ttsEngine")}
-                </span>
-                <div className="settings-field-wrap">
-                  <select
-                    className="field"
-                    value={settings.ttsEngine || "edge"}
-                    onChange={(e) => patch({ ttsEngine: e.target.value })}
-                  >
-                    {TTS_ENGINES.map((eng) => (
-                      <option key={eng.id} value={eng.id}>
-                        {t(eng.labelKey)}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="settings-row-hint">
-                    {settings.ttsEngine === "browser"
-                      ? t("settings.ttsEngineBrowserHint")
-                      : t("settings.ttsEngineEdgeHint")}
-                  </p>
-                </div>
-              </div>
-              <div className="settings-row">
                 <div className="flex items-center gap-2">
-                  {settings.ttsEngine === "browser" ? (
-                    <>
-                      <span className="settings-status-dot settings-status-dot--ok" />
-                      <span className="settings-status-text ok">
-                        {t("settings.ttsBrowserReady")}
-                      </span>
-                    </>
-                  ) : ttsOk === false ? (
+                  {ttsOk === false ? (
                     <>
                       <span className="settings-status-dot settings-status-dot--err" />
                       <span className="settings-status-text err">

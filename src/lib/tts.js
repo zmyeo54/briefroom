@@ -7,118 +7,26 @@ let playToken = 0;
 /** In-memory MP3 cache — replay / re-export skips Edge round-trips. */
 const audioCache = new Map();
 const CACHE_MAX = 100;
-/** Persist clips across refresh so replay doesn't re-hit Vercel TTS. */
-const IDB_NAME = "linecheck-tts-v1";
-const IDB_STORE = "clips";
-const IDB_MAX = 120;
-/**
- * Max simultaneous Edge TTS turns. Clips are all queued in parallel; this
- * pool is what actually hits the network. Mix batches are heavy — 4 saturated
- * Edge and made play-all feel stuck; 2 keeps headroom for clip #1 priority.
- */
+const FETCH_CONCURRENCY = 3;
+/** Edge drops WS mid-synthesis when many turns run at once (no turn.end). */
 const TTS_INFLIGHT_LIMIT = 2;
-const TTS_FETCH_TIMEOUT_MS = 45000;
-const TTS_FETCH_ATTEMPTS = 6;
-/** Idle prefetch only warms the first N clips (play starts ASAP from cache). */
-const PREFETCH_CLIP_LIMIT = 2;
 let ttsInflight = 0;
 const ttsWaiters = [];
-const ttsPriorityWaiters = [];
-const activeFetchControllers = new Set();
-/** Invalidate in-flight idle prefetch without stopping active playback. */
-let prefetchGen = 0;
 
-function openTtsIdb() {
-  if (typeof indexedDB === "undefined") return Promise.resolve(null);
-  return new Promise((resolve) => {
-    try {
-      const req = indexedDB.open(IDB_NAME, 1);
-      req.onupgradeneeded = () => {
-        const db = req.result;
-        if (!db.objectStoreNames.contains(IDB_STORE)) {
-          db.createObjectStore(IDB_STORE, { keyPath: "key" });
-        }
-      };
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => resolve(null);
-    } catch {
-      resolve(null);
-    }
-  });
-}
-
-async function idbGetClip(key) {
-  const db = await openTtsIdb();
-  if (!db) return null;
-  return new Promise((resolve) => {
-    try {
-      const tx = db.transaction(IDB_STORE, "readonly");
-      const req = tx.objectStore(IDB_STORE).get(key);
-      req.onsuccess = () => {
-        const row = req.result;
-        resolve(row?.blob instanceof Blob ? row.blob : null);
-      };
-      req.onerror = () => resolve(null);
-    } catch {
-      resolve(null);
-    }
-  });
-}
-
-async function idbSetClip(key, blob) {
-  const db = await openTtsIdb();
-  if (!db || !(blob instanceof Blob)) return;
-  try {
-    await new Promise((resolve, reject) => {
-      const tx = db.transaction(IDB_STORE, "readwrite");
-      const store = tx.objectStore(IDB_STORE);
-      store.put({ key, blob, at: Date.now() });
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
-    // ponytail: trim oldest when over cap
-    const keys = await new Promise((resolve) => {
-      const tx = db.transaction(IDB_STORE, "readonly");
-      const req = tx.objectStore(IDB_STORE).getAll();
-      req.onsuccess = () => resolve(req.result || []);
-      req.onerror = () => resolve([]);
-    });
-    if (keys.length <= IDB_MAX) return;
-    keys.sort((a, b) => (a.at || 0) - (b.at || 0));
-    const drop = keys.slice(0, keys.length - IDB_MAX);
-    await new Promise((resolve) => {
-      const tx = db.transaction(IDB_STORE, "readwrite");
-      const store = tx.objectStore(IDB_STORE);
-      for (const row of drop) store.delete(row.key);
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => resolve();
-    });
-  } catch {
-    /* ignore quota / private mode */
-  }
-}
-
-function withTtsSlot(fn, { priority = false } = {}) {
+function withTtsSlot(fn) {
   return new Promise((resolve, reject) => {
-    const entry = {
-      run: () => {
-        ttsInflight += 1;
-        Promise.resolve()
-          .then(fn)
-          .then(resolve, reject)
-          .finally(() => {
-            if (ttsInflight > 0) {
-              ttsInflight -= 1;
-            }
-            const next = ttsPriorityWaiters.shift() || ttsWaiters.shift();
-            next?.run?.();
-          });
-      },
-      reject,
+    const run = () => {
+      ttsInflight += 1;
+      Promise.resolve()
+        .then(fn)
+        .then(resolve, reject)
+        .finally(() => {
+          ttsInflight -= 1;
+          ttsWaiters.shift()?.();
+        });
     };
-    if (ttsInflight < TTS_INFLIGHT_LIMIT) entry.run();
-    else if (priority) ttsPriorityWaiters.push(entry);
-    else ttsWaiters.push(entry);
+    if (ttsInflight < TTS_INFLIGHT_LIMIT) run();
+    else ttsWaiters.push(run);
   });
 }
 
@@ -149,25 +57,25 @@ export const TTS_VOICES = [
   },
   {
     id: "en-aria-news",
-    label: "English female · Aria",
+    label: "English · Aria",
     lang: "en",
     gender: "female",
   },
   {
     id: "en-jenny-news",
-    label: "English female · Jenny",
+    label: "English · Jenny",
     lang: "en",
     gender: "female",
   },
   {
     id: "en-guy-news",
-    label: "English male · Guy",
+    label: "English · Guy",
     lang: "en",
     gender: "male",
   },
   {
     id: "en-davis-news",
-    label: "English male · Davis",
+    label: "English · Davis",
     lang: "en",
     gender: "male",
   },
@@ -330,23 +238,6 @@ export function buildSpeakParts(
   return parts;
 }
 
-/**
- * How many leading parts to play as the first progressive chunk.
- * Include preface + question only — never start audio on "Question 1." alone
- * and leave the real question waiting.
- */
-export function firstPlayGroupSize(parts, entry, options = {}) {
-  const list = parts || [];
-  if (!list.length) return 0;
-  const qOnly = buildSpeakParts(entry?.q || "", "", {
-    voiceQ: options.voiceQ,
-    voiceA: options.voiceA,
-    preface: entry?.preface || "",
-    lang: options.lang || "en",
-  });
-  return Math.min(list.length, Math.max(1, qOnly.length));
-}
-
 const LEGACY_VOICE_MAP = {
   "zh-male": "zh-yunyang-news",
   "zh-female": "zh-xiaoxiao-news",
@@ -376,152 +267,6 @@ export function voicesForLang(lang) {
 function rateForRequest(rate) {
   const n = Number(rate);
   return Number.isFinite(n) ? n : 1;
-}
-
-export const TTS_ENGINES = [
-  { id: "edge", labelKey: "settings.ttsEngineEdge" },
-  { id: "browser", labelKey: "settings.ttsEngineBrowser" },
-];
-
-function browserRate(rate) {
-  const n = Number(rate);
-  return Number.isFinite(n) ? Math.min(1.4, Math.max(0.6, n)) : 1;
-}
-
-async function loadBrowserVoices() {
-  if (typeof speechSynthesis === "undefined") return [];
-  const existing = speechSynthesis.getVoices();
-  if (existing.length) return existing;
-  return new Promise((resolve) => {
-    const done = () => resolve(speechSynthesis.getVoices() || []);
-    speechSynthesis.addEventListener("voiceschanged", done, { once: true });
-    setTimeout(done, 400);
-  });
-}
-
-/** Map Edge voice id → closest device voice (lang + rough gender). */
-async function pickBrowserVoice(voiceId) {
-  const voices = await loadBrowserVoices();
-  if (!voices.length) return null;
-  const meta = TTS_VOICES.find((v) => v.id === normalizeVoiceId(voiceId));
-  const wantZh = meta?.lang === "zh";
-  const wantFemale = meta?.gender === "female";
-  const pool = voices.filter((v) =>
-    wantZh ? /zh(-|_)/i.test(v.lang) : /^en/i.test(v.lang)
-  );
-  const ranked = (pool.length ? pool : voices).slice().sort((a, b) => {
-    const score = (v) => {
-      let s = 0;
-      const name = `${v.name} ${v.lang}`.toLowerCase();
-      if (
-        wantFemale &&
-        /female|woman|zira|samantha|tingting|xiaoxiao/i.test(name)
-      )
-        s += 2;
-      if (!wantFemale && /male|man|david|guy|yunyang|kangkang/i.test(name))
-        s += 2;
-      if (wantZh && /zh-cn|chinese/i.test(name)) s += 1;
-      if (!wantZh && /en-us|en-gb/i.test(name)) s += 1;
-      return s;
-    };
-    return score(b) - score(a);
-  });
-  return ranked[0] || null;
-}
-
-function speakBrowserPart(text, voiceId, rate, token) {
-  const clean = sanitizeSpeakText(text);
-  if (!clean) return Promise.resolve();
-  if (typeof speechSynthesis === "undefined") {
-    return Promise.reject(new Error("This browser has no built-in voice."));
-  }
-  return new Promise((resolve, reject) => {
-    let settled = false;
-    const finish = (fn, value) => {
-      if (settled) return;
-      settled = true;
-      fn(value);
-    };
-    pickBrowserVoice(voiceId).then((voice) => {
-      if (token !== playToken) {
-        finish(resolve);
-        return;
-      }
-      const u = new SpeechSynthesisUtterance(clean);
-      u.rate = browserRate(rate);
-      if (voice) {
-        u.voice = voice;
-        u.lang = voice.lang;
-      }
-      u.onend = () => finish(resolve);
-      u.onerror = () => {
-        if (token !== playToken) finish(resolve);
-        else finish(reject, new Error("Browser voice failed."));
-      };
-      try {
-        speechSynthesis.speak(u);
-      } catch (e) {
-        finish(reject, e);
-      }
-    });
-  });
-}
-
-/**
- * Instant device TTS (Web Speech API) — free, no server, lower quality.
- */
-async function speakQaSequenceBrowser(list, options) {
-  const {
-    rate = 1,
-    voiceQ = DEFAULT_VOICE_Q,
-    voiceA = DEFAULT_VOICE_A,
-    lang = "en",
-    onProgress,
-    onStart,
-    onPrepareProgress,
-  } = options;
-  const token = playToken;
-
-  onPrepareProgress?.({
-    done: 1,
-    total: 1,
-    percent: 100,
-    clip: list.length,
-    clips: list.length,
-    cached: true,
-  });
-
-  let started = false;
-  let played = 0;
-  const markStart = (i) => {
-    if (!started) {
-      started = true;
-      onStart?.();
-    }
-    onProgress?.(i);
-  };
-
-  for (let i = 0; i < list.length; i++) {
-    if (token !== playToken) return { played, skipped: list.length - played };
-    const parts = buildSpeakParts(list[i].q, list[i].a, {
-      voiceQ,
-      voiceA,
-      preface: list[i].preface || "",
-      lang,
-    });
-    if (!parts.length) continue;
-    markStart(i);
-    for (const part of parts) {
-      if (token !== playToken) return { played, skipped: list.length - played };
-      await speakBrowserPart(part.text, part.voice, rate, token);
-    }
-    played += 1;
-  }
-
-  if (!played) {
-    throw new Error("Couldn't start browser voice. Try Edge neural instead.");
-  }
-  return { played, skipped: 0 };
 }
 
 /** Strip markdown / codes / URLs so TTS reads natural speech only. */
@@ -561,7 +306,6 @@ function rememberBlob(key, blob) {
   while (audioCache.size > CACHE_MAX) {
     audioCache.delete(audioCache.keys().next().value);
   }
-  void idbSetClip(key, blob);
 }
 
 /** Run async work over items with a fixed worker pool (order preserved). */
@@ -582,7 +326,7 @@ async function mapPool(items, limit, fn) {
   return out;
 }
 
-async function fetchAudio(text, voice, rate, { priority = false } = {}) {
+async function fetchAudio(text, voice, rate) {
   const clean = sanitizeSpeakText(text);
   if (!clean) throw new Error("Nothing to speak");
 
@@ -590,271 +334,53 @@ async function fetchAudio(text, voice, rate, { priority = false } = {}) {
   const hit = audioCache.get(key);
   if (hit) return hit;
 
-  // Disk cache (survives refresh) — no Vercel TTS bandwidth.
-  const disk = await idbGetClip(key);
-  if (disk) {
-    audioCache.set(key, disk);
-    return disk;
-  }
-
   const payload = {
     text: clean,
     voice: normalizeVoiceId(voice),
     rate: rateForRequest(rate),
   };
 
-  const startToken = playToken;
   let lastMsg = "TTS failed";
-  for (let attempt = 0; attempt < TTS_FETCH_ATTEMPTS; attempt++) {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const res = await withTtsSlot(() =>
+      fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+    );
+
+    if (res.ok) {
+      const blob = await res.blob();
+      rememberBlob(key, blob);
+      return blob;
+    }
+
+    let msg = `TTS failed (${res.status})`;
     try {
-      // Timeout must start only after the TTS slot is acquired — play-all queues
-      // many Mix parts behind TTS_INFLIGHT_LIMIT; a pre-slot timer aborted waiters
-      // with "timed out" / transient cut-outs while single-item play stayed fine.
-      const result = await withTtsSlot(async () => {
-        if (playToken !== startToken) {
-          const err = new Error("Playback cancelled");
-          err.name = "AbortError";
-          throw err;
-        }
-        const controller = new AbortController();
-        activeFetchControllers.add(controller);
-        const timeoutId = setTimeout(() => {
-          try {
-            controller.abort();
-          } catch {
-            /* ignore */
-          }
-        }, TTS_FETCH_TIMEOUT_MS);
-        try {
-          const res = await fetch("/api/tts", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-            signal: controller.signal,
-          });
-          if (res.ok) {
-            return { ok: true, blob: await res.blob() };
-          }
-          let msg = `TTS failed (${res.status})`;
-          try {
-            const data = await res.json();
-            if (data?.error) msg = data.error;
-          } catch {
-            /* ignore */
-          }
-          return { ok: false, status: res.status, msg };
-        } finally {
-          clearTimeout(timeoutId);
-          activeFetchControllers.delete(controller);
-        }
-      }, { priority });
-
-      if (result.ok) {
-        rememberBlob(key, result.blob);
-        return result.blob;
-      }
-
-      let msg = result.msg;
-      const transient =
-        result.status === 502 ||
-        result.status === 504 ||
-        isTransientTtsError(result.status, msg);
-      if (result.status === 502 || result.status === 504) {
-        msg = "Practice voice isn’t ready yet. Give it a moment and try again.";
-      } else if (transient) {
-        msg = "Voice cut out mid-line. Tap play once more.";
-      }
-      lastMsg = msg;
-      if (attempt < TTS_FETCH_ATTEMPTS - 1 && transient) {
-        await new Promise((r) =>
-          setTimeout(r, Math.min(6000, 700 * 2 ** attempt))
-        );
-        continue;
-      }
-      throw new Error(lastMsg);
-    } catch (err) {
-      if (err.name === "AbortError" || err.message === "Playback cancelled") {
-        if (playToken !== startToken || err.message === "Playback cancelled") {
-          throw new Error("Playback cancelled");
-        }
-        lastMsg = "Voice request timed out. Please try again.";
-        if (attempt < TTS_FETCH_ATTEMPTS - 1) {
-          await new Promise((r) =>
-            setTimeout(r, Math.min(6000, 700 * 2 ** attempt))
-          );
-          continue;
-        }
-        throw new Error(lastMsg);
-      }
-      lastMsg = err.message || "TTS failed";
-      // Only retry flaky Edge/network errors — don't burn attempts on hard failures.
-      if (
-        attempt < TTS_FETCH_ATTEMPTS - 1 &&
-        (isTransientTtsError(0, lastMsg) ||
-          /timed out|cut out|TTS failed \(\d/i.test(lastMsg))
-      ) {
-        await new Promise((r) =>
-          setTimeout(r, Math.min(6000, 700 * 2 ** attempt))
-        );
-        continue;
-      }
-      throw new Error(lastMsg);
+      const data = await res.json();
+      if (data?.error) msg = data.error;
+    } catch {
+      /* ignore */
     }
-  }
-  throw new Error(lastMsg);
-}
-
-function clipCacheKey(parts, rate) {
-  return (
-    "clip\0" +
-    parts
-      .map((p) =>
-        cacheKey(sanitizeSpeakText(p.text), normalizeVoiceId(p.voice), rate)
-      )
-      .join("\n")
-  );
-}
-
-/**
- * One serverless invoke for a whole Q&A (all Mix lines). Avoids N cold starts.
- */
-async function fetchAudioBatch(parts, rate, { priority = false } = {}) {
-  const cleaned = parts
-    .map((p) => ({
-      text: sanitizeSpeakText(p.text),
-      voice: normalizeVoiceId(p.voice),
-    }))
-    .filter((p) => p.text);
-  if (!cleaned.length) throw new Error("Nothing to speak");
-
-  const keys = cleaned.map((p) => cacheKey(p.text, p.voice, rate));
-  const fromParts = [];
-  let allHit = true;
-  for (let i = 0; i < cleaned.length; i++) {
-    let hit = audioCache.get(keys[i]);
-    if (!hit) {
-      hit = await idbGetClip(keys[i]);
-      if (hit) audioCache.set(keys[i], hit);
+    const transient =
+      res.status === 502 ||
+      res.status === 504 ||
+      isTransientTtsError(res.status, msg);
+    if (res.status === 502 || res.status === 504) {
+      msg = "Practice voice isn’t ready yet. Give it a moment and try again.";
+    } else if (transient) {
+      msg =
+        attempt < 3
+          ? "Voice cut out mid-line. Trying again…"
+          : "Voice cut out mid-line. Tap play once more.";
     }
-    if (hit) fromParts.push(hit);
-    else {
-      allHit = false;
-      break;
+    lastMsg = msg;
+    if (attempt < 3 && transient) {
+      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+      continue;
     }
-  }
-  if (allHit) return new Blob(fromParts, { type: "audio/mpeg" });
-
-  const clipKey = "clip\0" + keys.join("\n");
-  let clipHit = audioCache.get(clipKey);
-  if (!clipHit) {
-    clipHit = await idbGetClip(clipKey);
-    if (clipHit) audioCache.set(clipKey, clipHit);
-  }
-  if (clipHit) return clipHit;
-
-  const payload = {
-    parts: cleaned.map((p) => ({ text: p.text, voice: p.voice })),
-    rate: rateForRequest(rate),
-  };
-  // Batch does more Edge work per request — give it room before aborting.
-  const timeoutMs = Math.min(
-    120000,
-    TTS_FETCH_TIMEOUT_MS + cleaned.length * 12000
-  );
-
-  const startToken = playToken;
-  let lastMsg = "TTS failed";
-  for (let attempt = 0; attempt < TTS_FETCH_ATTEMPTS; attempt++) {
-    try {
-      const result = await withTtsSlot(async () => {
-        if (playToken !== startToken) {
-          const err = new Error("Playback cancelled");
-          err.name = "AbortError";
-          throw err;
-        }
-        const controller = new AbortController();
-        activeFetchControllers.add(controller);
-        const timeoutId = setTimeout(() => {
-          try {
-            controller.abort();
-          } catch {
-            /* ignore */
-          }
-        }, timeoutMs);
-        try {
-          const res = await fetch("/api/tts", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-            signal: controller.signal,
-          });
-          if (res.ok) {
-            return { ok: true, blob: await res.blob() };
-          }
-          let msg = `TTS failed (${res.status})`;
-          try {
-            const data = await res.json();
-            if (data?.error) msg = data.error;
-          } catch {
-            /* ignore */
-          }
-          return { ok: false, status: res.status, msg };
-        } finally {
-          clearTimeout(timeoutId);
-          activeFetchControllers.delete(controller);
-        }
-      }, { priority });
-
-      if (result.ok) {
-        rememberBlob(clipKey, result.blob);
-        return result.blob;
-      }
-
-      let msg = result.msg;
-      const transient =
-        result.status === 502 ||
-        result.status === 504 ||
-        isTransientTtsError(result.status, msg);
-      if (result.status === 502 || result.status === 504) {
-        msg = "Practice voice isn’t ready yet. Give it a moment and try again.";
-      } else if (transient) {
-        msg = "Voice cut out mid-line. Tap play once more.";
-      }
-      lastMsg = msg;
-      if (attempt < TTS_FETCH_ATTEMPTS - 1 && transient) {
-        await new Promise((r) =>
-          setTimeout(r, Math.min(6000, 700 * 2 ** attempt))
-        );
-        continue;
-      }
-      throw new Error(lastMsg);
-    } catch (err) {
-      if (err.name === "AbortError" || err.message === "Playback cancelled") {
-        if (playToken !== startToken || err.message === "Playback cancelled") {
-          throw new Error("Playback cancelled");
-        }
-        lastMsg = "Voice request timed out. Please try again.";
-        if (attempt < TTS_FETCH_ATTEMPTS - 1) {
-          await new Promise((r) =>
-            setTimeout(r, Math.min(6000, 700 * 2 ** attempt))
-          );
-          continue;
-        }
-        throw new Error(lastMsg);
-      }
-      lastMsg = err.message || "TTS failed";
-      if (
-        attempt < TTS_FETCH_ATTEMPTS - 1 &&
-        (isTransientTtsError(0, lastMsg) ||
-          /timed out|cut out|TTS failed \(\d/i.test(lastMsg))
-      ) {
-        await new Promise((r) =>
-          setTimeout(r, Math.min(6000, 700 * 2 ** attempt))
-        );
-        continue;
-      }
-      throw new Error(lastMsg);
-    }
+    throw new Error(lastMsg);
   }
   throw new Error(lastMsg);
 }
@@ -871,8 +397,6 @@ export async function synthesizeQaAudio(
     voiceA = DEFAULT_VOICE_A,
     preface = "",
     lang = "en",
-    onPartComplete,
-    priority = false,
   } = {}
 ) {
   const parts = buildSpeakParts(question, answer, {
@@ -883,33 +407,10 @@ export async function synthesizeQaAudio(
   });
   if (!parts.length) throw new Error("Nothing to export");
 
-  // Prefer one /api/tts call for the whole Q&A (batch). Fall back to per-line
-  // if the batch endpoint fails (older deploys / transient Edge errors).
-  try {
-    const blob = await fetchAudioBatch(parts, rate, { priority });
-    for (let i = 0; i < parts.length; i++) onPartComplete?.();
-    return blob;
-  } catch (err) {
-    if (String(err?.message || err) === "Playback cancelled") throw err;
-  }
-
-  const results = await Promise.all(
-    parts.map(async (part) => {
-      try {
-        const blob = await fetchAudio(part.text, part.voice, rate, {
-          priority,
-        });
-        onPartComplete?.();
-        return blob;
-      } catch (err) {
-        onPartComplete?.();
-        if (String(err?.message || err) === "Playback cancelled") throw err;
-        return null;
-      }
-    })
+  // Parallel segment fetches — Mix mode has 4–6 parts; sequential felt like “compile time”.
+  const blobs = await Promise.all(
+    parts.map((part) => fetchAudio(part.text, part.voice, rate))
   );
-  const blobs = results.filter(Boolean);
-  if (!blobs.length) throw new Error("Nothing to speak");
   return new Blob(blobs, { type: "audio/mpeg" });
 }
 
@@ -936,44 +437,6 @@ function titleCase(text) {
 }
 
 /**
- * Merge all Q&A into one continuous MP3 blob (same pipeline as export / play-all).
- * Every clip is started in parallel; TTS_INFLIGHT_LIMIT throttles Edge.
- */
-export async function synthesizeMergedQaAudio(items, options = {}) {
-  const list = (items || []).filter(
-    (it) => it?.a?.trim() || it?.q?.trim() || it?.preface?.trim()
-  );
-  if (!list.length) throw new Error("Nothing to export");
-
-  const lang = options.lang || "en";
-  const blobs = await Promise.all(
-    list.map(async (item, i) => {
-      const preface =
-        item.preface ||
-        (lang === "zh" || lang === "both"
-          ? `第${i + 1}题。`
-          : `Question ${i + 1}.`);
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          return await synthesizeQaAudio(item.q, item.a, {
-            ...options,
-            preface,
-            lang,
-          });
-        } catch (err) {
-          if (String(err?.message || err) === "Playback cancelled") throw err;
-          await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
-        }
-      }
-      return null;
-    })
-  );
-  const ready = blobs.filter(Boolean);
-  if (!ready.length) throw new Error("Nothing to export");
-  return new Blob(ready, { type: "audio/mpeg" });
-}
-
-/**
  * Merge all Q&A into one continuous MP3 and save to Downloads.
  * Returns number of Q&A pairs included.
  */
@@ -981,7 +444,19 @@ export async function exportMergedQaAudio(items, options = {}) {
   const list = (items || []).filter((it) => it?.a?.trim() || it?.q?.trim());
   if (!list.length) throw new Error("Nothing to export");
 
-  const merged = await synthesizeMergedQaAudio(list, options);
+  const lang = options.lang || "en";
+  const blobs = await mapPool(list, FETCH_CONCURRENCY, async (item, i) => {
+    const preface =
+      lang === "zh" || lang === "both"
+        ? `第${i + 1}题。`
+        : `Question ${i + 1}.`;
+    return synthesizeQaAudio(item.q, item.a, {
+      ...options,
+      preface,
+    });
+  });
+
+  const merged = new Blob(blobs, { type: "audio/mpeg" });
   const stamp = new Date().toISOString().slice(0, 10);
   const parts = ["Line Check"];
   if (options.jobTitle) parts.push(titleCase(options.jobTitle));
@@ -1007,35 +482,30 @@ function getAudioContainer() {
   return audioContainer;
 }
 
-/** Minimal WAV of true silence (~50ms). Unsigned 8-bit PCM must use 0x80, not 0
- *  — zeros are full-scale negative and sound like a mic pop / static click. */
+/** Minimal WAV header for ~50ms of silence (8-bit PCM, 8 kHz). */
 let silentBlobUrl = null;
 function getSilentUrl() {
   if (silentBlobUrl) return silentBlobUrl;
-  const sampleCount = 400; // 50ms at 8 kHz
-  const len = 44 + sampleCount;
+  // WAV: 44-byte header + 400 samples of silence (50ms at 8 kHz)
+  const len = 44 + 400;
   const buf = new ArrayBuffer(len);
   const v = new DataView(buf);
-  const w = (p, s) => {
-    v.setUint32(p, s, true);
-  };
-  const s16 = (p, val) => {
-    v.setUint16(p, val, true);
-  };
+  const w = (p, s) => { v.setUint32(p, s, true); };
+  const s = (p, val) => { v.setUint16(p, val, true); };
   v.setUint32(0, 0x52494646, false); // "RIFF"
   w(4, len - 8);
   v.setUint32(8, 0x57415645, false); // "WAVE"
   v.setUint32(12, 0x666D7420, false); // "fmt "
-  w(16, 16); // chunk size
-  s16(20, 1); // PCM
-  s16(22, 1); // mono
-  w(24, 8000); // sample rate
-  w(28, 8000); // byte rate
-  s16(32, 1); // block align
-  s16(34, 8); // bits per sample
+  w(16, 16);          // chunk size
+  s(20, 1);           // PCM
+  s(22, 1);           // mono
+  w(24, 8000);        // sample rate
+  w(28, 8000);        // byte rate
+  s(32, 1);           // block align
+  s(34, 8);           // bits per sample
   v.setUint32(36, 0x64617461, false); // "data"
-  w(40, sampleCount);
-  new Uint8Array(buf, 44, sampleCount).fill(0x80); // unsigned 8-bit midpoint
+  w(40, 400);         // data size
+  // samples already zeroed (silence)
   silentBlobUrl = URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
   return silentBlobUrl;
 }
@@ -1055,7 +525,6 @@ function warmupAudio(token) {
   el.setAttribute("playsinline", "");
   el.setAttribute("webkit-playsinline", "");
   el.crossOrigin = "anonymous";
-  el.volume = 0;
   el.style.cssText = "display:none;width:0;height:0";
   el.src = getSilentUrl();
   currentAudio = el;
@@ -1066,12 +535,13 @@ function warmupAudio(token) {
   el.play().catch(() => {});
 }
 
-function playBlob(blob, token, { onStart, keepElement = false } = {}) {
+function playBlob(blob, token, { onStart } = {}) {
   return new Promise((resolve, reject) => {
     if (token !== playToken) {
       resolve();
       return;
     }
+    // Swap the real audio into the pre-warmed element
     const url = URL.createObjectURL(blob);
     const el = currentAudio;
     if (!el || token !== playToken) {
@@ -1079,71 +549,48 @@ function playBlob(blob, token, { onStart, keepElement = false } = {}) {
       resolve();
       return;
     }
+    // Revoke old URL
     if (currentUrl && currentUrl !== url) {
       URL.revokeObjectURL(currentUrl);
     }
     currentUrl = url;
-
-    // Clear prior handlers before swapping src — otherwise a stale onended
-    // from the previous clip can resolve this play immediately (playlist died
-    // after ~2 items).
-    el.onended = null;
-    el.onerror = null;
-    try {
-      el.pause();
-    } catch {
-      /* ignore */
-    }
-
-    let settled = false;
-    const finish = (fn, value) => {
-      if (settled) return;
-      settled = true;
-      fn(value);
-    };
-
-    el.volume = 1;
     el.src = url;
-    el.onended = () => {
-      if (token === playToken && !keepElement) cleanup();
-      finish(resolve);
-    };
-    el.onerror = () => {
-      if (token !== playToken) {
-        finish(resolve);
-        return;
-      }
-      cleanup();
-      finish(reject, new Error("Audio playback failed"));
-    };
     el.play()
       .then(() => {
         if (token === playToken) onStart?.();
       })
       .catch((e) => {
         if (token !== playToken) {
-          finish(resolve);
+          resolve();
           return;
         }
         cleanup();
-        finish(reject, e);
+        reject(e);
       });
+    el.onended = () => {
+      if (token === playToken) cleanup();
+      resolve();
+    };
+    el.onerror = () => {
+      if (token !== playToken) {
+        resolve();
+        return;
+      }
+      cleanup();
+      reject(new Error("Audio playback failed"));
+    };
   });
 }
 
 export async function speakText(
   text,
-  { rate = 1, voice = DEFAULT_VOICE_A, ttsEngine = "edge" } = {}
+  { rate = 1, voice = DEFAULT_VOICE_A } = {}
 ) {
   const trimmed = sanitizeSpeakText(text);
   if (!trimmed) return;
 
   stopSpeech();
   const token = playToken;
-  if (ttsEngine === "browser") {
-    await speakBrowserPart(trimmed, voice, rate, token);
-    return;
-  }
   warmupAudio(token);
   const blob = await fetchAudio(trimmed, voice, rate);
   if (token !== playToken) return;
@@ -1166,7 +613,6 @@ export async function speakQa(
     preface = "",
     lang = "en",
     onStart,
-    ttsEngine = "edge",
   } = {}
 ) {
   return speakQaSequence([{ q: question, a: answer, preface }], {
@@ -1175,23 +621,20 @@ export async function speakQa(
     voiceA,
     lang,
     onStart,
-    ttsEngine,
   });
 }
 
 /**
- * Progressive play-all:
- * 1) Clip #1 plays its first Mix segment ASAP (rest of the clip continues in parallel)
- * 2) Remaining clips generate in parallel (lower priority), chained after #1
- * 3) Merge-fallback if a later play() is blocked
+ * Prefetch every Q&A into one MP3, then play once.
+ * Needed for multi-item runs — a second audio.play() after the first ends
+ * often fails (Safari gesture), and one TTS error used to abort the rest.
  */
 export async function speakQaSequence(entries, options = {}) {
   const list = (entries || []).filter(
     (e) => e?.q?.trim() || e?.a?.trim() || e?.preface?.trim()
   );
-  if (!list.length) return { played: 0, skipped: 0 };
+  if (!list.length) return;
 
-  cancelPrefetch();
   stopSpeech();
   const token = playToken;
   const {
@@ -1201,386 +644,27 @@ export async function speakQaSequence(entries, options = {}) {
     lang = "en",
     onProgress,
     onStart,
-    onPrepareProgress,
-    ttsEngine = "edge",
   } = options;
 
-  if (ttsEngine === "browser") {
-    return speakQaSequenceBrowser(list, {
+  // Warm up audio context synchronously (in the user gesture) so mobile
+  // Safari / WeChat doesn't show its own media player overlay.
+  warmupAudio(token);
+
+  const blobs = await mapPool(list, FETCH_CONCURRENCY, async (e, i) => {
+    if (token !== playToken) return null;
+    onProgress?.(i);
+    return synthesizeQaAudio(e.q, e.a, {
       rate,
       voiceQ,
       voiceA,
-      lang,
-      onProgress,
-      onStart,
-      onPrepareProgress,
-    });
-  }
-
-  warmupAudio(token);
-
-  const entryParts = (entry) =>
-    buildSpeakParts(entry.q, entry.a, {
-      voiceQ,
-      voiceA,
-      preface: entry.preface || "",
+      preface: e.preface || "",
       lang,
     });
-
-  // Hydrate memory from IndexedDB so refresh replay skips Vercel TTS.
-  const diskKeys = [];
-  for (const entry of list) {
-    const parts = entryParts(entry);
-    const clipKey = clipCacheKey(parts, rate);
-    if (!audioCache.has(clipKey)) diskKeys.push(clipKey);
-    for (const part of parts) {
-      const clean = sanitizeSpeakText(part.text);
-      if (!clean) continue;
-      const key = cacheKey(clean, part.voice, rate);
-      if (!audioCache.has(key)) diskKeys.push(key);
-    }
-  }
-  if (diskKeys.length) {
-    await Promise.all(
-      diskKeys.map(async (key) => {
-        const blob = await idbGetClip(key);
-        if (blob) audioCache.set(key, blob);
-      })
-    );
-  }
-
-  const partCached = (entry) => {
-    const parts = entryParts(entry);
-    if (audioCache.has(clipCacheKey(parts, rate))) return true;
-    return parts.every((part) => {
-      const clean = sanitizeSpeakText(part.text);
-      if (!clean) return true;
-      return audioCache.has(cacheKey(clean, part.voice, rate));
-    });
-  };
-  const allWarm = list.every(partCached);
-  if (allWarm) {
-    onPrepareProgress?.({
-      done: 1,
-      total: 1,
-      percent: 100,
-      clip: list.length,
-      clips: list.length,
-      cached: true,
-    });
-  }
-
-  // Progress is per Q&A clip (one batch request each), not per Mix line.
-  const totalClips = list.length;
-  let doneClips = 0;
-  const bumpClip = (clipIndex) => {
-    doneClips += 1;
-    onPrepareProgress?.({
-      done: doneClips,
-      total: totalClips,
-      percent: Math.min(100, Math.round((doneClips / totalClips) * 100)),
-      clip: clipIndex + 1,
-      clips: list.length,
-    });
-  };
-
-  const synthesizeOne = async (entry, clipIndex, priority) => {
-    if (token !== playToken) return null;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        const blob = await synthesizeQaAudio(entry.q, entry.a, {
-          rate,
-          voiceQ,
-          voiceA,
-          preface: entry.preface || "",
-          lang,
-          priority,
-        });
-        bumpClip(clipIndex);
-        return blob;
-      } catch (err) {
-        if (token !== playToken) return null;
-        if (String(err?.message || err) === "Playback cancelled") throw err;
-        await new Promise((r) =>
-          setTimeout(r, Math.min(4000, 800 * 2 ** attempt))
-        );
-      }
-    }
-    bumpClip(clipIndex);
-    return null;
-  };
-
-  /**
-   * Clip #1: fetch parts in parallel, play the first part as soon as it lands
-   * while the rest of the clip (and later clips) still synthesize.
-   */
-  const playFirstClipProgressive = async () => {
-    const entry = list[0];
-    const parts = entryParts(entry);
-    if (!parts.length) {
-      bumpClip(0);
-      return false;
-    }
-
-    const clipKey = clipCacheKey(parts, rate);
-    let cached = audioCache.get(clipKey);
-    if (!cached) {
-      cached = await idbGetClip(clipKey);
-      if (cached) audioCache.set(clipKey, cached);
-    }
-    if (cached) {
-      bumpClip(0);
-      await playBlob(cached, token, {
-        keepElement: list.length > 1,
-        onStart: () => markStart(0),
-      });
-      return true;
-    }
-
-    const partTasks = parts.map((part) =>
-      fetchAudio(part.text, part.voice, rate, { priority: true }).catch(
-        (err) => {
-          if (String(err?.message || err) === "Playback cancelled") throw err;
-          return null;
-        }
-      )
-    );
-
-    // Wait for preface + question (not just "Question 1.") before starting.
-    const groupN = firstPlayGroupSize(parts, entry, {
-      voiceQ,
-      voiceA,
-      lang,
-    });
-    const headBlobs = [];
-    for (let i = 0; i < groupN; i++) {
-      if (token !== playToken) return false;
-      onPrepareProgress?.({
-        done: i,
-        total: Math.max(groupN, 1),
-        percent: Math.min(
-          99,
-          Math.round(((i + 0.5) / Math.max(groupN, 1)) * 100)
-        ),
-        clip: 1,
-        clips: list.length,
-      });
-      const b = await partTasks[i];
-      if (b) headBlobs.push(b);
-    }
-    if (token !== playToken) return false;
-    if (!headBlobs.length) {
-      bumpClip(0);
-      return false;
-    }
-
-    const firstBlob = new Blob(headBlobs, { type: "audio/mpeg" });
-    const restPromise = Promise.all(partTasks.slice(groupN));
-    try {
-      await playBlob(firstBlob, token, {
-        keepElement: true,
-        onStart: () => markStart(0),
-      });
-    } catch {
-      if (token !== playToken) return false;
-      warmupAudio(token);
-      const rest = (await restPromise).filter(Boolean);
-      const all = [...headBlobs, ...rest];
-      rememberBlob(clipKey, new Blob(all, { type: "audio/mpeg" }));
-      bumpClip(0);
-      await playBlob(new Blob(all, { type: "audio/mpeg" }), token, {
-        keepElement: list.length > 1,
-        onStart: () => markStart(0),
-      });
-      return true;
-    }
-
-    if (token !== playToken) return false;
-    const rest = (await restPromise).filter(Boolean);
-    const full = new Blob([...headBlobs, ...rest], { type: "audio/mpeg" });
-    rememberBlob(clipKey, full);
-    bumpClip(0);
-
-    if (rest.length) {
-      await playBlob(new Blob(rest, { type: "audio/mpeg" }), token, {
-        keepElement: list.length > 1,
-      });
-    }
-    return true;
-  };
-
-  let started = false;
-  let played = 0;
-  let skipped = 0;
-
-  const markStart = (i) => {
-    if (!started) {
-      started = true;
-      onStart?.();
-    }
-    onProgress?.(i);
-  };
-
-  try {
-    onPrepareProgress?.({
-      done: 0,
-      total: totalClips,
-      percent: 0,
-      clip: 1,
-      clips: list.length,
-    });
-
-    // Start later clips after clip-1 part fetches are queued (priority slots).
-    const firstPlay = playFirstClipProgressive();
-    await Promise.resolve();
-    const restTasks = list
-      .slice(1)
-      .map((entry, j) => synthesizeOne(entry, j + 1, false));
-
-    let firstOk = false;
-    try {
-      firstOk = await firstPlay;
-    } catch (err) {
-      if (String(err?.message || err) === "Playback cancelled") {
-        return { played, skipped };
-      }
-      firstOk = false;
-    }
-    if (token !== playToken) return { played, skipped };
-    if (firstOk) played += 1;
-    else skipped += 1;
-
-    for (let i = 1; i < list.length; i++) {
-      if (token !== playToken) return { played, skipped };
-      const blob = await restTasks[i - 1];
-      if (token !== playToken) return { played, skipped };
-      if (!blob) {
-        skipped += 1;
-        continue;
-      }
-      try {
-        await playBlob(blob, token, {
-          keepElement: true,
-          onStart: () => markStart(i),
-        });
-        played += 1;
-      } catch {
-        if (token !== playToken) return { played, skipped };
-        warmupAudio(token);
-        const rest = [];
-        for (let j = i; j < list.length; j++) {
-          const b = await restTasks[j - 1];
-          if (b) rest.push(b);
-          else skipped += 1;
-        }
-        if (!rest.length) break;
-        await playBlob(new Blob(rest, { type: "audio/mpeg" }), token, {
-          onStart: () => markStart(i),
-        });
-        played += rest.length;
-        break;
-      }
-    }
-  } finally {
-    if (token === playToken && currentAudio) cleanup();
-  }
-
-  if (!played) {
-    throw new Error("Couldn't prepare practice audio. Tap play once more.");
-  }
-  return { played, skipped };
-}
-
-/** Cancel idle prefetch without stopping playback. */
-export function cancelPrefetch() {
-  prefetchGen += 1;
-}
-
-/**
- * Warm the TTS lambda / Edge path in the background (no audio playback).
- */
-export async function warmupTts() {
-  try {
-    await fetch("/api/tts-warm", { method: "GET", cache: "no-store" });
-  } catch {
-    /* ignore — best-effort keep-warm */
-  }
-}
-
-/**
- * Synthesize selected Q&A into cache while the user is idle (no playback).
- * Play then hits memory/IDB instead of waiting on Edge.
- */
-export async function prefetchQaSequence(entries, options = {}) {
-  const list = (entries || []).filter(
-    (e) => e?.q?.trim() || e?.a?.trim() || e?.preface?.trim()
-  );
-  if (!list.length) return;
-
-  const gen = ++prefetchGen;
-  const {
-    rate = 1,
-    voiceQ = DEFAULT_VOICE_Q,
-    voiceA = DEFAULT_VOICE_A,
-    lang = "en",
-  } = options;
-
-  const entryParts = (entry) =>
-    buildSpeakParts(entry.q, entry.a, {
-      voiceQ,
-      voiceA,
-      preface: entry.preface || "",
-      lang,
-    });
-
-  const diskKeys = [];
-  for (const entry of list) {
-    const parts = entryParts(entry);
-    const clipKey = clipCacheKey(parts, rate);
-    if (!audioCache.has(clipKey)) diskKeys.push(clipKey);
-    for (const part of parts) {
-      const clean = sanitizeSpeakText(part.text);
-      if (!clean) continue;
-      const key = cacheKey(clean, part.voice, rate);
-      if (!audioCache.has(key)) diskKeys.push(key);
-    }
-  }
-  if (diskKeys.length) {
-    await Promise.all(
-      diskKeys.map(async (key) => {
-        const blob = await idbGetClip(key);
-        if (blob) audioCache.set(key, blob);
-      })
-    );
-  }
-  if (gen !== prefetchGen) return;
-
-  // Only warm the first few clips — prefetching a full Mix playlist saturates
-  // Edge and often gets cancelled when the user hits Play.
-  const warm = list.slice(0, PREFETCH_CLIP_LIMIT);
-
-  await synthesizeQaAudio(warm[0].q, warm[0].a, {
-    rate,
-    voiceQ,
-    voiceA,
-    preface: warm[0].preface || "",
-    lang,
-    priority: true,
-  }).catch(() => {});
-  if (gen !== prefetchGen) return;
-
-  await Promise.all(
-    warm.slice(1).map((entry) =>
-      synthesizeQaAudio(entry.q, entry.a, {
-        rate,
-        voiceQ,
-        voiceA,
-        preface: entry.preface || "",
-        lang,
-        priority: false,
-      }).catch(() => {})
-    )
-  );
+  });
+  if (token !== playToken) return;
+  if (blobs.some((b) => !b)) return;
+  onProgress?.(-1);
+  await playBlob(new Blob(blobs, { type: "audio/mpeg" }), token, { onStart });
 }
 
 /** Pause current practice audio without cancelling the session. */
@@ -1605,30 +689,6 @@ export function isSpeechPaused() {
 
 export function stopSpeech() {
   playToken += 1;
-
-  // Abort any active fetches
-  try {
-    for (const controller of activeFetchControllers) {
-      controller.abort();
-    }
-  } catch {
-    /* ignore */
-  }
-  activeFetchControllers.clear();
-
-  // Reject queued slot waiters so play-all doesn't hang after Stop/re-play.
-  const pending = [...ttsPriorityWaiters.splice(0), ...ttsWaiters.splice(0)];
-  ttsInflight = 0;
-  for (const w of pending) {
-    try {
-      const err = new Error("Playback cancelled");
-      err.name = "AbortError";
-      w.reject(err);
-    } catch {
-      /* ignore */
-    }
-  }
-
   cleanup();
   try {
     speechSynthesis.cancel();
