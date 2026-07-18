@@ -3,14 +3,15 @@ schema_version: 1
 locale: en-US
 branch: main
 nodes_managed: true
-exported_at: "2026-07-18T12:51:33Z"
+exported_at: "2026-07-18T13:53:58Z"
 modules:
     "":
-        dir_name: LineCheck — React PWA + Dual-Provider Chat_TTS App
-        title: LineCheck — React PWA + Dual-Provider Chat/TTS App
+        dir_name: LineCheck — Vite + React SPA with Serverless API Edge Functions
+        title: LineCheck — Vite + React SPA with Serverless API Edge Functions
         scope: []
         source_files: []
-        children: []
+        children:
+            - prompts
         depends_on: []
         related_to: []
     prompts:

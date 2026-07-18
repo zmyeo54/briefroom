@@ -1,2 +1,0 @@
-- API route handlers live under `api/*.js` and are declared as Vercel serverless functions in `vercel.json` with explicit `maxDuration` limits.
-- LLM-assisted code generation follows the prompt templates in `.prompts/` and Claude skills in `.claude/skills/` rather than ad-hoc instructions.

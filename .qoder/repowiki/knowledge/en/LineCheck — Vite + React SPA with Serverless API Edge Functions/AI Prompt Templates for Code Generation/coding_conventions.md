@@ -1,2 +1,0 @@
-- Each template starts with a YAML frontmatter block containing at least `name` and `description` keys before any prose content.
-- Guidelines are written as imperative bullet points prefixed with `-`, describing concrete patterns rather than abstract principles.

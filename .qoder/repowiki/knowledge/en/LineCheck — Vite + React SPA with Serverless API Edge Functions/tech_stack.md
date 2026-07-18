@@ -1,1 +1,0 @@
-Vite 8 + React 19 + Tailwind CSS v4 for the SPA; Node.js dev proxy + Python TTS microservice during development; Vercel serverless functions for production API routes; Playwright/Puppeteer used by scripts for regression testing.

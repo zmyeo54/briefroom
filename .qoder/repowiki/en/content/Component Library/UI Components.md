@@ -15,11 +15,10 @@
 
 ## Update Summary
 **Changes Made**
-- Updated CSS layout improvements documentation to reflect enhanced .doc-card and .doc-card-body selectors for better responsiveness and alignment across screen sizes
-- Enhanced DocumentField component documentation with improved form input handling and responsive design patterns
-- Updated styling customization sections to reflect new CSS custom properties and design token integration
-- Expanded responsive design patterns documentation to cover improved mobile-first approach and cross-device compatibility
-- Enhanced troubleshooting guide with new layout-related issues and performance optimization tips
+- Updated HomePage component documentation to reflect enhanced error message display and refresh button functionality for improved user recovery from errors
+- Enhanced error handling patterns documentation with new refresh capabilities and better user experience flows
+- Updated usage examples to demonstrate proper error state management and recovery mechanisms
+- Expanded troubleshooting guide with new error-related issues and resolution strategies
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -33,16 +32,16 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document provides comprehensive documentation for LineCheck's core UI components: BrandLogo, DocumentField, FocusBubbles, GenerateLoading, and InstallPrompt. Following recent significant CSS layout improvements and DocumentField component updates, these components now feature enhanced visual design, sophisticated animations, improved responsive behavior, and better theme support. The documentation covers prop specifications, event handling, advanced styling customization, accessibility features, responsive design patterns, and practical usage examples with code snippet paths to guide proper implementation and integration.
+This document provides comprehensive documentation for LineCheck's core UI components: BrandLogo, DocumentField, FocusBubbles, GenerateLoading, and InstallPrompt. Following recent significant CSS layout improvements and DocumentField component updates, these components now feature enhanced visual design, sophisticated animations, improved responsive behavior, and better theme support. The documentation covers prop specifications, event handling, advanced styling customization, accessibility features, responsive design patterns, and practical usage examples with code snippet paths to guide proper implementation and integration. Recent enhancements include improved error handling patterns in the HomePage component with better user recovery mechanisms through enhanced error message display and refresh button functionality.
 
 ## Project Structure
-The UI components are implemented as React functional components under src/components. They are consumed by pages and the application shell. Global styles are defined in src/index.css with extensive CSS custom properties, keyframe animations, and responsive breakpoints supporting modern design patterns. Recent updates have significantly improved CSS layout systems with enhanced .doc-card and .doc-card-body selectors for better responsiveness and alignment across screen sizes.
+The UI components are implemented as React functional components under src/components. They are consumed by pages and the application shell. Global styles are defined in src/index.css with extensive CSS custom properties, keyframe animations, and responsive breakpoints supporting modern design patterns. Recent updates have significantly improved CSS layout systems with enhanced .doc-card and .doc-card-body selectors for better responsiveness and alignment across screen sizes. The HomePage component has been enhanced with improved error handling capabilities including better error message display and refresh button functionality for enhanced user recovery from errors.
 
 ```mermaid
 graph TB
 subgraph "Application"
 App["App.jsx"]
-HomePage["HomePage.jsx"]
+HomePage["HomePage.jsx (Enhanced Error Handling)"]
 SettingsPage["SettingsPage.jsx"]
 end
 subgraph "UI Components"
@@ -58,6 +57,7 @@ Animations["CSS Keyframes"]
 Themes["Design Tokens"]
 Responsive["Media Queries"]
 DocCards[".doc-card System"]
+ErrorHandling["Error Display System"]
 end
 App --> HomePage
 App --> SettingsPage
@@ -79,6 +79,7 @@ CSS -.-> Animations
 CSS -.-> Themes
 CSS -.-> Responsive
 CSS -.-> DocCards
+CSS -.-> ErrorHandling
 ```
 
 **Diagram sources**
@@ -115,12 +116,12 @@ This section summarizes each component's purpose and typical responsibilities wi
 [No sources needed since this section provides a high-level overview]
 
 ## Architecture Overview
-The components are presented by page-level views and styled via global CSS with enhanced design tokens, keyframe animations, and responsive breakpoints. The following diagram shows how pages compose these components and where the enhanced global styles apply, including the new .doc-card system for improved layout management.
+The components are presented by page-level views and styled via global CSS with enhanced design tokens, keyframe animations, and responsive breakpoints. The following diagram shows how pages compose these components and where the enhanced global styles apply, including the new .doc-card system for improved layout management and enhanced error handling patterns in the HomePage component.
 
 ```mermaid
 graph TB
 subgraph "Pages"
-HP["HomePage.jsx"]
+HP["HomePage.jsx (Enhanced Error Handling)"]
 SP["SettingsPage.jsx"]
 end
 subgraph "Components"
@@ -137,6 +138,8 @@ Animations["Keyframe Animations"]
 Responsive["Media Queries"]
 Accessibility["A11y Support"]
 DocCards[".doc-card System"]
+ErrorDisplay["Error Display System"]
+RefreshMechanism["Refresh Button Functionality"]
 end
 HP --> BL
 HP --> DF
@@ -157,6 +160,8 @@ CSS -.-> Animations
 CSS -.-> Responsive
 CSS -.-> Accessibility
 CSS -.-> DocCards
+CSS -.-> ErrorDisplay
+CSS -.-> RefreshMechanism
 ```
 
 **Diagram sources**
@@ -390,11 +395,11 @@ Usage Examples
 - [index.css](file://src/index.css)
 
 ## Dependency Analysis
-The components rely on React primitives and enhanced global styles with improved design tokens and animation systems. Pages orchestrate their usage and manage state. The new .doc-card system provides improved layout consistency across all components.
+The components rely on React primitives and enhanced global styles with improved design tokens and animation systems. Pages orchestrate their usage and manage state. The new .doc-card system provides improved layout consistency across all components. The HomePage component now includes enhanced error handling patterns with improved user recovery mechanisms through better error message display and refresh button functionality.
 
 ```mermaid
 graph LR
-App["App.jsx"] --> HomePage["HomePage.jsx"]
+App["App.jsx"] --> HomePage["HomePage.jsx (Enhanced Error Handling)"]
 App --> SettingsPage["SettingsPage.jsx"]
 HomePage --> BrandLogo["BrandLogo.jsx"]
 HomePage --> DocumentField["DocumentField.jsx"]
@@ -414,6 +419,7 @@ CSS --- Animations["Enhanced Animations"]
 CSS --- Tokens["Design Tokens"]
 CSS --- Responsive["Responsive System"]
 CSS --- DocCards[".doc-card System"]
+CSS --- ErrorHandling["Error Display System"]
 ```
 
 **Diagram sources**
@@ -448,6 +454,7 @@ CSS --- DocCards[".doc-card System"]
 - **New**: Implement lazy loading for heavy animations and use CSS containment for isolated component rendering.
 - **New**: Utilize CSS Grid and Flexbox for improved layout performance and reduced reflow operations.
 - **New**: Leverage the enhanced .doc-card system for improved layout performance and better responsive behavior across different screen sizes.
+- **New**: Optimize error handling in HomePage component by implementing efficient error state management and minimizing unnecessary re-renders during error recovery flows.
 
 [No sources needed since this section provides general guidance]
 
@@ -463,6 +470,8 @@ CSS --- DocCards[".doc-card System"]
 - **New**: Responsive design conflicts: Verify media query breakpoints don't conflict with component-specific responsive styles.
 - **New**: .doc-card layout issues: Check that .doc-card and .doc-card-body selectors are properly applied and that responsive alignment is working correctly across different screen sizes. Verify CSS custom properties related to card layouts are properly defined.
 - **New**: DocumentField responsive alignment problems: Ensure the component integrates properly with the enhanced .doc-card system and that form fields maintain proper alignment across different viewport sizes.
+- **New**: HomePage error handling issues: Verify that enhanced error message display is properly rendered and refresh button functionality is working correctly. Check that error state management doesn't cause excessive re-renders and that user recovery flows are smooth and intuitive.
+- **New**: Error recovery flow problems: Ensure that refresh button callbacks are properly implemented and that error states are cleared correctly after successful recovery attempts.
 
 **Section sources**
 - [BrandLogo.jsx](file://src/components/BrandLogo.jsx)
@@ -470,8 +479,9 @@ CSS --- DocCards[".doc-card System"]
 - [FocusBubbles.jsx](file://src/components/FocusBubbles.jsx)
 - [GenerateLoading.jsx](file://src/components/GenerateLoading.jsx)
 - [InstallPrompt.jsx](file://src/components/InstallPrompt.jsx)
+- [HomePage.jsx](file://src/pages/HomePage.jsx)
 
 ## Conclusion
-These five components form the backbone of LineCheck's user interface, providing consistent branding, robust form handling, enhanced accessibility, clear loading feedback, and guided PWA installation. Following the recent significant CSS layout improvements and DocumentField component updates, these components now feature sophisticated animations, improved responsive behavior, enhanced theme support, better accessibility compliance, and improved layout consistency through the new .doc-card system. By following the prop specifications, event patterns, advanced styling approaches, and responsive strategies outlined here, developers can integrate and extend these components effectively while maintaining a high-quality user experience.
+These five components form the backbone of LineCheck's user interface, providing consistent branding, robust form handling, enhanced accessibility, clear loading feedback, and guided PWA installation. Following the recent significant CSS layout improvements and DocumentField component updates, these components now feature sophisticated animations, improved responsive behavior, enhanced theme support, better accessibility compliance, and improved layout consistency through the new .doc-card system. The HomePage component has been further enhanced with improved error handling patterns, better error message display, and refresh button functionality for enhanced user recovery from errors. By following the prop specifications, event patterns, advanced styling approaches, and responsive strategies outlined here, developers can integrate and extend these components effectively while maintaining a high-quality user experience.
 
-**Updated**: The recent enhancements demonstrate our commitment to delivering smooth, performant animations while maintaining accessibility standards and cross-browser compatibility. The improved animation system provides better visual feedback, enhanced support for assistive technologies, respects user preferences for reduced motion, and ensures an inclusive experience for all users. The comprehensive CSS layout improvements, particularly the enhanced .doc-card and .doc-card-body selectors, have significantly improved the overall visual design, responsiveness, alignment, and maintainability of the component system across all screen sizes.
+**Updated**: The recent enhancements demonstrate our commitment to delivering smooth, performant animations while maintaining accessibility standards and cross-browser compatibility. The improved animation system provides better visual feedback, enhanced support for assistive technologies, respects user preferences for reduced motion, and ensures an inclusive experience for all users. The comprehensive CSS layout improvements, particularly the enhanced .doc-card and .doc-card-body selectors, have significantly improved the overall visual design, responsiveness, alignment, and maintainability of the component system across all screen sizes. Additionally, the enhanced error handling in the HomePage component provides users with better recovery options and improved overall application resilience.

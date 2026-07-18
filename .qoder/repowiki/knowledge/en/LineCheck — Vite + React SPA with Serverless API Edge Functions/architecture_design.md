@@ -1,5 +1,0 @@
-The workspace is split into three runtime layers orchestrated from `package.json`:
-- Frontend: Vite app under `src/` (React 19 + Tailwind v4) built to `dist/`, served by `vite dev` on port 8787.
-- Backend: Node dev proxy `scripts/dev-api-server.mjs` forwards `/api/*` requests to the Python TTS server (`scripts/tts_server.py`) started via `npm run tts`; in production these routes are replaced by Vercel edge functions declared in `vercel.json` (`api/chat.js`, `api/fetch-url.js`, `api/tts.js`).
-- Shared concern: `api/_ttsShared.js` and `lib/edgeTts.js` provide the common msedge-tts integration consumed by both the dev proxy and the deployed functions.
-`vercel.json` declares the build pipeline (`npm run build` → `dist/`), SPA rewrites for `/settings`, security headers, and per-function `maxDuration` limits. The `.prompts/` and `.claude/skills/` directories supply LLM-assisted generation rules that all child modules follow.
