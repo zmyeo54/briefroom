@@ -3,12 +3,21 @@ schema_version: 1
 locale: en-US
 branch: main
 nodes_managed: true
-exported_at: "2026-07-18T05:46:12Z"
+exported_at: "2026-07-18T12:51:33Z"
 modules:
     "":
         dir_name: LineCheck — React PWA + Dual-Provider Chat_TTS App
         title: LineCheck — React PWA + Dual-Provider Chat/TTS App
         scope: []
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    prompts:
+        dir_name: AI Prompt Templates for Code Generation
+        title: AI Prompt Templates for Code Generation
+        scope:
+            - .prompts/
         source_files: []
         children: []
         depends_on: []

@@ -1416,11 +1416,11 @@ export default function HomePage() {
         </motion.div>
         <AnimatePresence mode="wait" initial={false}>
           {audioNote.text ? (
-            <motion.p
+            <motion.div
               key={audioNote.text}
               className={`action-dock-note ${
                 audioNote.kind === "error"
-                  ? "err"
+                  ? "err flex items-center justify-between pointer-events-auto shadow-sm"
                   : audioNote.kind === "ok"
                     ? "ok"
                     : "mute"
@@ -1434,8 +1434,19 @@ export default function HomePage() {
                 ease: [0.16, 1, 0.3, 1],
               }}
             >
-              {audioNote.text}
-            </motion.p>
+              <span>{audioNote.text}</span>
+              {audioNote.kind === "error" && (
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="ml-3 flex items-center gap-1 rounded bg-black/10 px-2 py-1 text-xs font-semibold uppercase tracking-wider text-inherit hover:bg-black/20 focus-visible:ring active:scale-95 dark:bg-white/10 dark:hover:bg-white/20"
+                  title="Refresh page"
+                >
+                  <ArrowCounterClockwise size={14} weight="bold" />
+                  Refresh
+                </button>
+              )}
+            </motion.div>
           ) : null}
         </AnimatePresence>
       </div>

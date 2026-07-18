@@ -1,0 +1,1 @@
+Curated prompt templates that steer LLM-assisted code generation toward the project's serverless conventions and mobile-first responsive design rules.

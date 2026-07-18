@@ -1,0 +1,1 @@
+Root of the LineCheck project that wires a Vite/React frontend, a Python TTS microservice, and Vercel serverless functions into one deployable product.

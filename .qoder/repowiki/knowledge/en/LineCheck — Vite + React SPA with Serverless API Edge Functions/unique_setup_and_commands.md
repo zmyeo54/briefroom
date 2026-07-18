@@ -1,0 +1,1 @@
+`npm run dev` boots three processes in parallel: the Python TTS server (`scripts/tts_server.py`), the Node API dev proxy (`scripts/dev-api-server.mjs`), and the Vite dev server on port 8787. Production builds go through `vite build` into `dist/` and are deployed to Vercel using the configuration in `vercel.json`.

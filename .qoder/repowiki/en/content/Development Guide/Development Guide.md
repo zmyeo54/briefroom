@@ -14,14 +14,17 @@
 - [scripts/tts_server.py](file://scripts/tts_server.py)
 - [.oxlintrc.json](file://.oxlintrc.json)
 - [vercel.json](file://vercel.json)
+- [.prompts/coding-conventions.prompt](file://.prompts/coding-conventions.prompt)
+- [.prompts/mobile-responsiveness.prompt](file://.prompts/mobile-responsiveness.prompt)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Added documentation for new build batches validation script (build_batches_check.mjs)
-- Enhanced TTS regression testing framework documentation with tts_regression.mjs details
-- Updated development API server section to reflect improved logging capabilities
-- Added comprehensive coverage of new development tools and automation scripts
+- Added comprehensive documentation for structured prompt files including coding conventions and mobile responsiveness guidelines
+- Enhanced code style section with standardized coding practices from .prompts directory
+- Updated contribution guidelines to include mobile-first responsive design patterns
+- Added new section on AI-assisted development workflows using structured prompts
+- Integrated prompt-based development standards into the overall development workflow
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -31,20 +34,23 @@
 5. [Development Server and Hot Reloading](#development-server-and-hot-reloading)
 6. [API Mocking and Backend Services](#api-mocking-and-backend-services)
 7. [Code Style and Linting](#code-style-and-linting)
-8. [Testing Strategies](#testing-strategies)
-9. [Debugging Techniques](#debugging-techniques)
-10. [Performance Optimization](#performance-optimization)
-11. [Bundle Analysis](#bundle-analysis)
-12. [Production Deployment](#production-deployment)
-13. [Contribution Guidelines](#contribution-guidelines)
-14. [Troubleshooting](#troubleshooting)
-15. [Conclusion](#conclusion)
+8. [Structured Development Prompts](#structured-development-prompts)
+9. [Testing Strategies](#testing-strategies)
+10. [Debugging Techniques](#debugging-techniques)
+11. [Performance Optimization](#performance-optimization)
+12. [Bundle Analysis](#bundle-analysis)
+13. [Production Deployment](#production-deployment)
+14. [Contribution Guidelines](#contribution-guidelines)
+15. [Troubleshooting](#troubleshooting)
+16. [Conclusion](#conclusion)
 
 ## Introduction
 
 LineCheck is a modern web application built with React and Vite, designed to provide intelligent document processing and interview preparation capabilities. This development guide serves as a comprehensive resource for contributors and developers working on the LineCheck project, covering everything from local setup to production deployment.
 
 The project follows modern JavaScript development practices with a focus on developer experience, performance optimization, and maintainable code architecture. It utilizes React for the frontend framework, Vite for fast build tooling, and includes comprehensive testing and automation scripts including advanced build validation and TTS regression testing frameworks.
+
+**Updated** The project now includes structured prompt files that establish standardized coding practices and responsive design patterns, enhancing consistency across the development team and improving code quality through AI-assisted development workflows.
 
 ## Project Structure
 
@@ -56,31 +62,37 @@ subgraph "Root Level"
 A[package.json] --> B[vite.config.js]
 A --> C[vercel.json]
 A --> D[.oxlintrc.json]
+A --> E[.prompts/]
 end
 subgraph "Source Code (src/)"
-E[src/main.jsx] --> F[src/App.jsx]
-F --> G[src/components/]
-F --> H[src/pages/]
-F --> I[src/lib/]
-F --> J[src/assets/]
+F[src/main.jsx] --> G[src/App.jsx]
+G --> H[src/components/]
+G --> I[src/pages/]
+G --> J[src/lib/]
+G --> K[src/assets/]
 end
 subgraph "API Layer (api/)"
-K[chat.js] --> L[tts.js]
-M[fetch-url.js] --> N[tts-health.js]
+L[chat.js] --> M[tts.js]
+N[fetch-url.js] --> O[tts-health.js]
 end
 subgraph "Scripts (scripts/)"
-O[dev-api-server.mjs] --> P[tts_regression.mjs]
-Q[build_batches_check.mjs] --> R[job_fetch.py]
-S[tts_server.py] --> O
+P[dev-api-server.mjs] --> Q[tts_regression.mjs]
+R[build_batches_check.mjs] --> S[job_fetch.py]
+T[tts_server.py] --> P
 end
 subgraph "Public Assets (public/)"
-T[manifest.json] --> U[sw.js]
-V[brand/] --> W[sitemap.xml]
+U[manifest.json] --> V[sw.js]
+W[brand/] --> X[sitemap.xml]
 end
-E --> K
-E --> L
-O --> K
-O --> L
+subgraph "Structured Prompts (.prompts/)"
+Y[coding-conventions.prompt] --> Z[mobile-responsiveness.prompt]
+end
+F --> L
+F --> M
+P --> L
+P --> M
+Y --> F
+Z --> F
 ```
 
 **Diagram sources**
@@ -90,6 +102,8 @@ O --> L
 - [scripts/dev-api-server.mjs:1-200](file://scripts/dev-api-server.mjs#L1-L200)
 - [scripts/tts_regression.mjs:1-200](file://scripts/tts_regression.mjs#L1-L200)
 - [scripts/build_batches_check.mjs:1-200](file://scripts/build_batches_check.mjs#L1-L200)
+- [.prompts/coding-conventions.prompt:1-200](file://.prompts/coding-conventions.prompt#L1-L200)
+- [.prompts/mobile-responsiveness.prompt:1-200](file://.prompts/mobile-responsiveness.prompt#L1-L200)
 
 ### Core Directory Organization
 
@@ -98,6 +112,7 @@ O --> L
 - **`scripts/`**: Development utilities, regression testing, build validation, and automation tasks
 - **`public/`**: Static assets including service worker, manifest, and brand materials
 - **`lib/`**: Shared libraries and external integrations
+- **`.prompts/`**: Structured prompt files for standardized coding practices and responsive design guidelines
 
 **Section sources**
 - [src/main.jsx:1-50](file://src/main.jsx#L1-L50)
@@ -114,6 +129,7 @@ Before starting development, ensure you have the following installed:
 - **npm**: Latest stable version
 - **Python 3**: For backend server scripts
 - **Git**: For version control
+- **AI Assistant**: Optional - for leveraging structured prompt files
 
 ### Initial Setup
 
@@ -147,6 +163,7 @@ The project uses modern development tooling including:
 - **ESLint/Oxlint**: Code linting and quality assurance
 - **Playwright**: End-to-end testing framework
 - **Custom Scripts**: Build validation and regression testing utilities
+- **Structured Prompts**: AI-assisted development guidelines
 
 **Section sources**
 - [package.json:1-100](file://package.json#L1-L100)
@@ -342,6 +359,95 @@ Automated code quality checks run before commits to maintain code standards.
 - [.oxlintrc.json:1-100](file://.oxlintrc.json#L1-L100)
 - [package.json:1-100](file://package.json#L1-L100)
 
+## Structured Development Prompts
+
+### Overview of Prompt-Based Development
+
+The LineCheck project now includes structured prompt files in the `.prompts/` directory that establish standardized coding practices and responsive design patterns. These prompt files serve as AI-assisted development guidelines that help maintain consistency across the codebase and improve code quality through automated guidance.
+
+```mermaid
+graph TB
+subgraph "Prompt Files (.prompts/)"
+A[coding-conventions.prompt] --> B[Standardized Coding Practices]
+C[mobile-responsiveness.prompt] --> D[Responsive Design Patterns]
+A --> E[Code Generation Guidelines]
+A --> F[Architecture Standards]
+C --> G[Mobile-First Approach]
+C --> H[Cross-Device Compatibility]
+B --> I[Consistent Code Style]
+D --> J[Adaptive UI Components]
+E --> K[AI-Assisted Development]
+F --> L[Best Practice Enforcement]
+G --> M[Touch-Friendly Interfaces]
+H --> N[Performance Optimization]
+```
+
+**Diagram sources**
+- [.prompts/coding-conventions.prompt:1-200](file://.prompts/coding-conventions.prompt#L1-L200)
+- [.prompts/mobile-responsiveness.prompt:1-200](file://.prompts/mobile-responsiveness.prompt#L1-L200)
+
+### Coding Conventions Framework
+
+The coding conventions prompt file establishes comprehensive standards for:
+
+#### Standardized Code Structure
+- **Component Architecture**: Consistent React component organization and naming
+- **File Organization**: Logical grouping of related functionality
+- **Import Statements**: Ordered and categorized imports following best practices
+- **Export Patterns**: Clear public API definitions and internal module boundaries
+
+#### Code Quality Standards
+- **Error Handling**: Comprehensive error catching and user feedback patterns
+- **Performance Considerations**: Memory management and optimization techniques
+- **Security Practices**: Input validation and secure coding patterns
+- **Documentation Requirements**: Inline comments and API documentation standards
+
+#### Development Workflow Integration
+- **AI-Assisted Development**: Structured prompts for code generation and review
+- **Code Review Guidelines**: Automated suggestions for improvements
+- **Testing Patterns**: Unit test structure and integration test strategies
+- **Debugging Protocols**: Systematic approaches to issue resolution
+
+### Mobile Responsiveness Guidelines
+
+The mobile responsiveness prompt file defines comprehensive patterns for creating adaptive user interfaces:
+
+#### Mobile-First Design Principles
+- **Progressive Enhancement**: Base functionality for mobile devices with enhanced desktop experiences
+- **Touch-Friendly Interfaces**: Optimized touch targets and gesture handling
+- **Performance Optimization**: Reduced bundle sizes and efficient asset loading for mobile networks
+- **Accessibility Standards**: WCAG compliance across all device types
+
+#### Responsive Layout Patterns
+- **Fluid Grid Systems**: Flexible layouts that adapt to various screen sizes
+- **Breakpoint Strategy**: Strategic use of CSS media queries for optimal viewing experiences
+- **Component Adaptation**: Reusable components that adjust behavior based on viewport size
+- **Navigation Patterns**: Mobile-friendly navigation structures and interaction models
+
+#### Cross-Device Compatibility
+- **Browser Support**: Consistent functionality across modern browsers
+- **Device Testing**: Comprehensive testing across different devices and orientations
+- **Performance Monitoring**: Mobile-specific performance metrics and optimization
+- **User Experience**: Seamless transitions between different device contexts
+
+### Implementation Guidelines
+
+#### Using Prompt Files in Development
+1. **Reference Before Coding**: Consult relevant prompt files before implementing new features
+2. **AI-Assisted Development**: Use structured prompts to generate boilerplate code following established patterns
+3. **Code Review Integration**: Leverage prompt-based guidelines for automated code quality checks
+4. **Team Collaboration**: Ensure all team members follow the same standardized patterns
+
+#### Integration with Development Tools
+- **IDE Integration**: Configure editors to reference prompt files for autocomplete and suggestions
+- **CI/CD Pipeline**: Include prompt-based validation in automated testing workflows
+- **Documentation Generation**: Extract guidelines from prompt files for contributor documentation
+- **Training Materials**: Use prompt files as training resources for new team members
+
+**Section sources**
+- [.prompts/coding-conventions.prompt:1-200](file://.prompts/coding-conventions.prompt#L1-L200)
+- [.prompts/mobile-responsiveness.prompt:1-200](file://.prompts/mobile-responsiveness.prompt#L1-L200)
+
 ## Testing Strategies
 
 ### Test Framework Architecture
@@ -368,24 +474,32 @@ M[Build Batches Validation] --> N[Batch Processing Tests]
 M --> O[Build Integrity Checks]
 M --> P[Dependency Validation]
 end
-B --> Q[Test Results]
-C --> Q
-D --> Q
-F --> Q
-G --> Q
-H --> Q
-J --> Q
-K --> Q
-L --> Q
-N --> Q
-O --> Q
-P --> Q
+subgraph "Prompt-Based Testing"
+Q[Coding Convention Tests] --> R[Code Style Validation]
+S[Mobile Responsiveness Tests] --> T[Cross-Device Compatibility]
+end
+B --> U[Test Results]
+C --> U
+D --> U
+F --> U
+G --> U
+H --> U
+J --> U
+K --> U
+L --> U
+N --> U
+O --> U
+P --> U
+R --> U
+T --> U
 ```
 
 **Diagram sources**
 - [scripts/tts_regression.mjs:1-200](file://scripts/tts_regression.mjs#L1-L200)
 - [scripts/build_batches_check.mjs:1-200](file://scripts/build_batches_check.mjs#L1-L200)
 - [package.json:1-150](file://package.json#L1-L150)
+- [.prompts/coding-conventions.prompt:1-200](file://.prompts/coding-conventions.prompt#L1-L200)
+- [.prompts/mobile-responsiveness.prompt:1-200](file://.prompts/mobile-responsiveness.prompt#L1-L200)
 
 ### Unit Testing
 
@@ -417,10 +531,18 @@ The project now includes sophisticated regression testing frameworks for critica
 - **Build Integrity Checks**: Validates build artifacts and output files
 - **Automation Integration**: Seamless integration with CI/CD pipelines
 
+#### Prompt-Based Testing Integration
+- **Coding Convention Validation**: Automated checks for adherence to established coding standards
+- **Mobile Responsiveness Verification**: Cross-device compatibility testing for responsive components
+- **Code Quality Assessment**: AI-assisted code review and improvement suggestions
+- **Pattern Compliance**: Validation that new code follows established architectural patterns
+
 **Section sources**
 - [scripts/tts_regression.mjs:1-200](file://scripts/tts_regression.mjs#L1-L200)
 - [scripts/build_batches_check.mjs:1-200](file://scripts/build_batches_check.mjs#L1-L200)
 - [package.json:1-200](file://package.json#L1-L200)
+- [.prompts/coding-conventions.prompt:1-200](file://.prompts/coding-conventions.prompt#L1-L200)
+- [.prompts/mobile-responsiveness.prompt:1-200](file://.prompts/mobile-responsiveness.prompt#L1-L200)
 
 ## Debugging Techniques
 
@@ -436,11 +558,13 @@ participant React as "React DevTools"
 participant Network as "Network Panel"
 participant Console as "Console"
 participant Logs as "Enhanced API Logs"
+participant Prompts as "Prompt Guidelines"
 Dev->>Browser : Open DevTools
 Dev->>React : Inspect Components
 Dev->>Network : Monitor API Calls
 Dev->>Console : View Logs & Errors
 Dev->>Logs : Check API Server Logs
+Dev->>Prompts : Reference Coding Standards
 Dev->>Dev : Set Breakpoints
 Dev->>Dev : Step Through Code
 ```
@@ -449,6 +573,7 @@ Dev->>Dev : Step Through Code
 - [src/main.jsx:1-100](file://src/main.jsx#L1-L100)
 - [vite.config.js:1-100](file://vite.config.js#L1-L100)
 - [scripts/dev-api-server.mjs:1-200](file://scripts/dev-api-server.mjs#L1-L200)
+- [.prompts/coding-conventions.prompt:1-200](file://.prompts/coding-conventions.prompt#L1-L200)
 
 ### Common Debugging Scenarios
 
@@ -457,6 +582,7 @@ Dev->>Dev : Step Through Code
 - **Performance Bottlenecks**: Performance tab analysis for optimization opportunities
 - **Memory Leaks**: Memory profiling and heap snapshot analysis
 - **Build Issues**: Enhanced logging for build process debugging
+- **Mobile Responsiveness Issues**: Device simulation and breakpoint testing
 
 ### Error Handling and Logging
 
@@ -467,11 +593,13 @@ Comprehensive error handling and logging throughout the application:
 - **Logging Strategy**: Structured logging with appropriate severity levels
 - **Error Tracking**: Integration with error monitoring services
 - **Enhanced API Logging**: Detailed request/response logging for development
+- **Prompt-Based Debugging**: Reference coding conventions for systematic issue resolution
 
 **Section sources**
 - [src/main.jsx:1-100](file://src/main.jsx#L1-L100)
 - [src/App.jsx:1-100](file://src/App.jsx#L1-L100)
 - [scripts/dev-api-server.mjs:1-200](file://scripts/dev-api-server.mjs#L1-L200)
+- [.prompts/coding-conventions.prompt:1-200](file://.prompts/coding-conventions.prompt#L1-L200)
 
 ## Performance Optimization
 
@@ -521,6 +649,7 @@ J --> K
 - **Bundle Size Tracking**: Automated bundle size regression detection
 - **Runtime Performance**: User experience metrics collection
 - **Resource Loading**: Asset loading performance analysis
+- **Mobile Performance**: Device-specific performance optimization
 
 **Section sources**
 - [vite.config.js:1-200](file://vite.config.js#L1-L200)
@@ -564,6 +693,7 @@ I --> L[Loading Time Improvements]
 - **Code Splitting**: Strategic chunk separation
 - **Asset Optimization**: Image and font compression
 - **Dependency Management**: Library selection and version optimization
+- **Mobile Optimization**: Reduced payload sizes for mobile devices
 
 **Section sources**
 - [vite.config.js:1-200](file://vite.config.js#L1-L200)
@@ -638,16 +768,18 @@ Different environments use separate configuration files:
 
 1. **Fork the Repository**: Create your own fork for development
 2. **Create Feature Branch**: Use descriptive branch names (`feature/add-chat-functionality`)
-3. **Make Changes**: Implement features with proper testing
-4. **Run Tests**: Ensure all tests pass before committing
-5. **Submit Pull Request**: Provide detailed description of changes
+3. **Review Prompt Files**: Consult `.prompts/` directory for coding standards and responsive design guidelines
+4. **Implement Changes**: Follow structured coding conventions and mobile-first principles
+5. **Run Tests**: Ensure all tests pass before committing
+6. **Submit Pull Request**: Provide detailed description of changes
 
 ### Code Standards
 
-- **JavaScript/JSX**: Follow ESLint/Oxlint rules
-- **React Patterns**: Use functional components with hooks
+- **JavaScript/JSX**: Follow ESLint/Oxlint rules and coding convention prompts
+- **React Patterns**: Use functional components with hooks following established patterns
 - **Naming Conventions**: Consistent naming across the codebase
 - **Documentation**: Comment complex logic and export public APIs
+- **Mobile Responsiveness**: Implement responsive design patterns from mobile responsiveness guidelines
 
 ### Commit Messages
 
@@ -662,15 +794,27 @@ Use conventional commit messages:
 
 ### Pull Request Process
 
-1. **Self-review**: Review your own changes thoroughly
+1. **Self-review**: Review your own changes thoroughly against coding conventions
 2. **Update documentation**: Include relevant documentation updates
-3. **Add tests**: Ensure adequate test coverage
+3. **Add tests**: Ensure adequate test coverage including mobile responsiveness tests
 4. **Request review**: Submit PR for team review
 5. **Address feedback**: Respond to review comments promptly
+
+### Prompt-Based Development Integration
+
+When contributing new features or making changes:
+
+1. **Reference Coding Conventions**: Consult `.prompts/coding-conventions.prompt` for implementation guidelines
+2. **Follow Mobile-First Design**: Apply patterns from `.prompts/mobile-responsiveness.prompt`
+3. **Use AI Assistance**: Leverage structured prompts for code generation and review
+4. **Maintain Consistency**: Ensure new code follows established architectural patterns
+5. **Test Across Devices**: Validate responsive behavior on multiple screen sizes
 
 **Section sources**
 - [README.md:1-100](file://README.md#L1-L100)
 - [package.json:1-100](file://package.json#L1-L100)
+- [.prompts/coding-conventions.prompt:1-200](file://.prompts/coding-conventions.prompt#L1-L200)
+- [.prompts/mobile-responsiveness.prompt:1-200](file://.prompts/mobile-responsiveness.prompt#L1-L200)
 
 ## Troubleshooting
 
@@ -688,6 +832,7 @@ Use conventional commit messages:
 - **Missing Dependencies**: Run `npm install` to ensure all packages are installed
 - **Configuration Errors**: Validate Vite configuration syntax
 - **Build Batch Issues**: Use build validation scripts to diagnose batch processing problems
+- **Prompt File Issues**: Ensure prompt files are accessible and properly formatted
 
 #### Testing Issues
 
@@ -695,18 +840,22 @@ Use conventional commit messages:
 - **Mock Configuration**: Verify API mocking configuration
 - **Browser Compatibility**: Check browser target configuration
 - **Regression Tests**: Validate TTS regression framework configuration
+- **Mobile Responsiveness Tests**: Test responsive components across different viewport sizes
 
 #### Enhanced Logging and Debugging
 
 - **API Server Logs**: Check enhanced logging output for detailed request/response information
 - **Build Validation**: Use build batches validation script for build integrity checks
 - **TTS Testing**: Utilize TTS regression framework for audio quality validation
+- **Prompt-Based Debugging**: Reference coding conventions for systematic issue resolution
+- **Mobile Debugging**: Use device simulation tools for responsive design issues
 
 ### Performance Issues
 
 - **Slow Development Server**: Enable incremental builds and optimize imports
 - **Large Bundle Size**: Analyze bundle and remove unused dependencies
 - **Memory Usage**: Monitor memory usage and optimize large data structures
+- **Mobile Performance**: Optimize for mobile devices and slower network connections
 
 ### Debugging Checklist
 
@@ -718,6 +867,18 @@ Use conventional commit messages:
 6. **Run build validation** scripts for build integrity
 7. **Execute regression tests** for critical functionality validation
 8. **Test in incognito mode** to rule out cache issues
+9. **Consult prompt files** for coding standard violations
+10. **Validate mobile responsiveness** across different device sizes
+
+### Prompt-Based Troubleshooting
+
+When encountering development issues:
+
+1. **Reference Coding Conventions**: Check `.prompts/coding-conventions.prompt` for best practices
+2. **Apply Mobile Guidelines**: Use `.prompts/mobile-responsiveness.prompt` for responsive design issues
+3. **Use AI Assistance**: Leverage structured prompts for code generation and problem-solving
+4. **Follow Established Patterns**: Ensure solutions align with project architecture standards
+5. **Validate Against Standards**: Use prompt-based guidelines for code quality assessment
 
 **Section sources**
 - [vite.config.js:1-200](file://vite.config.js#L1-L200)
@@ -725,6 +886,8 @@ Use conventional commit messages:
 - [scripts/dev-api-server.mjs:1-200](file://scripts/dev-api-server.mjs#L1-L200)
 - [scripts/build_batches_check.mjs:1-200](file://scripts/build_batches_check.mjs#L1-L200)
 - [scripts/tts_regression.mjs:1-200](file://scripts/tts_regression.mjs#L1-L200)
+- [.prompts/coding-conventions.prompt:1-200](file://.prompts/coding-conventions.prompt#L1-L200)
+- [.prompts/mobile-responsiveness.prompt:1-200](file://.prompts/mobile-responsiveness.prompt#L1-L200)
 
 ## Conclusion
 
@@ -738,9 +901,10 @@ Key highlights include:
 - **Performance Focus**: Built-in optimizations and bundle analysis capabilities
 - **Flexible Deployment**: Support for multiple deployment targets
 - **Developer Experience**: Hot reloading, debugging tools, and clear contribution guidelines
+- **Structured Development Prompts**: AI-assisted development with standardized coding practices and responsive design guidelines
 
-The recent enhancements include sophisticated build batches validation, comprehensive TTS regression testing framework, and improved development API server with enhanced logging capabilities, making it even easier to develop, test, and deploy high-quality applications.
+**Updated** The recent enhancements include sophisticated build batches validation, comprehensive TTS regression testing framework, improved development API server with enhanced logging capabilities, and the introduction of structured prompt files that establish standardized coding practices and mobile-responsive design patterns. These prompt files significantly enhance code consistency, improve developer productivity through AI assistance, and ensure mobile-first design principles are consistently applied across the codebase.
 
-Contributors should follow the established workflows and coding standards to maintain code quality and ensure smooth collaboration. The extensive automation and tooling make it easy to contribute effectively while maintaining high standards.
+Contributors should follow the established workflows and coding standards, including the new prompt-based development guidelines, to maintain code quality and ensure smooth collaboration. The extensive automation, structured prompts, and tooling make it easy to contribute effectively while maintaining high standards and ensuring cross-device compatibility.
 
-For additional questions or issues, consult the project documentation or reach out to the development team through the project's communication channels.
+For additional questions or issues, consult the project documentation, reference the structured prompt files for coding standards, or reach out to the development team through the project's communication channels.

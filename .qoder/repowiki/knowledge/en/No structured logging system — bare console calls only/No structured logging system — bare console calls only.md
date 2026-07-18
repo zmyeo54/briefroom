@@ -6,17 +6,17 @@ scope:
     - '**'
 source_files:
     - api/tts.js
+    - api/chat.js
     - scripts/dev-api-server.mjs
     - scripts/tts_regression.mjs
-    - api/chat.js
 ---
 
-This repository does not implement a logging system. There is no dedicated logger framework (e.g., pino, winston, bunyan), no log-level configuration, no centralized logger initialization, and no structured log fields or sinks.
+This repository does not implement a logging system. There is no dedicated logger framework (winston, pino, bunyan, log4js, debug, etc.), no centralized logger initialization, and no configuration for log levels or sinks.
 
-Across the codebase, logging consists entirely of ad-hoc `console.log`, `console.error`, and `console.warn` / `console.assert` calls scattered in a few places:
-- Serverless API route `api/tts.js` uses `console.error("[tts] synthesis error:", e?.message, e?.stack)` for TTS failures.
-- Scripts under `scripts/` (`dev-api-server.mjs`, `tts_regression.mjs`) use `console.log`/`console.error` for human-readable test output.
-- `api/chat.js` uses `console.assert` for internal unit-style checks.
-- The React frontend (`src/`) contains zero `console.*` calls; it has no client-side logging at all.
+All output in the codebase uses plain `console.log`, `console.error`, and `console.warn` calls scattered across:
+- `api/tts.js` — error logging with a `[tts]` prefix
+- `api/chat.js` — minimal `console.log("ok")`
+- `scripts/dev-api-server.mjs` — startup message
+- `scripts/tts_regression.mjs` — test harness output (pass/fail summaries)
 
-There is no shared logging utility, no environment-based level toggling, and no convention for log message formatting beyond simple bracketed prefixes like `[tts]`. Errors are surfaced to callers via thrown exceptions and HTTP responses rather than being emitted through a logging layer.
+There are no shared logging utilities, no structured log fields, no log rotation or file sinks, and no environment-based level control. The frontend (`src/`) contains no logging calls at all.
