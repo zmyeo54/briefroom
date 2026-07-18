@@ -14,12 +14,17 @@ import {
   CheckCircle,
   WarningCircle,
   Question,
+  Lightning,
 } from "@phosphor-icons/react";
 import {
   INTERVIEW_LANGS,
+  AI_PROVIDER_ORDER,
+  PINNED_GEMINI_MODEL,
   getSavedApiKey,
+  normalizeAiProvider,
   normalizeSettings,
   pickDefaultPair,
+  resolveApiKey,
   voicesForInterviewLang,
 } from "../lib/settingsConfig";
 import { loadJson, saveJson } from "../lib/storage";
@@ -53,6 +58,13 @@ export default function SettingsPage() {
   const [ttsOk, setTtsOk] = useState(null);
   const [serverKey, setServerKey] = useState(null);
   const [testing, setTesting] = useState(false);
+  const [testProvider, setTestProvider] = useState(() =>
+    normalizeAiProvider(
+      normalizeSettings(loadJson("settings", {})).aiProvider
+    )
+  );
+  const [apiTesting, setApiTesting] = useState(false);
+  const [apiTest, setApiTest] = useState(null); // { ok, text }
   const saveGen = useRef(0);
   const keyInputRef = useRef(null);
 
@@ -145,6 +157,77 @@ export default function SettingsPage() {
   const clearKey = () => {
     patch({ apiKey: "" });
     setStatus(t("settings.keyCleared"));
+  };
+
+  const testApi = async () => {
+    const provider = normalizeAiProvider(testProvider);
+    setApiTesting(true);
+    setApiTest(null);
+    const started = Date.now();
+    const apiKey = resolveApiKey(settings);
+    const headers = {
+      "Content-Type": "application/json",
+      "X-Linecheck-AI-Provider": provider,
+      "X-Linecheck-AI-Enabled": provider,
+    };
+    if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          model: settings.model || PINNED_GEMINI_MODEL,
+          temperature: 0,
+          max_tokens: 16,
+          messages: [
+            {
+              role: "user",
+              content: "Reply with exactly the word OK and nothing else.",
+            },
+          ],
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      const ms = Date.now() - started;
+      const label = t(`settings.aiProvider.${provider}`);
+      const errMsg =
+        data?.error?.message ||
+        (Array.isArray(data) && data[0]?.error?.message) ||
+        res.statusText ||
+        String(res.status);
+      if (!res.ok) {
+        setApiTest({
+          ok: false,
+          text: t("settings.apiTestFail", {
+            provider: label,
+            detail: errMsg,
+          }),
+        });
+        return;
+      }
+      const reply = String(
+        data?.choices?.[0]?.message?.content || ""
+      ).trim();
+      setApiTest({
+        ok: true,
+        text: t("settings.apiTestOk", {
+          provider: label,
+          model: data?.model || "—",
+          ms,
+          reply: (reply || "OK").slice(0, 48),
+        }),
+      });
+    } catch (e) {
+      setApiTest({
+        ok: false,
+        text: t("settings.apiTestFail", {
+          provider: t(`settings.aiProvider.${provider}`),
+          detail: e?.message || "network error",
+        }),
+      });
+    } finally {
+      setApiTesting(false);
+    }
   };
 
   const ratePct = Math.round(
@@ -438,9 +521,9 @@ export default function SettingsPage() {
                 <div className="flex flex-col gap-2.5 mt-1">
                   {(
                     [
+                      ["antigravity", "antigravityEnabled"],
                       ["gemini", "geminiEnabled"],
                       ["deepseek", "deepseekEnabled"],
-                      ["antigravity", "antigravityEnabled"],
                     ]
                   ).map(([id, flag]) => {
                     const flags = {
@@ -467,14 +550,14 @@ export default function SettingsPage() {
                             };
                             if (!on && settings.aiProvider === id) {
                               const stillOn = [
-                                ["gemini", flag === "geminiEnabled" ? on : flags.geminiEnabled],
-                                ["deepseek", flag === "deepseekEnabled" ? on : flags.deepseekEnabled],
                                 [
                                   "antigravity",
                                   flag === "antigravityEnabled"
                                     ? on
                                     : flags.antigravityEnabled,
                                 ],
+                                ["gemini", flag === "geminiEnabled" ? on : flags.geminiEnabled],
+                                ["deepseek", flag === "deepseekEnabled" ? on : flags.deepseekEnabled],
                               ].find(([, en]) => en)?.[0];
                               if (stillOn) next.aiProvider = stillOn;
                             }
@@ -495,7 +578,7 @@ export default function SettingsPage() {
                 <div className="settings-field-wrap">
                   <select
                     className="field"
-                    value={settings.aiProvider || "gemini"}
+                    value={settings.aiProvider || "antigravity"}
                     onChange={(e) =>
                       patch({
                         aiProvider: e.target.value,
@@ -503,6 +586,12 @@ export default function SettingsPage() {
                       })
                     }
                   >
+                    <option
+                      value="antigravity"
+                      disabled={settings.antigravityEnabled === false}
+                    >
+                      {t("settings.aiProvider.antigravity")}
+                    </option>
                     <option
                       value="gemini"
                       disabled={settings.geminiEnabled === false}
@@ -515,15 +604,69 @@ export default function SettingsPage() {
                     >
                       {t("settings.aiProvider.deepseek")}
                     </option>
-                    <option
-                      value="antigravity"
-                      disabled={settings.antigravityEnabled === false}
-                    >
-                      {t("settings.aiProvider.antigravity")}
-                    </option>
                   </select>
                 </div>
                 <p className="settings-row-hint">{t("settings.aiProviderHint")}</p>
+              </div>
+              <div className="settings-row">
+                <span className="settings-row-label">
+                  {t("settings.apiTest")}
+                </span>
+                <div className="flex flex-wrap items-center gap-2 mt-1">
+                  <div className="settings-field-wrap" style={{ flex: "1 1 10rem" }}>
+                    <select
+                      className="field"
+                      value={testProvider}
+                      onChange={(e) => {
+                        setTestProvider(e.target.value);
+                        setApiTest(null);
+                      }}
+                    >
+                      {AI_PROVIDER_ORDER.map((id) => (
+                        <option key={id} value={id}>
+                          {t(`settings.aiProvider.${id}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    className="settings-paste-btn"
+                    disabled={apiTesting}
+                    onClick={testApi}
+                  >
+                    <Lightning size={13} weight="fill" />
+                    {apiTesting
+                      ? t("settings.apiTestRunning")
+                      : t("settings.apiTestBtn")}
+                  </button>
+                </div>
+                {apiTest ? (
+                  <p
+                    className={`settings-key-status ${
+                      apiTest.ok
+                        ? "settings-key-status--ok"
+                        : "settings-key-status--warn"
+                    }`}
+                  >
+                    {apiTest.ok ? (
+                      <CheckCircle
+                        size={12}
+                        weight="fill"
+                        className="inline -mt-px mr-1"
+                      />
+                    ) : (
+                      <WarningCircle
+                        size={12}
+                        weight="fill"
+                        className="inline -mt-px mr-1"
+                      />
+                    )}
+                    {apiTest.text}
+                  </p>
+                ) : (
+                  <p className="settings-row-hint">{t("settings.apiTestHint")}</p>
+                )}
               </div>
             </div>
           </div>

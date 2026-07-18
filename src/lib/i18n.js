@@ -228,16 +228,24 @@ const en = {
   "settings.aiRegion.global": "Global",
   "settings.aiRegion.greaterChina": "Greater China",
   "settings.aiRegionHint":
-    "Greater China (or a Hong Kong / mainland China IP) uses DeepSeek. Global uses Gemini first; if Build fails once, tap again and we’ll retry on DeepSeek.",
+    "Routing is the same worldwide: Antigravity first, then Gemini, then DeepSeek. Change Prefer in Settings anytime.",
   "settings.aiProviders": "AI providers",
   "settings.aiProvidersHint":
-    "Turn each route on or off. At least one must stay on. DeepSeek often hits Vercel’s ~60s limit on long Builds — use Gemini or Antigravity if that happens.",
+    "Turn each route on or off. At least one must stay on. Default order is Antigravity → Gemini → DeepSeek.",
   "settings.aiProvider": "Prefer",
   "settings.aiProvider.gemini": "Gemini",
   "settings.aiProvider.deepseek": "DeepSeek",
   "settings.aiProvider.antigravity": "Antigravity",
   "settings.aiProviderHint":
-    "Which route to try first. If Build fails once, tap again and we’ll try the next enabled route.",
+    "Which route to try first. Failover follows Antigravity → Gemini → DeepSeek among the routes still on.",
+  "settings.apiTest": "Test API",
+  "settings.apiTestBtn": "Test",
+  "settings.apiTestRunning": "Testing…",
+  "settings.apiTestHint":
+    "Pick a route and tap Test — sends a tiny “OK” ping so you can confirm the key and proxy.",
+  "settings.apiTestOk":
+    "{provider} OK · {model} · {ms}ms · “{reply}”",
+  "settings.apiTestFail": "{provider} failed — {detail}",
   "settings.interviewLang": "Practice language",
   "settings.interviewLangHint":
     "Questions and answers will be written in this language.",
@@ -603,16 +611,24 @@ const zh = {
   "settings.aiRegion.global": "全球",
   "settings.aiRegion.greaterChina": "大中华区",
   "settings.aiRegionHint":
-    "大中华区（或香港／大陆 IP）走 DeepSeek。全球先走 Gemini；若首次生成失败，再点一次会换 DeepSeek 重试。",
+    "全球与大中华区默认一致：先 Antigravity，再 Gemini，最后 DeepSeek。可随时在设置里改优先线路。",
   "settings.aiProviders": "AI 线路",
   "settings.aiProvidersHint":
-    "可分别开关。至少保留一条。DeepSeek 长生成常撞上 Vercel 约 60 秒限制——若超时请改用 Gemini 或 Antigravity。",
+    "可分别开关。至少保留一条。默认顺序：Antigravity → Gemini → DeepSeek。",
   "settings.aiProvider": "优先使用",
   "settings.aiProvider.gemini": "Gemini",
   "settings.aiProvider.deepseek": "DeepSeek",
   "settings.aiProvider.antigravity": "Antigravity",
   "settings.aiProviderHint":
-    "先走哪条线路。若生成失败一次，再点生成会改试下一条已开启的线路。",
+    "先走哪条线路。失败后按 Antigravity → Gemini → DeepSeek 在仍开启的线路里依次重试。",
+  "settings.apiTest": "测试 API",
+  "settings.apiTestBtn": "测试",
+  "settings.apiTestRunning": "测试中…",
+  "settings.apiTestHint":
+    "选一条线路点测试——发一条很短的 “OK” 探测，确认密钥与代理是否通。",
+  "settings.apiTestOk":
+    "{provider} 正常 · {model} · {ms}ms · “{reply}”",
+  "settings.apiTestFail": "{provider} 失败 — {detail}",
   "settings.interviewLang": "练习语言",
   "settings.interviewLangHint": "问题与回答都会按此语言生成。",
   "settings.gender": "你的性别",

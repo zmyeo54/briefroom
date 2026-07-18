@@ -25,11 +25,11 @@ function withTtsSlot(fn) {
           if (ttsInflight > 0) {
             ttsInflight -= 1;
           }
-          ttsWaiters.shift()?.();
+          ttsWaiters.shift()?.run?.();
         });
     };
     if (ttsInflight < TTS_INFLIGHT_LIMIT) run();
-    else ttsWaiters.push(run);
+    else ttsWaiters.push({ run, reject });
   });
 }
 
@@ -346,43 +346,60 @@ async function fetchAudio(text, voice, rate) {
   const startToken = playToken;
   let lastMsg = "TTS failed";
   for (let attempt = 0; attempt < 4; attempt++) {
-    const controller = new AbortController();
-    activeFetchControllers.add(controller);
-
-    const timeoutId = setTimeout(() => {
-      try {
-        controller.abort();
-      } catch {}
-    }, 15000); // 15-second client-side timeout
-
     try {
-      const res = await withTtsSlot(() =>
-        fetch("/api/tts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-          signal: controller.signal,
-        })
-      );
+      // Timeout must start only after the TTS slot is acquired — play-all queues
+      // many Mix parts behind TTS_INFLIGHT_LIMIT; a pre-slot timer aborted waiters
+      // with "timed out" / transient cut-outs while single-item play stayed fine.
+      const result = await withTtsSlot(async () => {
+        if (playToken !== startToken) {
+          const err = new Error("Playback cancelled");
+          err.name = "AbortError";
+          throw err;
+        }
+        const controller = new AbortController();
+        activeFetchControllers.add(controller);
+        const timeoutId = setTimeout(() => {
+          try {
+            controller.abort();
+          } catch {
+            /* ignore */
+          }
+        }, 15000);
+        try {
+          const res = await fetch("/api/tts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+            signal: controller.signal,
+          });
+          if (res.ok) {
+            return { ok: true, blob: await res.blob() };
+          }
+          let msg = `TTS failed (${res.status})`;
+          try {
+            const data = await res.json();
+            if (data?.error) msg = data.error;
+          } catch {
+            /* ignore */
+          }
+          return { ok: false, status: res.status, msg };
+        } finally {
+          clearTimeout(timeoutId);
+          activeFetchControllers.delete(controller);
+        }
+      });
 
-      if (res.ok) {
-        const blob = await res.blob();
-        rememberBlob(key, blob);
-        return blob;
+      if (result.ok) {
+        rememberBlob(key, result.blob);
+        return result.blob;
       }
 
-      let msg = `TTS failed (${res.status})`;
-      try {
-        const data = await res.json();
-        if (data?.error) msg = data.error;
-      } catch {
-        /* ignore */
-      }
+      let msg = result.msg;
       const transient =
-        res.status === 502 ||
-        res.status === 504 ||
-        isTransientTtsError(res.status, msg);
-      if (res.status === 502 || res.status === 504) {
+        result.status === 502 ||
+        result.status === 504 ||
+        isTransientTtsError(result.status, msg);
+      if (result.status === 502 || result.status === 504) {
         msg = "Practice voice isn’t ready yet. Give it a moment and try again.";
       } else if (transient) {
         msg =
@@ -397,22 +414,24 @@ async function fetchAudio(text, voice, rate) {
       }
       throw new Error(lastMsg);
     } catch (err) {
-      if (err.name === "AbortError") {
-        if (playToken !== startToken) {
+      if (err.name === "AbortError" || err.message === "Playback cancelled") {
+        if (playToken !== startToken || err.message === "Playback cancelled") {
           throw new Error("Playback cancelled");
         }
         lastMsg = "Voice request timed out. Please try again.";
-      } else {
-        lastMsg = err.message || "TTS failed";
+        // Real network timeout (slot already held) — retry like other transients.
+        if (attempt < 3) {
+          await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+          continue;
+        }
+        throw new Error(lastMsg);
       }
-      if (attempt < 3 && err.name !== "AbortError") {
+      lastMsg = err.message || "TTS failed";
+      if (attempt < 3) {
         await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
         continue;
       }
       throw new Error(lastMsg);
-    } finally {
-      clearTimeout(timeoutId);
-      activeFetchControllers.delete(controller);
     }
   }
   throw new Error(lastMsg);
@@ -739,9 +758,18 @@ export function stopSpeech() {
   }
   activeFetchControllers.clear();
 
-  // Reset internal TTS concurrent queue state
+  // Reject queued slot waiters so play-all doesn't hang after Stop/re-play.
+  const pending = ttsWaiters.splice(0);
   ttsInflight = 0;
-  ttsWaiters.length = 0;
+  for (const w of pending) {
+    try {
+      const err = new Error("Playback cancelled");
+      err.name = "AbortError";
+      w.reject(err);
+    } catch {
+      /* ignore */
+    }
+  }
 
   cleanup();
   try {

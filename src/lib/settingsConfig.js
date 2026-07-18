@@ -109,12 +109,14 @@ export const DEFAULT_MODEL = PINNED_GEMINI_MODEL;
 
 /** Which server-side LLM to prefer (sent on each /api/chat request). */
 export const AI_PROVIDERS = [
+  { id: "antigravity" },
   { id: "gemini" },
   { id: "deepseek" },
-  { id: "antigravity" },
 ];
-export const DEFAULT_AI_PROVIDER = "gemini";
-export const AI_PROVIDER_IDS = AI_PROVIDERS.map((p) => p.id);
+/** Default try order: Antigravity → Gemini → DeepSeek (global + Greater China). */
+export const AI_PROVIDER_ORDER = AI_PROVIDERS.map((p) => p.id);
+export const DEFAULT_AI_PROVIDER = "antigravity";
+export const AI_PROVIDER_IDS = AI_PROVIDER_ORDER;
 
 /** @deprecated region was a proxy for provider — kept for stored settings / headers */
 export const AI_REGIONS = [
@@ -148,7 +150,7 @@ export function normalizeAiProvider(raw) {
   if (id === "deepseek") return "deepseek";
   if (id === "antigravity") return "antigravity";
   if (id === "gemini") return "gemini";
-  return normalizeAiRegion(raw) === "greater-china" ? "deepseek" : "gemini";
+  return DEFAULT_AI_PROVIDER;
 }
 
 export function providerToRegion(provider) {
@@ -162,29 +164,29 @@ export function aiProviderLabelKey(provider) {
   return `settings.aiProvider.${normalizeAiProvider(provider)}`;
 }
 
-/** Enabled providers in preference order (preferred first). */
+/**
+ * Enabled providers: preferred first, then the rest in AI_PROVIDER_ORDER
+ * (Antigravity → Gemini → DeepSeek).
+ */
 export function enabledAiProviders(settings = {}) {
   const preferred = normalizeAiProvider(settings.aiProvider);
-  const on = [];
-  if (settings.geminiEnabled !== false) on.push("gemini");
-  if (settings.deepseekEnabled !== false) on.push("deepseek");
-  if (settings.antigravityEnabled !== false) on.push("antigravity");
+  const flags = {
+    antigravity: settings.antigravityEnabled !== false,
+    gemini: settings.geminiEnabled !== false,
+    deepseek: settings.deepseekEnabled !== false,
+  };
+  const on = AI_PROVIDER_ORDER.filter((p) => flags[p]);
   if (!on.length) return [];
-  if (on.includes(preferred)) {
-    return [preferred, ...on.filter((p) => p !== preferred)];
-  }
-  return on;
+  if (!on.includes(preferred)) return on;
+  return [preferred, ...on.filter((p) => p !== preferred)];
 }
 
-/** Auto-pick DeepSeek for CN/HK unless the user chose manually. */
-export function aiProviderForGeo(country, settings = {}) {
+/** Antigravity for everyone unless the user chose Prefer manually. */
+export function aiProviderForGeo(_country, settings = {}) {
   if (settings.aiProviderManual || settings.aiRegionManual) {
     return normalizeAiProvider(settings.aiProvider || settings.aiRegion);
   }
-  if (isGreaterChinaCountry(country)) return "deepseek";
-  return normalizeAiProvider(
-    settings.aiProvider || settings.aiRegion || DEFAULT_AI_PROVIDER
-  );
+  return DEFAULT_AI_PROVIDER;
 }
 
 /** @deprecated use aiProviderForGeo */

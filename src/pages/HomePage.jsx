@@ -55,7 +55,6 @@ import {
   voicesForInterviewLang,
   enabledAiProviders,
   aiProviderLabelKey,
-  normalizeAiProvider,
   providerToRegion,
 } from "../lib/settingsConfig";
 import { useI18n } from "../lib/I18nContext";

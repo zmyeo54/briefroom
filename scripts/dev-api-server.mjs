@@ -1,8 +1,41 @@
 import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { URL } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(__dirname, '..');
+
+// Mirror production Vercel env — load .env.local for local Gemini/DeepSeek/Antigravity.
+function loadEnvLocal() {
+  const p = path.join(root, '.env.local');
+  if (!fs.existsSync(p)) return;
+  for (const line of fs.readFileSync(p, 'utf8').split('\n')) {
+    const t = line.trim();
+    if (!t || t.startsWith('#')) continue;
+    const i = t.indexOf('=');
+    if (i < 0) continue;
+    const k = t.slice(0, i).trim();
+    let v = t.slice(i + 1).trim();
+    if (
+      (v.startsWith('"') && v.endsWith('"')) ||
+      (v.startsWith("'") && v.endsWith("'"))
+    ) {
+      v = v.slice(1, -1);
+    }
+    if (!(k in process.env)) process.env[k] = v;
+  }
+}
+loadEnvLocal();
 
 const port = Number(process.env.PORT || 8791);
 const host = '127.0.0.1';
+const ANTIGRAVITY_DEFAULT_BASE = 'http://138.2.161.62:8045';
+const ANTIGRAVITY_MODEL = 'gemini-3.1-flash-lite';
+const PROVIDER_ORDER = ['antigravity', 'gemini', 'deepseek'];
+const KNOWN = new Set(PROVIDER_ORDER);
+const DEFAULT_AI_PROVIDER = 'antigravity';
 
 function json(res, status, body) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -66,20 +99,25 @@ function collectDeepSeekKeys(env = process.env) {
   return k ? [k] : [];
 }
 
+function collectAntigravityKeys(env = process.env) {
+  const k = String(env.ANTIGRAVITY_API_KEY || '').trim();
+  return k ? [k] : [];
+}
+
+function resolveAntigravityBase(env = process.env) {
+  let base = String(env.ANTIGRAVITY_API_BASE || ANTIGRAVITY_DEFAULT_BASE)
+    .trim()
+    .replace(/\/$/, '');
+  if (!base) base = ANTIGRAVITY_DEFAULT_BASE;
+  if (!/\/v1$/i.test(base)) base = `${base}/v1`;
+  return base;
+}
+
 function parseProvider(req) {
   const raw = String(req.headers['x-linecheck-ai-provider'] || '').toLowerCase();
-  if (raw === 'deepseek' || raw === 'gemini') return raw;
+  if (KNOWN.has(raw)) return raw;
   const regionRaw = String(req.headers['x-linecheck-ai-region'] || '').toLowerCase();
-  if (
-    regionRaw === 'greater-china' ||
-    regionRaw === 'greaterchina' ||
-    regionRaw === 'china' ||
-    regionRaw === 'cn' ||
-    regionRaw === 'hk'
-  ) {
-    return 'deepseek';
-  }
-  if (regionRaw === 'global') return 'gemini';
+  if (regionRaw) return DEFAULT_AI_PROVIDER;
   return '';
 }
 
@@ -89,7 +127,7 @@ function parseEnabled(req) {
   const set = new Set();
   for (const part of raw.split(/[\s,]+/)) {
     const p = part.trim().toLowerCase();
-    if (p === 'gemini' || p === 'deepseek') set.add(p);
+    if (KNOWN.has(p)) set.add(p);
   }
   return set.size ? set : null;
 }
@@ -97,17 +135,21 @@ function parseEnabled(req) {
 function providersToTry(req, env = process.env) {
   const enabled = parseEnabled(req);
   const userKey = Boolean(bearerFrom(req));
-  const hasDeepseek = collectDeepSeekKeys(env).length > 0 || userKey;
-  const hasGemini = collectServerKeys(env).length > 0 || userKey;
+  const has = {
+    gemini: collectServerKeys(env).length > 0 || userKey,
+    deepseek: collectDeepSeekKeys(env).length > 0 || userKey,
+    antigravity: collectAntigravityKeys(env).length > 0,
+  };
   const allow = (p) => {
     if (enabled && !enabled.has(p)) return false;
-    return p === 'deepseek' ? hasDeepseek : hasGemini;
+    return Boolean(has[p]);
   };
-  let preferred = parseProvider(req) || 'gemini';
+  let preferred = parseProvider(req) || DEFAULT_AI_PROVIDER;
   const order = [];
   if (allow(preferred)) order.push(preferred);
-  const alt = preferred === 'deepseek' ? 'gemini' : 'deepseek';
-  if (allow(alt)) order.push(alt);
+  for (const p of PROVIDER_ORDER) {
+    if (p !== preferred && allow(p)) order.push(p);
+  }
   return order;
 }
 
@@ -126,6 +168,12 @@ function bodyForProvider(body, provider) {
       max_tokens,
     };
   }
+  if (provider === 'antigravity') {
+    return {
+      ...body,
+      model: String(process.env.ANTIGRAVITY_MODEL || '').trim() || ANTIGRAVITY_MODEL,
+    };
+  }
   return body;
 }
 
@@ -136,11 +184,16 @@ function keyLooksLikeDeepSeek(key) {
 function keysForProvider(provider, userKey) {
   const out = [];
   const u = String(userKey || '').trim();
-  if (u) {
+  if (u && provider !== 'antigravity') {
     const ds = keyLooksLikeDeepSeek(u);
     if (provider === 'deepseek' ? ds : !ds) out.push(u);
   }
-  const pool = provider === 'deepseek' ? collectDeepSeekKeys() : collectServerKeys();
+  const pool =
+    provider === 'deepseek'
+      ? collectDeepSeekKeys()
+      : provider === 'antigravity'
+        ? collectAntigravityKeys()
+        : collectServerKeys();
   for (const key of pool) {
     if (!out.includes(key)) out.push(key);
   }
@@ -148,9 +201,12 @@ function keysForProvider(provider, userKey) {
 }
 
 async function callProvider(provider, key, body, signal) {
-  const base = provider === 'deepseek'
-    ? 'https://api.deepseek.com'
-    : 'https://generativelanguage.googleapis.com/v1beta/openai';
+  const base =
+    provider === 'deepseek'
+      ? 'https://api.deepseek.com'
+      : provider === 'antigravity'
+        ? resolveAntigravityBase()
+        : 'https://generativelanguage.googleapis.com/v1beta/openai';
   const payload = bodyForProvider(body, provider);
   const upstream = await fetch(`${base}/chat/completions`, {
     method: 'POST',
@@ -183,10 +239,15 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && url.pathname === '/api/chat') {
     const geminiKeys = collectServerKeys();
     const deepseekKeys = collectDeepSeekKeys();
+    const antigravityKeys = collectAntigravityKeys();
     json(res, 200, {
-      hasKey: geminiKeys.length > 0 || deepseekKeys.length > 0,
+      hasKey:
+        geminiKeys.length > 0 ||
+        deepseekKeys.length > 0 ||
+        antigravityKeys.length > 0,
       hasGemini: geminiKeys.length > 0,
       hasDeepseek: deepseekKeys.length > 0,
+      hasAntigravity: antigravityKeys.length > 0,
       country: null,
     });
     return;
@@ -209,7 +270,8 @@ const server = http.createServer(async (req, res) => {
   if (!order.length) {
     json(res, 503, {
       error: {
-        message: 'No API key configured for local dev. Set GEMINI_API_KEY or DEEPSEEK_API_KEY in your shell, or paste a key in Settings.',
+        message:
+          'No API key configured for local dev. Set GEMINI_API_KEY, DEEPSEEK_API_KEY, and/or ANTIGRAVITY_API_KEY in .env.local, or paste a key in Settings.',
       },
     });
     return;

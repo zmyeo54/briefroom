@@ -21,8 +21,11 @@ Set server env vars (never commit keys):
 
 - `GEMINI_API_KEY` — Google Gemini (`gemini-2.5-flash-lite`), used outside China
 - `DEEPSEEK_API_KEY` — DeepSeek (`deepseek-v4-flash`), used for China IPs + fallback
+- `ANTIGRAVITY_API_KEY` — Antigravity proxy on Oracle (`gemini-3.1-flash-lite` via OpenAI-compat `/v1`)
+- `ANTIGRAVITY_API_BASE` — optional; default `http://138.2.161.62:8045` (`/v1` appended if missing)
+- `ANTIGRAVITY_MODEL` — optional; default `gemini-3.1-flash-lite`
 
-`/api/chat` picks DeepSeek when `x-vercel-ip-country` is `CN`, otherwise Gemini.
+`/api/chat` defaults to Antigravity worldwide, then Gemini, then DeepSeek. Prefer in Settings overrides the start of that order.
 
 ```bash
 npm run build
