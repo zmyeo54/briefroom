@@ -134,11 +134,13 @@ function parseEnabled(req) {
 
 function providersToTry(req, env = process.env) {
   const enabled = parseEnabled(req);
-  const userKey = Boolean(bearerFrom(req));
+  const bearer = bearerFrom(req);
+  const userKey = Boolean(bearer);
+  const skBearer = keyLooksLikeDeepSeek(bearer);
   const has = {
     gemini: collectServerKeys(env).length > 0 || userKey,
-    deepseek: collectDeepSeekKeys(env).length > 0 || userKey,
-    antigravity: collectAntigravityKeys(env).length > 0,
+    deepseek: collectDeepSeekKeys(env).length > 0 || skBearer,
+    antigravity: collectAntigravityKeys(env).length > 0 || skBearer,
   };
   const allow = (p) => {
     if (enabled && !enabled.has(p)) return false;
@@ -184,9 +186,13 @@ function keyLooksLikeDeepSeek(key) {
 function keysForProvider(provider, userKey) {
   const out = [];
   const u = String(userKey || '').trim();
-  if (u && provider !== 'antigravity') {
-    const ds = keyLooksLikeDeepSeek(u);
-    if (provider === 'deepseek' ? ds : !ds) out.push(u);
+  if (u) {
+    const sk = keyLooksLikeDeepSeek(u);
+    if (provider === 'deepseek' || provider === 'antigravity') {
+      if (sk) out.push(u);
+    } else if (!sk) {
+      out.push(u);
+    }
   }
   const pool =
     provider === 'deepseek'

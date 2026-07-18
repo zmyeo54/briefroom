@@ -126,8 +126,7 @@ export function keysForRequest(userKey, env = process.env) {
   return out;
 }
 
-/** DeepSeek keys are sk-…; Settings still labels the paste field as Gemini.
- *  Antigravity proxy keys are also sk-… — they use ANTIGRAVITY_API_KEY only. */
+/** DeepSeek + Antigravity proxy keys are both sk-…; Gemini paste is not. */
 export function keyLooksLikeDeepSeek(key) {
   return /^sk-/i.test(String(key || "").trim());
 }
@@ -135,10 +134,14 @@ export function keyLooksLikeDeepSeek(key) {
 export function keysForProvider(provider, userKey, env = process.env) {
   const out = [];
   const u = String(userKey || "").trim();
-  // Antigravity keys collide with DeepSeek (both sk-) — never use paste there.
-  if (u && provider !== "antigravity") {
-    const ds = keyLooksLikeDeepSeek(u);
-    if (provider === "deepseek" ? ds : !ds) out.push(u);
+  if (u) {
+    const sk = keyLooksLikeDeepSeek(u);
+    // sk- paste → DeepSeek or Antigravity; other paste → Gemini only.
+    if (provider === "deepseek" || provider === "antigravity") {
+      if (sk) out.push(u);
+    } else if (!sk) {
+      out.push(u);
+    }
   }
   const pool =
     provider === "deepseek"
@@ -179,12 +182,13 @@ export function otherProvider(provider, env = process.env) {
  */
 export function providersToTry(req, env = process.env) {
   const enabled = parseEnabledProviders(req);
-  const userKey = Boolean(bearerFromReq(req));
-  // Bearer may be Gemini or DeepSeek — not Antigravity (sk- collision).
+  const bearer = bearerFromReq(req);
+  const userKey = Boolean(bearer);
+  const skBearer = keyLooksLikeDeepSeek(bearer);
   const has = {
     gemini: collectServerKeys(env).length > 0 || userKey,
-    deepseek: collectDeepSeekKeys(env).length > 0 || userKey,
-    antigravity: collectAntigravityKeys(env).length > 0,
+    deepseek: collectDeepSeekKeys(env).length > 0 || skBearer,
+    antigravity: collectAntigravityKeys(env).length > 0 || skBearer,
   };
 
   const allow = (p) => {
@@ -521,7 +525,7 @@ if (typeof process !== "undefined" && process.argv?.[1]?.endsWith("chat.js")) {
   console.assert(shouldTryOtherProvider(404, { error: { message: "not found" } }), "404 falls back");
   console.assert(!shouldTryOtherProvider(400, {}), "400 stays");
   console.assert(
-    bodyForProvider({ model: "gemini-2.5-flash-lite", messages: [] }, "deepseek")
+    bodyForProvider({ model: "gemini-3.1-flash-lite", messages: [] }, "deepseek")
       .model === DEEPSEEK_MODEL,
     "deepseek model swap"
   );
@@ -569,8 +573,13 @@ if (typeof process !== "undefined" && process.argv?.[1]?.endsWith("chat.js")) {
   );
   console.assert(
     JSON.stringify(keysForProvider("antigravity", "sk-paste", env)) ===
+      JSON.stringify(["sk-paste", "ag"]),
+    "antigravity accepts sk- paste"
+  );
+  console.assert(
+    JSON.stringify(keysForProvider("antigravity", "AIza-gemini", env)) ===
       JSON.stringify(["ag"]),
-    "antigravity ignores paste (sk- collision)"
+    "antigravity skips gemini paste"
   );
   console.assert(isAbortError({ name: "TimeoutError" }), "timeout is abort");
   console.assert(

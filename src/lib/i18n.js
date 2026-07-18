@@ -209,8 +209,8 @@ const en = {
 
   "settings.eyebrow": "Your setup",
   "settings.title": "Settings",
-  "settings.apiKey": "Gemini API key",
-  "settings.apiKeyPlaceholder": "Paste your Gemini API key",
+  "settings.apiKey": "API key",
+  "settings.apiKeyPlaceholder": "Paste Gemini (AIza…) or Antigravity / DeepSeek (sk-…) key",
   "settings.pasteKey": "Paste key",
   "settings.clearKey": "Remove key",
   "settings.pasteEmpty": "Clipboard is empty — copy a key first.",
@@ -223,7 +223,8 @@ const en = {
   "settings.nameHint":
     "Filled from your resume when we spot a name. Edit anytime — your edit wins.",
   "settings.keyLoaded": "Key ready ({preview}… · {n} chars). Paste a new one anytime to replace it.",
-  "settings.noKey": "No key yet — paste a Gemini API key, or set GEMINI_API_KEY on Vercel.",
+  "settings.noKey":
+    "No key yet — paste a key above, or set GEMINI_API_KEY / DEEPSEEK_API_KEY / ANTIGRAVITY_API_KEY on the server.",
   "settings.aiRegion": "Region",
   "settings.aiRegion.global": "Global",
   "settings.aiRegion.greaterChina": "Greater China",
@@ -592,8 +593,8 @@ const zh = {
 
   "settings.eyebrow": "你的设置",
   "settings.title": "设置",
-  "settings.apiKey": "Gemini API 密钥",
-  "settings.apiKeyPlaceholder": "粘贴你的 Gemini API 密钥",
+  "settings.apiKey": "API 密钥",
+  "settings.apiKeyPlaceholder": "粘贴 Gemini（AIza…）或 Antigravity / DeepSeek（sk-…）密钥",
   "settings.pasteKey": "粘贴密钥",
   "settings.clearKey": "移除密钥",
   "settings.pasteEmpty": "剪贴板是空的——先复制密钥。",
@@ -606,7 +607,8 @@ const zh = {
   "settings.nameHint":
     "放进简历后会自动识别姓名。可随时改——你改的优先。",
   "settings.keyLoaded": "密钥已就绪（{preview}… · {n} 字符）。随时可粘贴新密钥覆盖。",
-  "settings.noKey": "还没有密钥——粘贴 Gemini 密钥，或在 Vercel 设置 GEMINI_API_KEY。",
+  "settings.noKey":
+    "还没有密钥——在上方粘贴，或在服务器设置 GEMINI_API_KEY / DEEPSEEK_API_KEY / ANTIGRAVITY_API_KEY。",
   "settings.aiRegion": "地区",
   "settings.aiRegion.global": "全球",
   "settings.aiRegion.greaterChina": "大中华区",

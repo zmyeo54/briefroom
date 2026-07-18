@@ -19,7 +19,7 @@ TTS and job-link fetch run as Vercel serverless functions under `/api/*` (Micros
 
 Set server env vars (never commit keys):
 
-- `GEMINI_API_KEY` — Google Gemini (`gemini-2.5-flash-lite`), used outside China
+- `GEMINI_API_KEY` — Google Gemini (`gemini-3.1-flash-lite`), used outside China
 - `DEEPSEEK_API_KEY` — DeepSeek (`deepseek-v4-flash`), used for China IPs + fallback
 - `ANTIGRAVITY_API_KEY` — Antigravity proxy on Oracle (`gemini-3.1-flash-lite` via OpenAI-compat `/v1`)
 - `ANTIGRAVITY_API_BASE` — optional; default `http://138.2.161.62:8045` (`/v1` appended if missing)

@@ -100,10 +100,10 @@ export function voiceForInterviewLang(lang, currentVoice) {
  * Pinned versioned ID — do not use `-latest` aliases; Google hot-swaps those
  * to newer (often pricier) models without your code changing.
  */
-export const PINNED_GEMINI_MODEL = "gemini-2.5-flash-lite";
+export const PINNED_GEMINI_MODEL = "gemini-3.1-flash-lite";
 
 /** @deprecated use PINNED_GEMINI_MODEL */
-export const GEMINI_MODELS = [{ id: PINNED_GEMINI_MODEL, label: "2.5 Flash-Lite" }];
+export const GEMINI_MODELS = [{ id: PINNED_GEMINI_MODEL, label: "3.1 Flash-Lite" }];
 
 export const DEFAULT_MODEL = PINNED_GEMINI_MODEL;
 

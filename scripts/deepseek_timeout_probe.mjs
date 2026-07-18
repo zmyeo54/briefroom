@@ -52,7 +52,7 @@ if (!key) {
 // --- Unit seam: what /api/chat actually sends ---
 const shaped = bodyForProvider(
   {
-    model: "gemini-2.5-flash-lite",
+    model: "gemini-3.1-flash-lite",
     max_tokens: 2048,
     messages: [{ role: "user", content: "hi" }],
   },

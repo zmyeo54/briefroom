@@ -164,7 +164,11 @@ export default function SettingsPage() {
     setApiTesting(true);
     setApiTest(null);
     const started = Date.now();
-    const apiKey = resolveApiKey(settings);
+    // Don't send the Gemini env key when probing DeepSeek/Antigravity —
+    // those routes want an sk- paste or their own server env key.
+    const pasted = String(settings.apiKey || "").trim();
+    const apiKey =
+      provider === "gemini" ? resolveApiKey(settings) : pasted;
     const headers = {
       "Content-Type": "application/json",
       "X-Linecheck-AI-Provider": provider,
