@@ -109,13 +109,13 @@ export const DEFAULT_MODEL = PINNED_GEMINI_MODEL;
 
 /** Which server-side LLM to prefer (sent on each /api/chat request). */
 export const AI_PROVIDERS = [
-  { id: "gemini" },
   { id: "antigravity" },
+  { id: "gemini" },
   { id: "deepseek" },
 ];
-/** Default try order: Gemini → Antigravity → DeepSeek (global + Greater China). */
+/** Default try order: Antigravity → Gemini → DeepSeek. */
 export const AI_PROVIDER_ORDER = AI_PROVIDERS.map((p) => p.id);
-export const DEFAULT_AI_PROVIDER = "gemini";
+export const DEFAULT_AI_PROVIDER = "antigravity";
 export const AI_PROVIDER_IDS = AI_PROVIDER_ORDER;
 
 /** @deprecated region was a proxy for provider — kept for stored settings / headers */

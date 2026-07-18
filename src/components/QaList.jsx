@@ -111,6 +111,13 @@ export default function QaList({
             const playing = playingIndex === i;
             const expanded = open.has(i);
             const pinned = Boolean(item.pinned);
+            // Pin badge already says Foundation / Yours — don't double-label.
+            const showCategory =
+              item.category &&
+              !(
+                pinned &&
+                (item.category === "foundation" || item.category === "addon")
+              );
 
             return (
               <motion.li
@@ -176,7 +183,7 @@ export default function QaList({
                               {String(i + 1).padStart(2, "0")}
                             </span>
                           )}
-                          {item.category ? (
+                          {showCategory ? (
                             <span
                               className="qa-category-badge"
                               style={{

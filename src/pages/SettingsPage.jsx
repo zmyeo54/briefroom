@@ -19,6 +19,7 @@ import {
 import {
   INTERVIEW_LANGS,
   AI_PROVIDER_ORDER,
+  DEFAULT_AI_PROVIDER,
   PINNED_GEMINI_MODEL,
   getSavedApiKey,
   normalizeAiProvider,
@@ -28,12 +29,23 @@ import {
   voicesForInterviewLang,
 } from "../lib/settingsConfig";
 import { loadJson, saveJson } from "../lib/storage";
-import { speakQa, voicesForLang } from "../lib/tts";
+import { speakQa, speakText, TTS_VOICES, voicesForLang } from "../lib/tts";
 import { useI18n } from "../lib/I18nContext";
 import Shell from "../components/Shell";
 import { resetOnboarding } from "../components/OnboardingTour";
 
 const SECTION_DELAY = 0.08;
+
+function voicePreviewLine(voiceId, role) {
+  const lang = TTS_VOICES.find((v) => v.id === voiceId)?.lang;
+  const zh = lang === "zh";
+  if (role === "q") {
+    return zh ? "请介绍一下你自己。" : "Tell me about yourself.";
+  }
+  return zh
+    ? "我负责跨区域交付，强调结果与客户信任。"
+    : "I lead delivery teams across markets with clear ownership.";
+}
 
 const fadeUp = {
   hidden: { opacity: 0, y: 14 },
@@ -48,6 +60,64 @@ const fadeUp = {
   }),
 };
 
+function useBriefFlash(ms = 1600) {
+  const [on, setOn] = useState(false);
+  const timer = useRef(null);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const flash = () => {
+    setOn(true);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setOn(false), ms);
+  };
+  return [on, flash];
+}
+
+function SectionSaveBtn({ label, savedLabel, onClick }) {
+  const [saved, flash] = useBriefFlash();
+  return (
+    <button
+      type="button"
+      className={`settings-section-save${saved ? " is-saved" : ""}`}
+      aria-live="polite"
+      onClick={() => {
+        onClick();
+        flash();
+      }}
+    >
+      {saved ? (
+        <CheckCircle size={14} weight="fill" />
+      ) : (
+        <FloppyDisk size={14} weight="bold" />
+      )}
+      {saved ? savedLabel : label}
+    </button>
+  );
+}
+
+function SaveAllBar({ label, savedLabel, onClick, className = "" }) {
+  const [saved, flash] = useBriefFlash();
+  return (
+    <div className={`settings-actions ${className}`.trim()}>
+      <button
+        type="button"
+        className={`settings-btn-save${saved ? " is-saved" : ""}`}
+        aria-live="polite"
+        onClick={() => {
+          onClick();
+          flash();
+        }}
+      >
+        {saved ? (
+          <CheckCircle size={16} weight="fill" />
+        ) : (
+          <FloppyDisk size={16} weight="bold" />
+        )}
+        {saved ? savedLabel : label}
+      </button>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const navigate = useNavigate();
   const { t } = useI18n();
@@ -55,9 +125,11 @@ export default function SettingsPage() {
     normalizeSettings(loadJson("settings", {}))
   );
   const [status, setStatus] = useState("");
+  const [saveToast, setSaveToast] = useState(0);
   const [ttsOk, setTtsOk] = useState(null);
   const [serverKey, setServerKey] = useState(null);
   const [testing, setTesting] = useState(false);
+  const [previewing, setPreviewing] = useState(null); // "q" | "a" | null
   const [testProvider, setTestProvider] = useState(() =>
     normalizeAiProvider(
       normalizeSettings(loadJson("settings", {})).aiProvider
@@ -67,7 +139,43 @@ export default function SettingsPage() {
   const [apiTest, setApiTest] = useState(null); // { ok, text }
   const saveGen = useRef(0);
   const keyInputRef = useRef(null);
+  const toastTimer = useRef(null);
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+  const voiceBusy = testing || Boolean(previewing);
 
+  const previewVoice = async (role) => {
+    const voice = role === "q" ? settings.voiceQ : settings.voiceA;
+    setPreviewing(role);
+    setStatus(t("settings.playing"));
+    try {
+      await speakText(voicePreviewLine(voice, role), {
+        rate: settings.rate,
+        voice,
+      });
+      setStatus(t("settings.testDone"));
+      setTtsOk(true);
+    } catch (e) {
+      setStatus(e.message || "TTS test failed.");
+      setTtsOk(false);
+    } finally {
+      setPreviewing(null);
+    }
+  };
+
+  const saveNow = (msg) => {
+    saveGen.current += 1; // cancel pending debounce
+    saveJson("settings", normalizeSettings(settingsRef.current));
+    setStatus(msg ?? t("settings.saved"));
+    // Visible confirmation even when scrolled away from the bottom status line
+    setSaveToast((n) => n + 1);
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setSaveToast(0), 1800);
+  };
+
+  useEffect(() => () => clearTimeout(toastTimer.current), []);
+
+  // Debounced autosave while editing
   useEffect(() => {
     const gen = ++saveGen.current;
     const saveTimer = setTimeout(() => {
@@ -76,6 +184,13 @@ export default function SettingsPage() {
     }, 250);
     return () => clearTimeout(saveTimer);
   }, [settings]);
+
+  // Flush on leave (nav away / unmount) so a mid-debounce edit isn't dropped
+  useEffect(() => {
+    return () => {
+      saveJson("settings", normalizeSettings(settingsRef.current));
+    };
+  }, []);
 
   useEffect(() => {
     const refresh = () => {
@@ -257,6 +372,13 @@ export default function SettingsPage() {
           </h1>
         </motion.header>
 
+        <SaveAllBar
+          label={t("settings.saveAll")}
+          savedLabel={t("settings.saved")}
+          onClick={() => saveNow()}
+          className="settings-actions--top"
+        />
+
         {/* Identity Card */}
         <motion.section
           className="settings-section"
@@ -273,6 +395,11 @@ export default function SettingsPage() {
               <span className="settings-card-label">
                 {t("settings.name")}
               </span>
+              <SectionSaveBtn
+                label={t("settings.save")}
+                savedLabel={t("settings.saved")}
+                onClick={() => saveNow()}
+              />
             </div>
             <div className="settings-card-body">
               <div className="settings-row">
@@ -330,6 +457,11 @@ export default function SettingsPage() {
               <span className="settings-card-label">
                 {t("settings.interviewLang")}
               </span>
+              <SectionSaveBtn
+                label={t("settings.save")}
+                savedLabel={t("settings.saved")}
+                onClick={() => saveNow()}
+              />
             </div>
             <div className="settings-card-body">
               <div className="settings-row">
@@ -366,7 +498,7 @@ export default function SettingsPage() {
                 <span className="settings-row-label">
                   {t("settings.voiceQ")}
                 </span>
-                <div className="settings-field-wrap">
+                <div className="settings-field-wrap settings-voice-row">
                   <select
                     className="field"
                     value={settings.voiceQ}
@@ -378,13 +510,23 @@ export default function SettingsPage() {
                       </option>
                     ))}
                   </select>
+                  <button
+                    type="button"
+                    className="settings-voice-preview"
+                    disabled={voiceBusy}
+                    aria-label={t("settings.previewVoiceQ")}
+                    title={t("settings.previewVoiceQ")}
+                    onClick={() => previewVoice("q")}
+                  >
+                    <Play size={16} weight="fill" />
+                  </button>
                 </div>
               </div>
               <div className="settings-row">
                 <span className="settings-row-label">
                   {t("settings.voiceA")}
                 </span>
-                <div className="settings-field-wrap">
+                <div className="settings-field-wrap settings-voice-row">
                   <select
                     className="field"
                     value={settings.voiceA}
@@ -396,6 +538,16 @@ export default function SettingsPage() {
                       </option>
                     ))}
                   </select>
+                  <button
+                    type="button"
+                    className="settings-voice-preview"
+                    disabled={voiceBusy}
+                    aria-label={t("settings.previewVoiceA")}
+                    title={t("settings.previewVoiceA")}
+                    onClick={() => previewVoice("a")}
+                  >
+                    <Play size={16} weight="fill" />
+                  </button>
                 </div>
                 <p className="settings-row-hint">{t("settings.voiceHint")}</p>
               </div>
@@ -421,6 +573,11 @@ export default function SettingsPage() {
                   rate: Number(settings.rate).toFixed(2),
                 })}
               </span>
+              <SectionSaveBtn
+                label={t("settings.save")}
+                savedLabel={t("settings.saved")}
+                onClick={() => saveNow()}
+              />
             </div>
             <div className="settings-card-body">
               <div className="settings-row">
@@ -434,6 +591,49 @@ export default function SettingsPage() {
                   className="settings-range"
                   style={{ "--range-pct": `${ratePct}%` }}
                 />
+              </div>
+              <div className="settings-row">
+                <button
+                  type="button"
+                  className="settings-btn-test"
+                  disabled={voiceBusy}
+                  onClick={async () => {
+                    setTesting(true);
+                    setStatus(t("settings.playingSample"));
+                    try {
+                      const isEn = settings.lang === "en";
+                      const isZh = settings.lang === "zh";
+                      await speakQa(
+                        isEn
+                          ? "Tell me about yourself."
+                          : isZh
+                            ? "请介绍一下你自己。"
+                            : "Tell me about yourself. / 请介绍一下你自己。",
+                        isEn
+                          ? "I lead delivery teams across markets with clear ownership."
+                          : isZh
+                            ? "我负责跨区域交付，强调结果与客户信任。"
+                            : "I lead delivery teams across markets with clear ownership.\n\n我负责跨区域交付，强调结果与客户信任。",
+                        {
+                          rate: settings.rate,
+                          voiceQ: settings.voiceQ,
+                          voiceA: settings.voiceA,
+                          lang: settings.lang,
+                        }
+                      );
+                      setStatus(t("settings.testDone"));
+                      setTtsOk(true);
+                    } catch (e) {
+                      setStatus(e.message || "TTS test failed.");
+                      setTtsOk(false);
+                    } finally {
+                      setTesting(false);
+                    }
+                  }}
+                >
+                  <Play size={16} weight="fill" />
+                  {testing ? t("settings.playing") : t("settings.testQa")}
+                </button>
               </div>
             </div>
           </div>
@@ -455,6 +655,11 @@ export default function SettingsPage() {
               <span className="settings-card-label">
                 {t("settings.apiKey")}
               </span>
+              <SectionSaveBtn
+                label={t("settings.save")}
+                savedLabel={t("settings.saved")}
+                onClick={() => saveNow()}
+              />
             </div>
             <div className="settings-card-body">
               <div className="settings-row">
@@ -582,7 +787,7 @@ export default function SettingsPage() {
                 <div className="settings-field-wrap">
                   <select
                     className="field"
-                    value={settings.aiProvider || "gemini"}
+                    value={settings.aiProvider || DEFAULT_AI_PROVIDER}
                     onChange={(e) =>
                       patch({
                         aiProvider: e.target.value,
@@ -591,16 +796,16 @@ export default function SettingsPage() {
                     }
                   >
                     <option
-                      value="gemini"
-                      disabled={settings.geminiEnabled === false}
-                    >
-                      {t("settings.aiProvider.gemini")}
-                    </option>
-                    <option
                       value="antigravity"
                       disabled={settings.antigravityEnabled === false}
                     >
                       {t("settings.aiProvider.antigravity")}
+                    </option>
+                    <option
+                      value="gemini"
+                      disabled={settings.geminiEnabled === false}
+                    >
+                      {t("settings.aiProvider.gemini")}
                     </option>
                     <option
                       value="deepseek"
@@ -760,59 +965,23 @@ export default function SettingsPage() {
           </div>
 
           {/* Action bar */}
+          <SaveAllBar
+            label={t("settings.saveAll")}
+            savedLabel={t("settings.saved")}
+            onClick={() => saveNow()}
+            className="settings-actions--bottom"
+          />
           <div className="settings-actions">
             <button
               type="button"
               className="settings-btn-save"
               onClick={() => {
-                saveJson("settings", normalizeSettings(settings));
-                setStatus(t("settings.saved"));
+                saveNow();
                 navigate("/");
               }}
             >
               <FloppyDisk size={16} weight="bold" />
               {t("settings.saveBack")}
-            </button>
-            <button
-              type="button"
-              className="settings-btn-test"
-              disabled={testing}
-              onClick={async () => {
-                setTesting(true);
-                setStatus(t("settings.playingSample"));
-                try {
-                  const isEn = settings.lang === "en";
-                  const isZh = settings.lang === "zh";
-                  await speakQa(
-                    isEn
-                      ? "Tell me about yourself."
-                      : isZh
-                        ? "请介绍一下你自己。"
-                        : "Tell me about yourself. / 请介绍一下你自己。",
-                    isEn
-                      ? "I lead delivery teams across markets with clear ownership."
-                      : isZh
-                        ? "我负责跨区域交付，强调结果与客户信任。"
-                        : "I lead delivery teams across markets with clear ownership.\n\n我负责跨区域交付，强调结果与客户信任。",
-                    {
-                      rate: settings.rate,
-                      voiceQ: settings.voiceQ,
-                      voiceA: settings.voiceA,
-                      lang: settings.lang,
-                    }
-                  );
-                  setStatus(t("settings.testDone"));
-                  setTtsOk(true);
-                } catch (e) {
-                  setStatus(e.message || "TTS test failed.");
-                  setTtsOk(false);
-                } finally {
-                  setTesting(false);
-                }
-              }}
-            >
-              <Play size={16} weight="fill" />
-              {testing ? t("settings.playing") : t("settings.testQa")}
             </button>
           </div>
 
@@ -830,6 +999,24 @@ export default function SettingsPage() {
             ) : null}
           </AnimatePresence>
         </motion.section>
+
+        <AnimatePresence>
+          {saveToast > 0 ? (
+            <motion.div
+              key={saveToast}
+              className="settings-save-toast"
+              role="status"
+              aria-live="polite"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              transition={{ duration: 0.2 }}
+            >
+              <CheckCircle size={16} weight="fill" />
+              {t("settings.saved")}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </div>
     </Shell>
   );

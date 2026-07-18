@@ -16,9 +16,9 @@ export const AI_REGION_HEADER = "x-linecheck-ai-region";
 export const AI_PROVIDER_HEADER = "x-linecheck-ai-provider";
 export const AI_ENABLED_HEADER = "x-linecheck-ai-enabled";
 const KNOWN_PROVIDERS = new Set(["gemini", "antigravity", "deepseek"]);
-/** Default try order when keys exist: Gemini → Antigravity → DeepSeek. */
-export const PROVIDER_ORDER = ["gemini", "antigravity", "deepseek"];
-export const DEFAULT_AI_PROVIDER = "gemini";
+/** Default try order when keys exist: Antigravity → Gemini → DeepSeek. */
+export const PROVIDER_ORDER = ["antigravity", "gemini", "deepseek"];
+export const DEFAULT_AI_PROVIDER = "antigravity";
 /** Soft ceiling under Vercel maxDuration:60 — return JSON 504 instead of HTML kill. */
 export const HANDLER_BUDGET_MS = 55_000;
 /** Per upstream call; leaves room to return cleanly (or try a fast failover). */
@@ -48,9 +48,9 @@ export function parseAiRegion(req) {
 export function parseAiProvider(req) {
   const raw = String(req.headers?.[AI_PROVIDER_HEADER] || "").toLowerCase();
   if (KNOWN_PROVIDERS.has(raw)) return raw;
-  // Legacy region header — both regions now default to Gemini.
+  // Legacy region header — both regions now default to Antigravity.
   const region = parseAiRegion(req);
-  if (region) return "gemini";
+  if (region) return DEFAULT_AI_PROVIDER;
   return "";
 }
 
@@ -178,7 +178,7 @@ export function otherProvider(provider, env = process.env) {
 /**
  * Preference order for this request.
  * Client sends preferred provider + which are enabled; missing keys are skipped.
- * Rest follow PROVIDER_ORDER (Gemini → Antigravity → DeepSeek).
+ * Rest follow PROVIDER_ORDER (Antigravity → Gemini → DeepSeek).
  */
 export function providersToTry(req, env = process.env) {
   const enabled = parseEnabledProviders(req);
@@ -452,15 +452,15 @@ if (typeof process !== "undefined" && process.argv?.[1]?.endsWith("chat.js")) {
   console.assert(!shouldTryNextKey(400, { error: { message: "bad" } }), "400 stays");
   console.assert(
     pickProvider({ headers: { "x-vercel-ip-country": "CN" } }, env) ===
-      "gemini",
-    "CN geo → gemini"
+      "antigravity",
+    "CN geo → antigravity"
   );
   console.assert(
     pickProvider(
       { headers: { [AI_REGION_HEADER]: "global", "x-vercel-ip-country": "US" } },
       env
-    ) === "gemini",
-    "global region → gemini"
+    ) === "antigravity",
+    "global region → antigravity"
   );
   console.assert(
     pickProvider({ headers: { [AI_PROVIDER_HEADER]: "deepseek" } }, env) ===
@@ -507,7 +507,7 @@ if (typeof process !== "undefined" && process.argv?.[1]?.endsWith("chat.js")) {
         env
       )
     ) === JSON.stringify(["gemini", "antigravity", "deepseek"]),
-    "default order gemini → AG → deepseek"
+    "prefer gemini then AG then deepseek"
   );
   console.assert(
     JSON.stringify(
@@ -516,11 +516,11 @@ if (typeof process !== "undefined" && process.argv?.[1]?.endsWith("chat.js")) {
         env
       )
     ) === JSON.stringify(["antigravity", "gemini", "deepseek"]),
-    "prefer AG then gemini then deepseek"
+    "default order AG → gemini → deepseek"
   );
   console.assert(
-    otherProvider("deepseek", env) === "gemini",
-    "deepseek alt → gemini"
+    otherProvider("deepseek", env) === "antigravity",
+    "deepseek alt → antigravity"
   );
   console.assert(shouldTryOtherProvider(404, { error: { message: "not found" } }), "404 falls back");
   console.assert(!shouldTryOtherProvider(400, {}), "400 stays");
