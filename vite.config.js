@@ -21,6 +21,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: () => "/health",
       },
+      "/api/tts-warm": {
+        target: "http://127.0.0.1:8790",
+        changeOrigin: true,
+        rewrite: () => "/tts-warm",
+      },
       "/api/tts": {
         target: "http://127.0.0.1:8790",
         changeOrigin: true,

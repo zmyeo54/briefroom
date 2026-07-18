@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * First clip must start before later clips finish (priority synth).
- * onPrepareProgress must report percent.
+ * First audio should start before the whole playlist finishes.
+ * onPrepareProgress must report percent (per clip after batch).
  */
 import { resolve, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -51,7 +51,10 @@ globalThis.URL.revokeObjectURL = () => {};
 globalThis.speechSynthesis = { cancel() {} };
 
 globalThis.fetch = async (_url, init) => {
-  const text = JSON.parse(init.body || "{}").text || "";
+  const body = JSON.parse(init.body || "{}");
+  const text = Array.isArray(body.parts)
+    ? body.parts.map((p) => p.text || "").join(" ")
+    : body.text || "";
   const slow = /\bQ[3-9]\b|\bA[3-9]\b|\bP[3-9]\b/.test(text);
   await new Promise((r) => setTimeout(r, slow ? 100 : 8));
   return {
@@ -100,9 +103,9 @@ if (!pcts.length || pcts[pcts.length - 1] < 100) {
 const timeToStart = startAt - t0;
 const total = Date.now() - t0;
 if (timeToStart > total * 0.55) {
-  console.error("RED: first clip not prioritized", { timeToStart, total });
+  console.error("RED: first clip too late", { timeToStart, total });
   process.exit(1);
 }
 console.log(
-  `GREEN: priority+pct startMs=${timeToStart} totalMs=${total} lastPct=${pcts[pcts.length - 1]} samples=${pcts.length}`
+  `GREEN: batch+pct startMs=${timeToStart} totalMs=${total} lastPct=${pcts[pcts.length - 1]} samples=${pcts.length}`
 );

@@ -4,16 +4,19 @@ import {
   rateToEdge,
   resolveVoice,
   sanitizeSpeakText,
+  buildMultiVoiceSsml,
 } from "./_ttsShared.js";
 
 export const config = {
   maxDuration: 60,
-  api: { bodyParser: { sizeLimit: "32kb" } },
+  api: { bodyParser: { sizeLimit: "64kb" } },
 };
 
 /** Edge WS often drops mid-synthesis on long turns — keep each request short. */
-const CHUNK_CHARS = 700;
+const CHUNK_CHARS = 900;
 const MAX_ATTEMPTS = 5;
+const MAX_BATCH_PARTS = 12;
+const OUTPUT = OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3;
 
 function collectStream(stream, timeoutMs = 45000) {
   return new Promise((resolve, reject) => {
@@ -62,7 +65,6 @@ export function splitSpeakChunks(text, maxLen = CHUNK_CHARS) {
   }
   if (buf) parts.push(buf);
 
-  // Hard-split any leftover monster sentence
   return parts.flatMap((p) => {
     if (p.length <= maxLen) return [p];
     const hard = [];
@@ -74,12 +76,26 @@ export function splitSpeakChunks(text, maxLen = CHUNK_CHARS) {
 async function synthesizeOnce(text, edgeVoice, rate) {
   const tts = new MsEdgeTTS();
   try {
-    await tts.setMetadata(
-      edgeVoice,
-      OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3
-    );
+    await tts.setMetadata(edgeVoice, OUTPUT);
     const { audioStream } = tts.toStream(text, { rate });
     const audio = await collectStream(audioStream);
+    if (!audio?.length) throw new Error("empty audio");
+    return audio;
+  } finally {
+    try {
+      tts.close();
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+async function synthesizeRawSsml(ssml, edgeVoice) {
+  const tts = new MsEdgeTTS();
+  try {
+    await tts.setMetadata(edgeVoice, OUTPUT);
+    const { audioStream } = tts.rawToStream(ssml);
+    const audio = await collectStream(audioStream, 60000);
     if (!audio?.length) throw new Error("empty audio");
     return audio;
   } finally {
@@ -98,12 +114,66 @@ async function synthesizeWithRetry(text, edgeVoice, rate) {
       return await synthesizeOnce(text, edgeVoice, rate);
     } catch (e) {
       last = e;
-      // Edge flaps the WS under load — back off harder before retrying.
       const ms = Math.min(5000, 500 * 2 ** attempt);
       await new Promise((r) => setTimeout(r, ms));
     }
   }
   throw last;
+}
+
+async function synthesizeText(text, voiceId, rate) {
+  const edgeVoice = resolveVoice(voiceId);
+  const pieces = splitSpeakChunks(text);
+  const buffers = [];
+  for (const piece of pieces) {
+    buffers.push(await synthesizeWithRetry(piece, edgeVoice, rate));
+  }
+  return Buffer.concat(buffers);
+}
+
+function canMultiVoice(parts) {
+  if (!parts.length || parts.length > MAX_BATCH_PARTS) return false;
+  // Long segments still need chunking — fall back to per-part Edge turns.
+  return parts.every((p) => sanitizeSpeakText(p?.text || "").length <= CHUNK_CHARS);
+}
+
+async function synthesizeParts(parts, rate) {
+  const cleaned = [];
+  for (const part of parts) {
+    const text = sanitizeSpeakText(part?.text || "");
+    if (!text) continue;
+    if (text.length > 4500) {
+      const err = new Error("text too long");
+      err.status = 400;
+      throw err;
+    }
+    cleaned.push({ text, voice: part.voice });
+  }
+  if (!cleaned.length) return Buffer.alloc(0);
+
+  if (canMultiVoice(cleaned)) {
+    const ssml = buildMultiVoiceSsml(cleaned, rate);
+    const firstVoice = resolveVoice(cleaned[0].voice);
+    let last;
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      try {
+        return await synthesizeRawSsml(ssml, firstVoice);
+      } catch (e) {
+        last = e;
+        await new Promise((r) =>
+          setTimeout(r, Math.min(5000, 500 * 2 ** attempt))
+        );
+      }
+    }
+    // Multi-voice SSML flaky under Edge — fall through to sequential.
+    console.warn("[tts] multi-voice SSML failed, sequential fallback:", last?.message);
+  }
+
+  const buffers = [];
+  for (const part of cleaned) {
+    buffers.push(await synthesizeText(part.text, part.voice, rate));
+  }
+  return Buffer.concat(buffers);
 }
 
 export default async function handler(req, res) {
@@ -120,6 +190,25 @@ export default async function handler(req, res) {
   try {
     const body =
       typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body || {};
+    const rate = rateToEdge(body.rate);
+
+    // Batch: one serverless invoke synthesizes many segments (Q+A Mix parts).
+    if (Array.isArray(body.parts) && body.parts.length) {
+      if (body.parts.length > MAX_BATCH_PARTS) {
+        res.status(400).json({ error: "too many parts" });
+        return;
+      }
+      const audio = await synthesizeParts(body.parts, rate);
+      if (!audio.length) {
+        res.status(502).json({ error: "empty audio" });
+        return;
+      }
+      res.setHeader("Content-Type", "audio/mpeg");
+      res.setHeader("Cache-Control", "no-store");
+      res.status(200).send(audio);
+      return;
+    }
+
     const text = sanitizeSpeakText(body.text || "");
     if (!text) {
       res.status(400).json({ error: "text required" });
@@ -130,14 +219,7 @@ export default async function handler(req, res) {
       return;
     }
 
-    const edgeVoice = resolveVoice(body.voice);
-    const rate = rateToEdge(body.rate);
-    const pieces = splitSpeakChunks(text);
-    const buffers = [];
-    for (const piece of pieces) {
-      buffers.push(await synthesizeWithRetry(piece, edgeVoice, rate));
-    }
-    const audio = Buffer.concat(buffers);
+    const audio = await synthesizeText(text, body.voice, rate);
     if (!audio.length) {
       res.status(502).json({ error: "empty audio" });
       return;
@@ -147,6 +229,10 @@ export default async function handler(req, res) {
     res.setHeader("Cache-Control", "no-store");
     res.status(200).send(audio);
   } catch (e) {
+    if (e?.status === 400) {
+      res.status(400).json({ error: e.message });
+      return;
+    }
     console.error("[tts] synthesis error:", e?.message, e?.stack);
     res.status(500).json({ error: e?.message || "TTS failed" });
   }

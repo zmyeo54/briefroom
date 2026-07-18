@@ -68,10 +68,25 @@ import {
   pauseSpeech,
   resumeSpeech,
   exportMergedQaAudio,
+  prefetchQaSequence,
+  cancelPrefetch,
+  warmupTts,
 } from "../lib/tts";
 
 function readSettings() {
   return normalizeSettings(loadJson("settings", {}));
+}
+
+function buildSpeakEntries(qaList, indices, lang) {
+  return indices.map((i) => {
+    const preface =
+      lang === "zh"
+        ? `第${i + 1}题。`
+        : lang === "both"
+          ? `Question ${i + 1}. / 第${i + 1}题。`
+          : `Question ${i + 1}.`;
+    return { q: qaList[i].q, a: qaList[i].a, preface };
+  });
 }
 
 export default function HomePage() {
@@ -263,6 +278,49 @@ export default function HomePage() {
     const id = setTimeout(() => setStatus({ text: "", kind: "" }), ms);
     return () => clearTimeout(id);
   }, [status]);
+
+  // Keep TTS lambda warm while practicing; idle-prefetch selected (or all) clips.
+  useEffect(() => {
+    warmupTts();
+    const warmId = setInterval(() => warmupTts(), 4 * 60 * 1000);
+    return () => clearInterval(warmId);
+  }, []);
+
+  useEffect(() => {
+    if (!qa.length || speaking) {
+      cancelPrefetch();
+      return undefined;
+    }
+    const latest = readSettings();
+    const indices = (
+      selected.size
+        ? [...selected].sort((a, b) => a - b)
+        : qa.map((_, i) => i)
+    ).filter((i) => qa[i]?.a?.trim() || qa[i]?.q?.trim());
+    if (!indices.length) return undefined;
+
+    const handle = setTimeout(() => {
+      prefetchQaSequence(buildSpeakEntries(qa, indices, latest.lang), {
+        rate: latest.rate,
+        voiceQ: latest.voiceQ,
+        voiceA: latest.voiceA,
+        lang: latest.lang,
+      });
+    }, 600);
+    return () => {
+      clearTimeout(handle);
+      cancelPrefetch();
+    };
+  }, [
+    qa,
+    qaEpoch,
+    selected,
+    speaking,
+    settings.lang,
+    settings.voiceQ,
+    settings.voiceA,
+    settings.rate,
+  ]);
 
   const questions = useMemo(
     () =>
@@ -813,15 +871,7 @@ export default function HomePage() {
     setAudioPaused(false);
     setAudioReady(false);
     setStatus({ text: "", kind: "" });
-    const entries = indices.map((i) => {
-      const preface =
-        latest.lang === "zh"
-          ? `第${i + 1}题。`
-          : latest.lang === "both"
-            ? `Question ${i + 1}. / 第${i + 1}题。`
-            : `Question ${i + 1}.`;
-      return { q: qa[i].q, a: qa[i].a, preface };
-    });
+    const entries = buildSpeakEntries(qa, indices, latest.lang);
     setAudioNote({ text: t("home.preparingAudio"), kind: "" });
     setPreparePct(0);
     setPrepareClip({ clip: 0, clips: entries.length });
@@ -1495,7 +1545,7 @@ export default function HomePage() {
               {!audioReady && !audioPaused ? (
                 <>
                   <SpinnerGap size={16} className="animate-spin" />
-                  {preparePct > 0
+                  {prepareClip.clips > 0
                     ? preparePct >= 100 &&
                       prepareClip.clip === prepareClip.clips
                       ? t("home.preparingAudioCached")

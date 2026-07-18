@@ -7,5 +7,7 @@ export {
   resolveVoice,
   rateToEdge,
   sanitizeSpeakText,
+  escapeXml,
+  buildMultiVoiceSsml,
   cors,
 } from "../lib/edgeTts.js";

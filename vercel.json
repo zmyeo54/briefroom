@@ -23,7 +23,14 @@
   ],
   "functions": {
     "api/tts.js": { "maxDuration": 60 },
+    "api/tts-warm.js": { "maxDuration": 30 },
     "api/fetch-url.js": { "maxDuration": 30 },
     "api/chat.js": { "maxDuration": 60 }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/tts-warm",
+      "schedule": "*/5 * * * *"
+    }
+  ]
 }
