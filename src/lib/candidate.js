@@ -109,3 +109,15 @@ export function applyCandidateNameToItems(items, name) {
     a: applyCandidateNameToText(item.a, n),
   }));
 }
+
+if (typeof process !== "undefined" && process.argv?.[1]?.endsWith("candidate.js")) {
+  console.assert(
+    pickCandidateName("Jane Doe", "Ignore this") === "Jane Doe",
+    "AI name wins"
+  );
+  console.assert(
+    pickCandidateName("", "Name: Alex Chen\nEngineer") === "Alex Chen",
+    "resume fallback"
+  );
+  console.assert(pickCandidateName("x", "") === "", "rejects implausible AI name");
+}

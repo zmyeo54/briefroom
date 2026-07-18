@@ -8,10 +8,8 @@ let playToken = 0;
 const audioCache = new Map();
 const CACHE_MAX = 100;
 const FETCH_CONCURRENCY = 3;
-/** Play-all prefetches item-by-item — parallel items × Mix parts flooded Edge. */
-const SPEAK_ITEM_CONCURRENCY = 1;
 /** Edge drops WS mid-synthesis when many turns run at once (no turn.end). */
-const TTS_INFLIGHT_LIMIT = 2;
+const TTS_INFLIGHT_LIMIT = 1;
 const TTS_FETCH_TIMEOUT_MS = 30000;
 let ttsInflight = 0;
 const ttsWaiters = [];
@@ -63,25 +61,25 @@ export const TTS_VOICES = [
   },
   {
     id: "en-aria-news",
-    label: "English · Aria",
+    label: "English female · Aria",
     lang: "en",
     gender: "female",
   },
   {
     id: "en-jenny-news",
-    label: "English · Jenny",
+    label: "English female · Jenny",
     lang: "en",
     gender: "female",
   },
   {
     id: "en-guy-news",
-    label: "English · Guy",
+    label: "English male · Guy",
     lang: "en",
     gender: "male",
   },
   {
     id: "en-davis-news",
-    label: "English · Davis",
+    label: "English male · Davis",
     lang: "en",
     gender: "male",
   },
@@ -462,10 +460,12 @@ export async function synthesizeQaAudio(
   });
   if (!parts.length) throw new Error("Nothing to export");
 
-  // Parallel segment fetches — Mix mode has 4–6 parts; sequential felt like “compile time”.
-  const blobs = await Promise.all(
-    parts.map((part) => fetchAudio(part.text, part.voice, rate))
-  );
+  // One part at a time — Mix Promise.all × play-all still opened multiple Edge
+  // turns and surfaced as "Voice cut out mid-line" for select-all.
+  const blobs = [];
+  for (const part of parts) {
+    blobs.push(await fetchAudio(part.text, part.voice, rate));
+  }
   return new Blob(blobs, { type: "audio/mpeg" });
 }
 
@@ -708,20 +708,34 @@ export async function speakQaSequence(entries, options = {}) {
   // Prefetch only — do not call onProgress here. HomePage maps onProgress →
   // playingIndex → "Now reading"; firing it during prepare made rows pulse/hop
   // while the FAB stayed on "Preparing voice…".
-  // One item at a time: Mix mode is already 4–6 parts per item behind the
-  // inflight cap; parallel items were what tripped "Voice cut out mid-line".
-  const blobs = await mapPool(list, SPEAK_ITEM_CONCURRENCY, async (e) => {
-    if (token !== playToken) return null;
-    return synthesizeQaAudio(e.q, e.a, {
-      rate,
-      voiceQ,
-      voiceA,
-      preface: e.preface || "",
-      lang,
-    });
-  });
+  // Sequential items + one retry: one bad Edge turn must not kill the playlist.
+  const blobs = [];
+  for (const e of list) {
+    if (token !== playToken) return;
+    let blob = null;
+    let lastErr = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        blob = await synthesizeQaAudio(e.q, e.a, {
+          rate,
+          voiceQ,
+          voiceA,
+          preface: e.preface || "",
+          lang,
+        });
+        break;
+      } catch (err) {
+        lastErr = err;
+        if (token !== playToken) return;
+        if (String(err?.message || err) === "Playback cancelled") throw err;
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+      }
+    }
+    if (blob) blobs.push(blob);
+    else if (lastErr) throw lastErr;
+  }
   if (token !== playToken) return;
-  if (blobs.some((b) => !b)) return;
+  if (!blobs.length) return;
   await playBlob(new Blob(blobs, { type: "audio/mpeg" }), token, {
     onStart: () => {
       onStart?.();
