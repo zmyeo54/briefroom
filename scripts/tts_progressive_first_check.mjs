@@ -91,14 +91,14 @@ let startAt = 0;
 await speakQaSequence(
   [
     {
-      q: "Hello / 你好",
-      a: "I am a candidate. / 我是候选人。",
-      preface: "Question 1. / 第一题。",
+      q: "Hello there friend how are you doing today?",
+      a: "I am a candidate with a long answer.",
+      preface: "Question 1.",
     },
     { q: "Two?", a: "Answer two.", preface: "Q2." },
   ],
   {
-    lang: "both",
+    lang: "en",
     onStart: () => {
       startAt = Date.now();
     },
@@ -110,13 +110,13 @@ if (!startAt) {
   process.exit(1);
 }
 const toStart = startAt - t0;
-// First Mix part is fast (10ms); full batch of remaining parts is 120ms each.
-// Progressive play should start well before ~200ms+.
-if (toStart > 100) {
-  console.error("RED: first audio too late for progressive path", {
-    toStart,
-    partN,
-  });
+// Preface is fast; real question part is delayed 120ms — must wait for both.
+if (toStart < 100) {
+  console.error("RED: started too early (preface-only?)", { toStart, partN });
   process.exit(1);
 }
-console.log(`GREEN: progressive first-audio startMs=${toStart} partsFetched=${partN}`);
+if (toStart > 400) {
+  console.error("RED: first audio too late", { toStart, partN });
+  process.exit(1);
+}
+console.log(`GREEN: progressive Q-group startMs=${toStart} partsFetched=${partN}`);

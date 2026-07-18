@@ -330,6 +330,23 @@ export function buildSpeakParts(
   return parts;
 }
 
+/**
+ * How many leading parts to play as the first progressive chunk.
+ * Include preface + question only — never start audio on "Question 1." alone
+ * and leave the real question waiting.
+ */
+export function firstPlayGroupSize(parts, entry, options = {}) {
+  const list = parts || [];
+  if (!list.length) return 0;
+  const qOnly = buildSpeakParts(entry?.q || "", "", {
+    voiceQ: options.voiceQ,
+    voiceA: options.voiceA,
+    preface: entry?.preface || "",
+    lang: options.lang || "en",
+  });
+  return Math.min(list.length, Math.max(1, qOnly.length));
+}
+
 const LEGACY_VOICE_MAP = {
   "zh-male": "zh-yunyang-news",
   "zh-female": "zh-xiaoxiao-news",
@@ -1329,14 +1346,36 @@ export async function speakQaSequence(entries, options = {}) {
       )
     );
 
-    const firstBlob = await partTasks[0];
+    // Wait for preface + question (not just "Question 1.") before starting.
+    const groupN = firstPlayGroupSize(parts, entry, {
+      voiceQ,
+      voiceA,
+      lang,
+    });
+    const headBlobs = [];
+    for (let i = 0; i < groupN; i++) {
+      if (token !== playToken) return false;
+      onPrepareProgress?.({
+        done: i,
+        total: Math.max(groupN, 1),
+        percent: Math.min(
+          99,
+          Math.round(((i + 0.5) / Math.max(groupN, 1)) * 100)
+        ),
+        clip: 1,
+        clips: list.length,
+      });
+      const b = await partTasks[i];
+      if (b) headBlobs.push(b);
+    }
     if (token !== playToken) return false;
-    if (!firstBlob) {
+    if (!headBlobs.length) {
       bumpClip(0);
       return false;
     }
 
-    const restPromise = Promise.all(partTasks.slice(1));
+    const firstBlob = new Blob(headBlobs, { type: "audio/mpeg" });
+    const restPromise = Promise.all(partTasks.slice(groupN));
     try {
       await playBlob(firstBlob, token, {
         keepElement: true,
@@ -1346,7 +1385,7 @@ export async function speakQaSequence(entries, options = {}) {
       if (token !== playToken) return false;
       warmupAudio(token);
       const rest = (await restPromise).filter(Boolean);
-      const all = [firstBlob, ...rest];
+      const all = [...headBlobs, ...rest];
       rememberBlob(clipKey, new Blob(all, { type: "audio/mpeg" }));
       bumpClip(0);
       await playBlob(new Blob(all, { type: "audio/mpeg" }), token, {
@@ -1358,7 +1397,7 @@ export async function speakQaSequence(entries, options = {}) {
 
     if (token !== playToken) return false;
     const rest = (await restPromise).filter(Boolean);
-    const full = new Blob([firstBlob, ...rest], { type: "audio/mpeg" });
+    const full = new Blob([...headBlobs, ...rest], { type: "audio/mpeg" });
     rememberBlob(clipKey, full);
     bumpClip(0);
 
