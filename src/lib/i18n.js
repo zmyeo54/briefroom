@@ -221,7 +221,7 @@ const en = {
   "settings.name": "Your name",
   "settings.namePlaceholder": "How you introduce yourself",
   "settings.nameHint":
-    "Filled from your resume when we spot a name. Edit anytime — your edit wins.",
+    "Filled after you build answers, when AI spots a name. Edit anytime — your edit wins.",
   "settings.keyLoaded": "Key ready ({preview}… · {n} chars). Paste a new one anytime to replace it.",
   "settings.noKey":
     "No key yet — paste a key above, or set GEMINI_API_KEY / DEEPSEEK_API_KEY / ANTIGRAVITY_API_KEY on the server.",
@@ -229,16 +229,16 @@ const en = {
   "settings.aiRegion.global": "Global",
   "settings.aiRegion.greaterChina": "Greater China",
   "settings.aiRegionHint":
-    "Routing is the same worldwide: Antigravity first, then Gemini, then DeepSeek. Change Prefer in Settings anytime.",
+    "Routing is the same worldwide: Gemini first, then Antigravity, then DeepSeek. Change Prefer in Settings anytime.",
   "settings.aiProviders": "AI providers",
   "settings.aiProvidersHint":
-    "Turn each route on or off. At least one must stay on. Default order is Antigravity → Gemini → DeepSeek.",
+    "Turn each route on or off. At least one must stay on. Default order is Gemini → Antigravity → DeepSeek.",
   "settings.aiProvider": "Prefer",
   "settings.aiProvider.gemini": "Gemini",
   "settings.aiProvider.deepseek": "DeepSeek",
   "settings.aiProvider.antigravity": "Antigravity",
   "settings.aiProviderHint":
-    "Which route to try first. Failover follows Antigravity → Gemini → DeepSeek among the routes still on.",
+    "Which route to try first. Failover follows Gemini → Antigravity → DeepSeek among the routes still on.",
   "settings.apiTest": "Test API",
   "settings.apiTestBtn": "Test",
   "settings.apiTestRunning": "Testing…",
@@ -605,7 +605,7 @@ const zh = {
   "settings.name": "你的姓名",
   "settings.namePlaceholder": "自我介绍时怎么称呼自己",
   "settings.nameHint":
-    "放进简历后会自动识别姓名。可随时改——你改的优先。",
+    "生成答案后，AI 从简历识别到姓名会填入。可随时改——你改的优先。",
   "settings.keyLoaded": "密钥已就绪（{preview}… · {n} 字符）。随时可粘贴新密钥覆盖。",
   "settings.noKey":
     "还没有密钥——在上方粘贴，或在服务器设置 GEMINI_API_KEY / DEEPSEEK_API_KEY / ANTIGRAVITY_API_KEY。",
@@ -613,16 +613,16 @@ const zh = {
   "settings.aiRegion.global": "全球",
   "settings.aiRegion.greaterChina": "大中华区",
   "settings.aiRegionHint":
-    "全球与大中华区默认一致：先 Antigravity，再 Gemini，最后 DeepSeek。可随时在设置里改优先线路。",
+    "全球与大中华区默认一致：先 Gemini，再 Antigravity，最后 DeepSeek。可随时在设置里改优先线路。",
   "settings.aiProviders": "AI 线路",
   "settings.aiProvidersHint":
-    "可分别开关。至少保留一条。默认顺序：Antigravity → Gemini → DeepSeek。",
+    "可分别开关。至少保留一条。默认顺序：Gemini → Antigravity → DeepSeek。",
   "settings.aiProvider": "优先使用",
   "settings.aiProvider.gemini": "Gemini",
   "settings.aiProvider.deepseek": "DeepSeek",
   "settings.aiProvider.antigravity": "Antigravity",
   "settings.aiProviderHint":
-    "先走哪条线路。失败后按 Antigravity → Gemini → DeepSeek 在仍开启的线路里依次重试。",
+    "先走哪条线路。失败后按 Gemini → Antigravity → DeepSeek 在仍开启的线路里依次重试。",
   "settings.apiTest": "测试 API",
   "settings.apiTestBtn": "测试",
   "settings.apiTestRunning": "测试中…",

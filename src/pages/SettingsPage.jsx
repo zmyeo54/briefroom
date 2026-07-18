@@ -582,7 +582,7 @@ export default function SettingsPage() {
                 <div className="settings-field-wrap">
                   <select
                     className="field"
-                    value={settings.aiProvider || "antigravity"}
+                    value={settings.aiProvider || "gemini"}
                     onChange={(e) =>
                       patch({
                         aiProvider: e.target.value,
@@ -591,16 +591,16 @@ export default function SettingsPage() {
                     }
                   >
                     <option
-                      value="antigravity"
-                      disabled={settings.antigravityEnabled === false}
-                    >
-                      {t("settings.aiProvider.antigravity")}
-                    </option>
-                    <option
                       value="gemini"
                       disabled={settings.geminiEnabled === false}
                     >
                       {t("settings.aiProvider.gemini")}
+                    </option>
+                    <option
+                      value="antigravity"
+                      disabled={settings.antigravityEnabled === false}
+                    >
+                      {t("settings.aiProvider.antigravity")}
                     </option>
                     <option
                       value="deepseek"

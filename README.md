@@ -25,7 +25,7 @@ Set server env vars (never commit keys):
 - `ANTIGRAVITY_API_BASE` — optional; default `http://138.2.161.62:8045` (`/v1` appended if missing)
 - `ANTIGRAVITY_MODEL` — optional; default `gemini-3.1-flash-lite`
 
-`/api/chat` defaults to Antigravity worldwide, then Gemini, then DeepSeek. Prefer in Settings overrides the start of that order.
+`/api/chat` defaults to Gemini worldwide, then Antigravity, then DeepSeek. Prefer in Settings overrides the start of that order.
 
 ```bash
 npm run build

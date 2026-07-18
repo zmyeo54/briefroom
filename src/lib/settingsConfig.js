@@ -109,13 +109,13 @@ export const DEFAULT_MODEL = PINNED_GEMINI_MODEL;
 
 /** Which server-side LLM to prefer (sent on each /api/chat request). */
 export const AI_PROVIDERS = [
-  { id: "antigravity" },
   { id: "gemini" },
+  { id: "antigravity" },
   { id: "deepseek" },
 ];
-/** Default try order: Antigravity → Gemini → DeepSeek (global + Greater China). */
+/** Default try order: Gemini → Antigravity → DeepSeek (global + Greater China). */
 export const AI_PROVIDER_ORDER = AI_PROVIDERS.map((p) => p.id);
-export const DEFAULT_AI_PROVIDER = "antigravity";
+export const DEFAULT_AI_PROVIDER = "gemini";
 export const AI_PROVIDER_IDS = AI_PROVIDER_ORDER;
 
 /** @deprecated region was a proxy for provider — kept for stored settings / headers */
@@ -166,7 +166,7 @@ export function aiProviderLabelKey(provider) {
 
 /**
  * Enabled providers: preferred first, then the rest in AI_PROVIDER_ORDER
- * (Antigravity → Gemini → DeepSeek).
+ * (Gemini → Antigravity → DeepSeek).
  */
 export function enabledAiProviders(settings = {}) {
   const preferred = normalizeAiProvider(settings.aiProvider);
@@ -181,7 +181,7 @@ export function enabledAiProviders(settings = {}) {
   return [preferred, ...on.filter((p) => p !== preferred)];
 }
 
-/** Antigravity for everyone unless the user chose Prefer manually. */
+/** Gemini for everyone unless the user chose Prefer manually. */
 export function aiProviderForGeo(_country, settings = {}) {
   if (settings.aiProviderManual || settings.aiRegionManual) {
     return normalizeAiProvider(settings.aiProvider || settings.aiRegion);

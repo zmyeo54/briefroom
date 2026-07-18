@@ -37,6 +37,7 @@ import {
 } from "../lib/prompt";
 import {
   extractCandidateName,
+  pickCandidateName,
   applyCandidateNameToItems,
 } from "../lib/candidate";
 import {
@@ -376,26 +377,15 @@ export default function HomePage() {
     return `${label} · ${genMeta.model}`;
   }, [genMeta, settings.aiProvider, t]);
 
-  /** Fill Settings → Your name from resume when the field is still empty. */
-  const catchNameFromResume = useCallback(
-    (resumeText = resume) => {
-      const extracted = extractCandidateName(resumeText);
-      if (!extracted) return "";
-      const cur = readSettings();
-      if (String(cur.name || "").trim()) return extracted;
-      patchSettings({ name: extracted });
-      return extracted;
-    },
-    // patchSettings is stable enough via readSettings; resume used as default arg
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [resume]
-  );
-
-  // When a resume is attached, catch the name into Settings if empty
-  useEffect(() => {
-    if (!resume.trim()) return;
-    catchNameFromResume(resume);
-  }, [resume, catchNameFromResume]);
+  /** Fill Settings → Your name after AI spots one (user edit wins). */
+  const catchNameIfEmpty = useCallback((spotted) => {
+    const name = String(spotted || "").trim();
+    if (!name) return "";
+    const cur = readSettings();
+    if (String(cur.name || "").trim()) return name;
+    patchSettings({ name });
+    return name;
+  }, []);
 
   const setInterviewLang = (lang) => {
     const cur = readSettings();
@@ -702,11 +692,13 @@ export default function HomePage() {
         queue = [result.provider];
       }
 
-      const fromResume = catchNameFromResume(resume);
+      const spotted = pickCandidateName(
+        parsedMeta?.candidateName || parsedMeta?.name,
+        resume
+      );
+      const fromAi = catchNameIfEmpty(spotted);
       const nameForAnswers =
-        String(readSettings().name || "").trim() ||
-        fromResume ||
-        extractCandidateName(resume);
+        String(readSettings().name || "").trim() || fromAi || spotted;
 
       const named = applyCandidateNameToItems(merged, nameForAnswers);
       const items = pinMandatoryFirst(named, latest.lang, questions);

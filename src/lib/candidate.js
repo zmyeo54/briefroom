@@ -35,6 +35,13 @@ export function extractCandidateName(resume) {
   return "";
 }
 
+/** Prefer AI-spotted name; fall back to resume heuristics. */
+export function pickCandidateName(aiName, resume) {
+  const fromAi = cleanName(aiName);
+  if (isPlausibleName(fromAi)) return fromAi;
+  return extractCandidateName(resume);
+}
+
 function looksLikeNoiseLine(line) {
   return (
     /@|https?:\/\//i.test(line) ||
