@@ -12,8 +12,8 @@ export const config = {
 };
 
 /** Edge WS often drops mid-synthesis on long turns — keep each request short. */
-const CHUNK_CHARS = 480;
-const MAX_ATTEMPTS = 6;
+const CHUNK_CHARS = 700;
+const MAX_ATTEMPTS = 5;
 
 function collectStream(stream, timeoutMs = 45000) {
   return new Promise((resolve, reject) => {

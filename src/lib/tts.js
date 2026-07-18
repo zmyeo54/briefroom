@@ -8,8 +8,10 @@ let playToken = 0;
 const audioCache = new Map();
 const CACHE_MAX = 100;
 const FETCH_CONCURRENCY = 3;
-/** Edge drops WS mid-synthesis when many turns run at once (no turn.end). */
-const TTS_INFLIGHT_LIMIT = 1;
+/** Cap concurrent Edge turns — 1 was safe but ~2× slower; 2 is the sweet spot. */
+const TTS_INFLIGHT_LIMIT = 2;
+/** How many Q&A items to synthesize in parallel for play-all / export. */
+const SPEAK_ITEM_CONCURRENCY = 2;
 const TTS_FETCH_TIMEOUT_MS = 45000;
 const TTS_FETCH_ATTEMPTS = 6;
 let ttsInflight = 0;
@@ -468,18 +470,20 @@ export async function synthesizeQaAudio(
   });
   if (!parts.length) throw new Error("Nothing to export");
 
-  // One part at a time. Skip a glitched line rather than failing the whole Q&A.
-  const blobs = [];
-  let lastErr = null;
-  for (const part of parts) {
-    try {
-      blobs.push(await fetchAudio(part.text, part.voice, rate));
-    } catch (err) {
-      if (String(err?.message || err) === "Playback cancelled") throw err;
-      lastErr = err;
-    }
-  }
-  if (!blobs.length) throw lastErr || new Error("Nothing to speak");
+  // Parallel parts, gated by TTS_INFLIGHT_LIMIT. Skip a glitched line rather
+  // than failing the whole Q&A.
+  const results = await Promise.all(
+    parts.map(async (part) => {
+      try {
+        return await fetchAudio(part.text, part.voice, rate);
+      } catch (err) {
+        if (String(err?.message || err) === "Playback cancelled") throw err;
+        return null;
+      }
+    })
+  );
+  const blobs = results.filter(Boolean);
+  if (!blobs.length) throw new Error("Nothing to speak");
   return new Blob(blobs, { type: "audio/mpeg" });
 }
 
@@ -515,34 +519,29 @@ export async function synthesizeMergedQaAudio(items, options = {}) {
   if (!list.length) throw new Error("Nothing to export");
 
   const lang = options.lang || "en";
-  const blobs = [];
-  for (let i = 0; i < list.length; i++) {
-    const item = list[i];
+  const blobs = await mapPool(list, SPEAK_ITEM_CONCURRENCY, async (item, i) => {
     const preface =
       item.preface ||
       (lang === "zh" || lang === "both"
         ? `第${i + 1}题。`
         : `Question ${i + 1}.`);
-    let blob = null;
-    let lastErr = null;
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        blob = await synthesizeQaAudio(item.q, item.a, {
+        return await synthesizeQaAudio(item.q, item.a, {
           ...options,
           preface,
           lang,
         });
-        break;
       } catch (err) {
-        lastErr = err;
         if (String(err?.message || err) === "Playback cancelled") throw err;
         await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
       }
     }
-    if (!blob) throw lastErr || new Error("TTS failed");
-    blobs.push(blob);
-  }
-  return new Blob(blobs, { type: "audio/mpeg" });
+    return null;
+  });
+  const ready = blobs.filter(Boolean);
+  if (!ready.length) throw new Error("Nothing to export");
+  return new Blob(ready, { type: "audio/mpeg" });
 }
 
 /**
@@ -769,54 +768,43 @@ export async function speakQaSequence(entries, options = {}) {
 
   warmupAudio(token);
 
-  const blobs = [];
-  let skipped = 0;
-
-  for (let i = 0; i < list.length; i++) {
-    if (token !== playToken) return { played: 0, skipped };
-    let blob = null;
+  const blobs = await mapPool(list, SPEAK_ITEM_CONCURRENCY, async (entry) => {
+    if (token !== playToken) return null;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        blob = await synthesizeQaAudio(list[i].q, list[i].a, {
+        return await synthesizeQaAudio(entry.q, entry.a, {
           rate,
           voiceQ,
           voiceA,
-          preface: list[i].preface || "",
+          preface: entry.preface || "",
           lang,
         });
-        break;
       } catch (err) {
-        if (token !== playToken) return { played: 0, skipped };
-        if (String(err?.message || err) === "Playback cancelled") {
-          throw err;
-        }
+        if (token !== playToken) return null;
+        if (String(err?.message || err) === "Playback cancelled") throw err;
         await new Promise((r) =>
           setTimeout(r, Math.min(4000, 800 * 2 ** attempt))
         );
       }
     }
-    if (blob) blobs.push(blob);
-    else skipped += 1;
+    return null;
+  });
 
-    // Let Edge settle between Q&A turns (cuts stream-closed storms).
-    if (i < list.length - 1 && token === playToken) {
-      await new Promise((r) => setTimeout(r, 400));
-    }
-  }
-
-  if (token !== playToken) return { played: 0, skipped };
-  if (!blobs.length) {
+  if (token !== playToken) return { played: 0, skipped: 0 };
+  const ready = blobs.filter(Boolean);
+  const skipped = blobs.length - ready.length;
+  if (!ready.length) {
     throw new Error("Couldn't prepare practice audio. Tap play once more.");
   }
 
-  await playBlob(new Blob(blobs, { type: "audio/mpeg" }), token, {
+  await playBlob(new Blob(ready, { type: "audio/mpeg" }), token, {
     onStart: () => {
       onStart?.();
       onProgress?.(0);
     },
   });
 
-  return { played: blobs.length, skipped };
+  return { played: ready.length, skipped };
 }
 
 /** Pause current practice audio without cancelling the session. */
