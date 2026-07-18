@@ -644,7 +644,6 @@ function playBlob(blob, token, { onStart, keepElement = false } = {}) {
       resolve();
       return;
     }
-    // Swap the real audio into the pre-warmed element
     const url = URL.createObjectURL(blob);
     const el = currentAudio;
     if (!el || token !== playToken) {
@@ -652,38 +651,55 @@ function playBlob(blob, token, { onStart, keepElement = false } = {}) {
       resolve();
       return;
     }
-    // Revoke old URL
     if (currentUrl && currentUrl !== url) {
       URL.revokeObjectURL(currentUrl);
     }
     currentUrl = url;
+
+    // Clear prior handlers before swapping src — otherwise a stale onended
+    // from the previous clip can resolve this play immediately (playlist died
+    // after ~2 items).
+    el.onended = null;
+    el.onerror = null;
+    try {
+      el.pause();
+    } catch {
+      /* ignore */
+    }
+
+    let settled = false;
+    const finish = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      fn(value);
+    };
+
     el.volume = 1;
     el.src = url;
+    el.onended = () => {
+      if (token === playToken && !keepElement) cleanup();
+      finish(resolve);
+    };
+    el.onerror = () => {
+      if (token !== playToken) {
+        finish(resolve);
+        return;
+      }
+      cleanup();
+      finish(reject, new Error("Audio playback failed"));
+    };
     el.play()
       .then(() => {
         if (token === playToken) onStart?.();
       })
       .catch((e) => {
         if (token !== playToken) {
-          resolve();
+          finish(resolve);
           return;
         }
         cleanup();
-        reject(e);
+        finish(reject, e);
       });
-    el.onended = () => {
-      // keepElement: play-all reuses this <audio> for the next Q&A
-      if (token === playToken && !keepElement) cleanup();
-      resolve();
-    };
-    el.onerror = () => {
-      if (token !== playToken) {
-        resolve();
-        return;
-      }
-      cleanup();
-      reject(new Error("Audio playback failed"));
-    };
   });
 }
 
@@ -730,9 +746,9 @@ export async function speakQa(
 }
 
 /**
- * Play every Q&A in order — same synthesis as MP3 export, one clip at a time.
- * Skips items that still fail after retries so one Edge glitch cannot kill
- * the whole playlist. Returns { played, skipped }.
+ * Build every Q&A into one MP3 (same as export), then play once.
+ * Multi-clip playlists were stopping after ~2 items on mobile (stale onended /
+ * blocked play()). One concatenated blob matches export and plays straight through.
  */
 export async function speakQaSequence(entries, options = {}) {
   const list = (entries || []).filter(
@@ -751,75 +767,56 @@ export async function speakQaSequence(entries, options = {}) {
     onStart,
   } = options;
 
-  // Warm up audio context synchronously (in the user gesture) so mobile
-  // Safari / WeChat doesn't show its own media player overlay.
   warmupAudio(token);
 
-  const synthesizeEntry = async (e) => {
+  const blobs = [];
+  let skipped = 0;
+
+  for (let i = 0; i < list.length; i++) {
+    if (token !== playToken) return { played: 0, skipped };
+    let blob = null;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        return await synthesizeQaAudio(e.q, e.a, {
+        blob = await synthesizeQaAudio(list[i].q, list[i].a, {
           rate,
           voiceQ,
           voiceA,
-          preface: e.preface || "",
+          preface: list[i].preface || "",
           lang,
         });
+        break;
       } catch (err) {
-        if (token !== playToken) throw new Error("Playback cancelled");
-        if (String(err?.message || err) === "Playback cancelled") throw err;
+        if (token !== playToken) return { played: 0, skipped };
+        if (String(err?.message || err) === "Playback cancelled") {
+          throw err;
+        }
         await new Promise((r) =>
-          setTimeout(r, Math.min(4000, 600 * 2 ** attempt))
+          setTimeout(r, Math.min(4000, 800 * 2 ** attempt))
         );
       }
     }
-    return null;
-  };
+    if (blob) blobs.push(blob);
+    else skipped += 1;
 
-  let started = false;
-  let played = 0;
-  let skipped = 0;
-
-  // Fully serial: synth → play → next. Prefetching the next item while Edge
-  // was still flaky caused cascading "stream closed" failures.
-  for (let i = 0; i < list.length; i++) {
-    if (token !== playToken) return { played, skipped };
-    const blob = await synthesizeEntry(list[i]);
-    if (token !== playToken) return { played, skipped };
-    if (!blob) {
-      skipped += 1;
-      continue;
-    }
-
-    try {
-      await playBlob(blob, token, {
-        keepElement: i < list.length - 1,
-        onStart: () => {
-          if (!started) {
-            started = true;
-            onStart?.();
-          }
-          onProgress?.(i);
-        },
-      });
-      played += 1;
-    } catch (err) {
-      if (token !== playToken) return { played, skipped };
-      // playBlob cleanup() wiped the element — re-warm and keep going.
-      warmupAudio(token);
-      skipped += 1;
-    }
-
-    // Brief pause so Edge can settle between turns.
+    // Let Edge settle between Q&A turns (cuts stream-closed storms).
     if (i < list.length - 1 && token === playToken) {
-      await new Promise((r) => setTimeout(r, 250));
+      await new Promise((r) => setTimeout(r, 400));
     }
   }
 
-  if (!played) {
+  if (token !== playToken) return { played: 0, skipped };
+  if (!blobs.length) {
     throw new Error("Couldn't prepare practice audio. Tap play once more.");
   }
-  return { played, skipped };
+
+  await playBlob(new Blob(blobs, { type: "audio/mpeg" }), token, {
+    onStart: () => {
+      onStart?.();
+      onProgress?.(0);
+    },
+  });
+
+  return { played: blobs.length, skipped };
 }
 
 /** Pause current practice audio without cancelling the session. */
