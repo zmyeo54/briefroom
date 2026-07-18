@@ -537,30 +537,35 @@ function getAudioContainer() {
   return audioContainer;
 }
 
-/** Minimal WAV header for ~50ms of silence (8-bit PCM, 8 kHz). */
+/** Minimal WAV of true silence (~50ms). Unsigned 8-bit PCM must use 0x80, not 0
+ *  — zeros are full-scale negative and sound like a mic pop / static click. */
 let silentBlobUrl = null;
 function getSilentUrl() {
   if (silentBlobUrl) return silentBlobUrl;
-  // WAV: 44-byte header + 400 samples of silence (50ms at 8 kHz)
-  const len = 44 + 400;
+  const sampleCount = 400; // 50ms at 8 kHz
+  const len = 44 + sampleCount;
   const buf = new ArrayBuffer(len);
   const v = new DataView(buf);
-  const w = (p, s) => { v.setUint32(p, s, true); };
-  const s = (p, val) => { v.setUint16(p, val, true); };
+  const w = (p, s) => {
+    v.setUint32(p, s, true);
+  };
+  const s16 = (p, val) => {
+    v.setUint16(p, val, true);
+  };
   v.setUint32(0, 0x52494646, false); // "RIFF"
   w(4, len - 8);
   v.setUint32(8, 0x57415645, false); // "WAVE"
   v.setUint32(12, 0x666D7420, false); // "fmt "
-  w(16, 16);          // chunk size
-  s(20, 1);           // PCM
-  s(22, 1);           // mono
-  w(24, 8000);        // sample rate
-  w(28, 8000);        // byte rate
-  s(32, 1);           // block align
-  s(34, 8);           // bits per sample
+  w(16, 16); // chunk size
+  s16(20, 1); // PCM
+  s16(22, 1); // mono
+  w(24, 8000); // sample rate
+  w(28, 8000); // byte rate
+  s16(32, 1); // block align
+  s16(34, 8); // bits per sample
   v.setUint32(36, 0x64617461, false); // "data"
-  w(40, 400);         // data size
-  // samples already zeroed (silence)
+  w(40, sampleCount);
+  new Uint8Array(buf, 44, sampleCount).fill(0x80); // unsigned 8-bit midpoint
   silentBlobUrl = URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
   return silentBlobUrl;
 }
@@ -580,6 +585,7 @@ function warmupAudio(token) {
   el.setAttribute("playsinline", "");
   el.setAttribute("webkit-playsinline", "");
   el.crossOrigin = "anonymous";
+  el.volume = 0;
   el.style.cssText = "display:none;width:0;height:0";
   el.src = getSilentUrl();
   currentAudio = el;
@@ -609,6 +615,7 @@ function playBlob(blob, token, { onStart } = {}) {
       URL.revokeObjectURL(currentUrl);
     }
     currentUrl = url;
+    el.volume = 1;
     el.src = url;
     el.play()
       .then(() => {

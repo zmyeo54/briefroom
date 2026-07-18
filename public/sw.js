@@ -1,5 +1,5 @@
 /** Bump on every release that must invalidate stale shells (TTS client, etc.). */
-const CACHE = "linecheck-v8";
+const CACHE = "linecheck-v9";
 const ASSETS = [
   "/manifest.json",
   "/icon-192.png",
