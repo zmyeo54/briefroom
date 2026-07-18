@@ -1012,12 +1012,9 @@ export async function speakQa(
 
 /**
  * Progressive play-all:
- * 1) Clip #1 gets a priority TTS slot so audio starts ASAP
- * 2) Remaining clips generate in parallel (lower priority)
- * 3) Chain clips on the same <audio>; merge-fallback if a later play() is blocked
- *
- * onPrepareProgress({ done, total, percent, clip, clips }) fires as each clip
- * finishes (cache hits count too).
+ * 1) Clip #1 plays its first Mix segment ASAP (rest of the clip continues in parallel)
+ * 2) Remaining clips generate in parallel (lower priority), chained after #1
+ * 3) Merge-fallback if a later play() is blocked
  */
 export async function speakQaSequence(entries, options = {}) {
   const list = (entries || []).filter(
@@ -1131,6 +1128,83 @@ export async function speakQaSequence(entries, options = {}) {
     return null;
   };
 
+  /**
+   * Clip #1: fetch parts in parallel, play the first part as soon as it lands
+   * while the rest of the clip (and later clips) still synthesize.
+   */
+  const playFirstClipProgressive = async () => {
+    const entry = list[0];
+    const parts = entryParts(entry);
+    if (!parts.length) {
+      bumpClip(0);
+      return false;
+    }
+
+    const clipKey = clipCacheKey(parts, rate);
+    let cached = audioCache.get(clipKey);
+    if (!cached) {
+      cached = await idbGetClip(clipKey);
+      if (cached) audioCache.set(clipKey, cached);
+    }
+    if (cached) {
+      bumpClip(0);
+      await playBlob(cached, token, {
+        keepElement: list.length > 1,
+        onStart: () => markStart(0),
+      });
+      return true;
+    }
+
+    const partTasks = parts.map((part) =>
+      fetchAudio(part.text, part.voice, rate, { priority: true }).catch(
+        (err) => {
+          if (String(err?.message || err) === "Playback cancelled") throw err;
+          return null;
+        }
+      )
+    );
+
+    const firstBlob = await partTasks[0];
+    if (token !== playToken) return false;
+    if (!firstBlob) {
+      bumpClip(0);
+      return false;
+    }
+
+    const restPromise = Promise.all(partTasks.slice(1));
+    try {
+      await playBlob(firstBlob, token, {
+        keepElement: true,
+        onStart: () => markStart(0),
+      });
+    } catch {
+      if (token !== playToken) return false;
+      warmupAudio(token);
+      const rest = (await restPromise).filter(Boolean);
+      const all = [firstBlob, ...rest];
+      rememberBlob(clipKey, new Blob(all, { type: "audio/mpeg" }));
+      bumpClip(0);
+      await playBlob(new Blob(all, { type: "audio/mpeg" }), token, {
+        keepElement: list.length > 1,
+        onStart: () => markStart(0),
+      });
+      return true;
+    }
+
+    if (token !== playToken) return false;
+    const rest = (await restPromise).filter(Boolean);
+    const full = new Blob([firstBlob, ...rest], { type: "audio/mpeg" });
+    rememberBlob(clipKey, full);
+    bumpClip(0);
+
+    if (rest.length) {
+      await playBlob(new Blob(rest, { type: "audio/mpeg" }), token, {
+        keepElement: list.length > 1,
+      });
+    }
+    return true;
+  };
+
   let started = false;
   let played = 0;
   let skipped = 0;
@@ -1151,49 +1225,30 @@ export async function speakQaSequence(entries, options = {}) {
       clip: 1,
       clips: list.length,
     });
-    // Claim a slot for clip #1 before the rest queue, then prepare others
-    // in the background while #1 plays.
-    const firstTask = synthesizeOne(list[0], 0, true);
+
+    // Start later clips after clip-1 part fetches are queued (priority slots).
+    const firstPlay = playFirstClipProgressive();
     await Promise.resolve();
     const restTasks = list
       .slice(1)
       .map((entry, j) => synthesizeOne(entry, j + 1, false));
-    const tasks = [firstTask, ...restTasks];
-    const firstBlob = await tasks[0];
-    if (token !== playToken) return { played, skipped };
 
-    if (firstBlob) {
-      try {
-        await playBlob(firstBlob, token, {
-          keepElement: list.length > 1,
-          onStart: () => markStart(0),
-        });
-        played += 1;
-      } catch {
-        if (token !== playToken) return { played, skipped };
-        warmupAudio(token);
-        const rest = [];
-        if (firstBlob) rest.push(firstBlob);
-        for (let j = 1; j < list.length; j++) {
-          const b = await tasks[j];
-          if (b) rest.push(b);
-          else skipped += 1;
-        }
-        if (rest.length) {
-          await playBlob(new Blob(rest, { type: "audio/mpeg" }), token, {
-            onStart: () => markStart(0),
-          });
-          played += rest.length;
-        }
+    let firstOk = false;
+    try {
+      firstOk = await firstPlay;
+    } catch (err) {
+      if (String(err?.message || err) === "Playback cancelled") {
         return { played, skipped };
       }
-    } else {
-      skipped += 1;
+      firstOk = false;
     }
+    if (token !== playToken) return { played, skipped };
+    if (firstOk) played += 1;
+    else skipped += 1;
 
     for (let i = 1; i < list.length; i++) {
       if (token !== playToken) return { played, skipped };
-      const blob = await tasks[i];
+      const blob = await restTasks[i - 1];
       if (token !== playToken) return { played, skipped };
       if (!blob) {
         skipped += 1;
@@ -1210,7 +1265,7 @@ export async function speakQaSequence(entries, options = {}) {
         warmupAudio(token);
         const rest = [];
         for (let j = i; j < list.length; j++) {
-          const b = await tasks[j];
+          const b = await restTasks[j - 1];
           if (b) rest.push(b);
           else skipped += 1;
         }
