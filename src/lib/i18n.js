@@ -125,6 +125,8 @@ const en = {
   "home.flash.audioSaved":
     "Exported — one MP3 with {n} Q&A is in Downloads. Replay it anywhere outside the app.",
   "home.flash.audioFailed": "Couldn’t export the audio. {detail}",
+  "home.flash.audioSkipped":
+    "Played through — skipped {n} glitched line(s). Tap play again if you want another pass.",
   "home.flash.pdfSaved":
     "Exported — PDF with {n} Q&A is in Downloads.",
   "home.flash.pdfFailed": "Couldn’t export the PDF. {detail}",
@@ -514,6 +516,8 @@ const zh = {
   "home.flash.audioSaved":
     "已导出——含 {n} 组问答的 MP3 在下载文件夹，可在应用外随时回放。",
   "home.flash.audioFailed": "音频导出失败。{detail}",
+  "home.flash.audioSkipped":
+    "已播完——跳过了 {n} 段卡顿语音。想再听一遍可再点播放。",
   "home.flash.pdfSaved": "已导出——含 {n} 组问答的 PDF 在下载文件夹。",
   "home.flash.pdfFailed": "PDF 导出失败。{detail}",
 

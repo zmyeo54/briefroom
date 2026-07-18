@@ -175,12 +175,14 @@ export default function HomePage() {
     return playSessionRef.current;
   };
 
-  const finishPlaySession = (session, err) => {
+  const finishPlaySession = (session, err, meta = {}) => {
     if (playSessionRef.current !== session) return;
     const msg = String(err?.message || err || "");
     // Superseded by Stop / Restart — not a real failure to show.
     if (msg && msg !== "Playback cancelled") {
       flash(msg, "error");
+    } else if (!msg && meta.skipped > 0) {
+      flash(t("home.flash.audioSkipped", { n: meta.skipped }), "ok");
     }
     endPlayback();
   };
@@ -818,7 +820,7 @@ export default function HomePage() {
               : `Question ${i + 1}.`;
         return { q: qa[i].q, a: qa[i].a, preface };
       });
-      await speakQaSequence(entries, {
+      const result = await speakQaSequence(entries, {
         rate: latest.rate,
         voiceQ: latest.voiceQ,
         voiceA: latest.voiceA,
@@ -833,7 +835,7 @@ export default function HomePage() {
           setAudioNote({ text: "", kind: "" });
         },
       });
-      finishPlaySession(session);
+      finishPlaySession(session, null, result);
     } catch (e) {
       finishPlaySession(session, e);
     }

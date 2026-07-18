@@ -12,8 +12,8 @@ export const config = {
 };
 
 /** Edge WS often drops mid-synthesis on long turns — keep each request short. */
-const CHUNK_CHARS = 900;
-const MAX_ATTEMPTS = 3;
+const CHUNK_CHARS = 480;
+const MAX_ATTEMPTS = 6;
 
 function collectStream(stream, timeoutMs = 45000) {
   return new Promise((resolve, reject) => {
@@ -98,8 +98,9 @@ async function synthesizeWithRetry(text, edgeVoice, rate) {
       return await synthesizeOnce(text, edgeVoice, rate);
     } catch (e) {
       last = e;
-      // Brief backoff — Edge rate-limits / flaps the WS
-      await new Promise((r) => setTimeout(r, 350 * (attempt + 1)));
+      // Edge flaps the WS under load — back off harder before retrying.
+      const ms = Math.min(5000, 500 * 2 ** attempt);
+      await new Promise((r) => setTimeout(r, ms));
     }
   }
   throw last;
