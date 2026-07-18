@@ -1,0 +1,16 @@
+---
+name: mobile-responsiveness
+description: Build responsive, mobile-first web applications. Use when implementing responsive layouts, touch interactions, mobile navigation, or optimizing for various screen sizes.
+---
+
+Apply responsive, mobile-first design system rules to our styling, viewport, hook usage, navigation, touch events or CSS styles.
+
+### Mobile-First Guidelines:
+- Use mobile-first css/tailwind defaults (no media queries for mobile, only min-width for larger breakpoints).
+- Support notch safe-areas (env(safe-area-inset-*)).
+- Handle touch interactions/swipe gesture helpers, and responsive components.
+
+### Examples:
+- Tailwind classes: `p-4 md:p-8 lg:p-12`
+- Touch hook: SwipeableCard with `onTouchStart`, `onTouchMove`, and `onTouchEnd` tracking `clientX` offsets.
+- Custom Media Query Hook: `useMediaQuery(query)`

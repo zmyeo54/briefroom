@@ -1,0 +1,12 @@
+---
+name: coding-conventions
+description: Core coding guidelines and serverless shape patterns for the LineCheck app.
+---
+
+Apply these coding guidelines to the current selection or project task:
+
+- Serverless handlers in `api/` follow the Next/Vercel shape: export a default async `(req, res)` function plus a top-level `config = { maxDuration, api.bodyParser.sizeLimit }` object.
+- Upstream LLM requests use `AbortSignal.timeout()` capped at 50s per call and a 55s overall handler deadline, returning a structured `{ upstream, data }` tuple so callers can uniformly decide whether to retry the next key or switch provider.
+- Key pools are assembled by splitting whitespace/comma-delimited env values and deduplicating via array `includes`, supporting both `GEMINI_API_KEY` and the numbered `GEMINI_API_KEY_2..10` variants.
+- Client-to-server provider selection is expressed through three request headers (`x-linecheck-ai-region`, `x-linecheck-ai-provider`, `x-linecheck-ai-enabled`) parsed by helper functions rather than ad-hoc header reads.
+- The local dev API (`scripts/dev-api-server.mjs`) duplicates the provider-selection/key-pool logic from `api/chat.js` to stay in sync.
