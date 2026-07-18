@@ -631,6 +631,8 @@ function playBlob(blob, token, { onStart } = {}) {
   });
 }
 
+export async function __fetchAudio(text, voice, rate) { return fetchAudio(text, voice, rate); }
+export function __wipeMem() { audioCache.clear(); }
 export async function speakText(
   text,
   { rate = 1, voice = DEFAULT_VOICE_A } = {}
