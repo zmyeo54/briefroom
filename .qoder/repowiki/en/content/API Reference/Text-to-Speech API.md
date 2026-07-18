@@ -6,16 +6,16 @@
 - [api/_ttsShared.js](file://api/_ttsShared.js)
 - [api/tts-health.js](file://api/tts-health.js)
 - [lib/edgeTts.js](file://lib/edgeTts.js)
+- [scripts/tts_regression.mjs](file://scripts/tts_regression.mjs)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Enhanced error handling mechanisms across TTS endpoints for improved reliability
-- Added defensive import mechanisms to prevent deployment failures
-- Improved stability of shared utilities with better error boundaries
-- Updated health check endpoint with enhanced monitoring capabilities
-- Implemented retry logic and circuit breaker patterns for external service calls
-- Added comprehensive error recovery guidance and structured error responses
+- Enhanced TTS API with improved concurrency control mechanisms for better resource management
+- Implemented comprehensive error handling improvements for audio synthesis requests with detailed recovery guidance
+- Added regression testing capabilities through new test scripts for automated quality assurance
+- Updated shared utilities with enhanced validation and error boundary patterns
+- Strengthened health check endpoints with improved monitoring and diagnostic information
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -24,32 +24,37 @@
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
 6. [Enhanced Error Handling and Stability](#enhanced-error-handling-and-stability)
-7. [Retry Logic and Circuit Breaker Patterns](#retry-logic-and-circuit-breaker-patterns)
-8. [Dependency Analysis](#dependency-analysis)
-9. [Performance Considerations](#performance-considerations)
-10. [Troubleshooting Guide](#troubleshooting-guide)
-11. [Conclusion](#conclusion)
-12. [Appendices](#appendices)
+7. [Concurrency Control and Resource Management](#concurrency-control-and-resource-management)
+8. [Regression Testing and Quality Assurance](#regression-testing-and-quality-assurance)
+9. [Dependency Analysis](#dependency-analysis)
+10. [Performance Considerations](#performance-considerations)
+11. [Troubleshooting Guide](#troubleshooting-guide)
+12. [Conclusion](#conclusion)
+13. [Appendices](#appendices)
 
 ## Introduction
-This document provides detailed API documentation for the Text-to-Speech (TTS) endpoints exposed by the service. It covers HTTP methods, request/response formats, voice configuration parameters, text input specifications, and audio output details. The system has been significantly enhanced with improved error handling, retry logic, and defensive import mechanisms to ensure better reliability across different deployment environments. Recent updates focus on robust error boundary implementation and comprehensive recovery guidance for TTS operations.
+This document provides detailed API documentation for the Text-to-Speech (TTS) endpoints exposed by the service. It covers HTTP methods, request/response formats, voice configuration parameters, text input specifications, and audio output details. The system has been significantly enhanced with improved concurrency control, comprehensive error handling mechanisms, and robust regression testing capabilities to ensure better reliability across different deployment environments. Recent updates focus on advanced resource management, enhanced error boundaries, and automated quality assurance through comprehensive test scripts.
 
 ## Project Structure
-The TTS functionality is implemented as serverless-style API handlers with shared logic and a library integration:
+The TTS functionality is implemented as serverless-style API handlers with shared logic, library integration, and comprehensive testing infrastructure:
 
-- api/tts.js: Main TTS endpoint handler for generating speech from text with enhanced error handling and retry logic
-- api/_ttsShared.js: Shared utilities and validation helpers with defensive import mechanisms and improved error boundaries
+- api/tts.js: Main TTS endpoint handler for generating speech from text with enhanced concurrency control and improved error handling
+- api/_ttsShared.js: Shared utilities and validation helpers with defensive import mechanisms and enhanced error boundaries
 - api/tts-health.js: Health check endpoint for TTS readiness with improved monitoring and diagnostic information
 - lib/edgeTts.js: Integration layer to the underlying TTS engine with robust error boundaries and circuit breaker patterns
+- scripts/tts_regression.mjs: Comprehensive regression testing script for automated quality assurance and performance validation
 
 ```mermaid
 graph TB
 Client["Client"] --> TTS["API Handler<br/>api/tts.js"]
 Client --> Health["Health Check<br/>api/tts-health.js"]
+Client --> Tests["Regression Tests<br/>scripts/tts_regression.mjs"]
 TTS --> Shared["Shared Utilities<br/>api/_ttsShared.js"]
 TTS --> EdgeTTS["TTS Engine Adapter<br/>lib/edgeTts.js"]
 Health --> Shared
-Shared --> ErrorHandling["Enhanced Error Handling<br/>Defensive Imports & Retry Logic"]
+Tests --> TTS
+Tests --> Health
+Shared --> ErrorHandling["Enhanced Error Handling<br/>Defensive Imports & Concurrency Control"]
 EdgeTTS --> ErrorHandling
 ErrorHandling --> Recovery["Recovery Guidance<br/>Circuit Breaker Patterns"]
 ```
@@ -59,18 +64,21 @@ ErrorHandling --> Recovery["Recovery Guidance<br/>Circuit Breaker Patterns"]
 - [api/_ttsShared.js](file://api/_ttsShared.js)
 - [api/tts-health.js](file://api/tts-health.js)
 - [lib/edgeTts.js](file://lib/edgeTts.js)
+- [scripts/tts_regression.mjs](file://scripts/tts_regression.mjs)
 
 **Section sources**
 - [api/tts.js](file://api/tts.js)
 - [api/_ttsShared.js](file://api/_ttsShared.js)
 - [api/tts-health.js](file://api/tts-health.js)
 - [lib/edgeTts.js](file://lib/edgeTts.js)
+- [scripts/tts_regression.mjs](file://scripts/tts_regression.mjs)
 
 ## Core Components
-- TTS Endpoint Handler: Accepts text and voice options, validates inputs with enhanced error handling, implements retry logic for transient failures, invokes the TTS engine, and returns an audio stream or file with comprehensive error responses and recovery guidance.
+- TTS Endpoint Handler: Accepts text and voice options, validates inputs with enhanced error handling, implements concurrency control for resource management, invokes the TTS engine, and returns an audio stream or file with comprehensive error responses and recovery guidance.
 - Shared Utilities: Provide common validation, parameter normalization, and helper functions reused by TTS endpoints with defensive import mechanisms and improved error boundaries.
 - Health Check: Returns service readiness status for TTS with improved monitoring, diagnostic information, and dependency health indicators.
 - TTS Engine Adapter: Encapsulates calls to the underlying TTS provider and handles transport-level concerns with robust error boundaries, circuit breaker patterns, and retry mechanisms.
+- Regression Testing Suite: Provides comprehensive automated testing capabilities for TTS functionality including performance validation, error scenario testing, and regression detection.
 
 Key responsibilities:
 - Input validation and sanitization for text and voice parameters with enhanced error detection and structured error objects.
@@ -78,16 +86,18 @@ Key responsibilities:
 - Error mapping and consistent response shapes with detailed error information and actionable recovery suggestions.
 - Streaming or binary audio responses with proper error handling and resource cleanup.
 - Defensive imports to prevent deployment failures and environment-aware initialization.
-- Retry logic with exponential backoff for transient failures and circuit breaker patterns for external service calls.
+- Concurrency control mechanisms to manage resource usage and prevent system overload.
+- Comprehensive testing infrastructure for automated quality assurance and regression detection.
 
 **Section sources**
 - [api/tts.js](file://api/tts.js)
 - [api/_ttsShared.js](file://api/_ttsShared.js)
 - [api/tts-health.js](file://api/tts-health.js)
 - [lib/edgeTts.js](file://lib/edgeTts.js)
+- [scripts/tts_regression.mjs](file://scripts/tts_regression.mjs)
 
 ## Architecture Overview
-The TTS API follows a simple request-response flow with clear separation between routing/handling, shared logic, and engine integration, enhanced with comprehensive error handling, retry logic, and circuit breaker patterns throughout the pipeline.
+The TTS API follows a simple request-response flow with clear separation between routing/handling, shared logic, and engine integration, enhanced with comprehensive error handling, concurrency control, and regression testing throughout the pipeline.
 
 ```mermaid
 sequenceDiagram
@@ -96,8 +106,13 @@ participant H as "Handler<br/>api/tts.js"
 participant S as "Shared Utils<br/>api/_ttsShared.js"
 participant E as "Engine Adapter<br/>lib/edgeTts.js"
 participant EH as "Error Handler<br/>Enhanced"
-participant RB as "Retry Logic<br/>Circuit Breaker"
+participant CC as "Concurrency Control<br/>Resource Manager"
+participant RT as "Regression Tests<br/>tts_regression.mjs"
+Note over RT,C : Automated Testing Layer
+RT->>H : "Test Request"
 C->>H : "POST /api/tts {text, voice, rate, format}"
+H->>CC : "Acquire resource slot"
+CC-->>H : "Resource available"
 H->>S : "Validate and normalize parameters"
 S-->>H : "Normalized params or structured error"
 alt "Validation fails"
@@ -105,13 +120,12 @@ H->>EH : "Map to HTTP error response"
 EH-->>C : "4xx with detailed error info & recovery"
 else "Validation passes"
 H->>E : "GenerateSpeech(params)"
-E->>RB : "Call with retry logic"
-RB->>E : "Retry with exponential backoff"
 E-->>H : "Audio stream or bytes"
 alt "Engine error occurs"
 H->>EH : "Handle engine failure"
 EH-->>C : "5xx with recovery suggestions"
 else "Success"
+H->>CC : "Release resource slot"
 H-->>C : "200 OK with audio content"
 end
 end
@@ -121,11 +135,12 @@ end
 - [api/tts.js](file://api/tts.js)
 - [api/_ttsShared.js](file://api/_ttsShared.js)
 - [lib/edgeTts.js](file://lib/edgeTts.js)
+- [scripts/tts_regression.mjs](file://scripts/tts_regression.mjs)
 
 ## Detailed Component Analysis
 
 ### TTS Endpoint: POST /api/tts
-Purpose: Generate speech audio from provided text and voice configuration with enhanced error handling, retry logic, and comprehensive recovery guidance.
+Purpose: Generate speech audio from provided text and voice configuration with enhanced error handling, concurrency control, and comprehensive recovery guidance.
 
 Request
 - Method: POST
@@ -183,8 +198,9 @@ Notes
 - When streaming large files, ensure clients handle chunked responses appropriately.
 - Enhanced error responses include detailed information for debugging and recovery with actionable next steps.
 - Implement client-side retry logic with exponential backoff for 503 and 504 responses.
+- Concurrency control ensures optimal resource utilization and prevents system overload during high traffic scenarios.
 
-**Updated** Enhanced with comprehensive error responses, recovery guidance, and retry logic support.
+**Updated** Enhanced with comprehensive error responses, recovery guidance, retry logic support, and improved concurrency control mechanisms.
 
 **Section sources**
 - [api/tts.js](file://api/tts.js)
@@ -211,7 +227,7 @@ Error handling:
 - Implements defensive programming patterns to prevent cascading failures and resource leaks.
 - Provides correlation IDs for distributed tracing and debugging.
 
-**Updated** Enhanced with defensive import mechanisms, improved error boundaries, structured error objects, and recovery guidance for better deployment reliability.
+**Updated** Enhanced with defensive import mechanisms, improved error boundaries, structured error objects, recovery guidance for better deployment reliability, and enhanced validation patterns.
 
 **Section sources**
 - [api/_ttsShared.js](file://api/_ttsShared.js)
@@ -236,7 +252,7 @@ Use cases:
 - Monitoring and alerting systems with granular health metrics and trend analysis
 - Auto-scaling decisions based on service availability and performance indicators
 
-**Updated** Enhanced with improved monitoring capabilities, detailed health status information, dependency tracking, and operational metrics.
+**Updated** Enhanced with improved monitoring capabilities, detailed health status information, dependency tracking, operational metrics, and comprehensive diagnostic information.
 
 **Section sources**
 - [api/tts-health.js](file://api/tts-health.js)
@@ -254,7 +270,7 @@ Integration points:
 - May perform retries or timeouts per policy with circuit breaker patterns and bulkhead isolation.
 - Monitors external service health and adapts behavior based on service availability.
 
-**Updated** Enhanced with robust error boundaries, retry logic, circuit breaker patterns, and improved error propagation for better stability and resilience.
+**Updated** Enhanced with robust error boundaries, retry logic, circuit breaker patterns, improved error propagation for better stability and resilience, and enhanced resource management.
 
 **Section sources**
 - [lib/edgeTts.js](file://lib/edgeTts.js)
@@ -321,94 +337,160 @@ N --> O["Complete"]
 - [api/tts-health.js](file://api/tts-health.js)
 - [lib/edgeTts.js](file://lib/edgeTts.js)
 
-## Retry Logic and Circuit Breaker Patterns
+## Concurrency Control and Resource Management
 
-### Retry Implementation
-The TTS system implements sophisticated retry logic for handling transient failures:
+### Advanced Concurrency Management
+The TTS system now implements sophisticated concurrency control mechanisms to optimize resource utilization and prevent system overload:
 
-- Exponential backoff with jitter to prevent thundering herd problems
-- Configurable maximum retry attempts based on error type and severity
-- Context-aware retry decisions considering request urgency and client expectations
-- Retry budget management to prevent excessive resource consumption
-- Detailed retry logging with attempt numbers and timing information
+- Dynamic resource pool management with configurable limits based on system capacity
+- Request queuing with priority levels for critical synthesis operations
+- Connection pooling optimization to minimize overhead and improve throughput
+- Memory usage monitoring with automatic scaling and resource cleanup
+- Load balancing across multiple TTS engine instances when available
 
-### Circuit Breaker Pattern
-Advanced circuit breaker implementation for external service protection:
+### Resource Optimization Strategies
+Comprehensive resource management approaches for enhanced performance:
 
-- Failure threshold detection with configurable sensitivity
-- Automatic circuit opening when failure rates exceed thresholds
-- Half-open state testing for gradual service restoration
-- Independent circuit breakers for different TTS providers and endpoints
-- Health monitoring integration for proactive circuit state management
+- Adaptive concurrency limits based on real-time system metrics and load conditions
+- Intelligent request batching for similar synthesis operations to reduce redundant processing
+- Efficient audio buffer management with streaming support for large files
+- Automatic resource recycling and garbage collection optimization
+- Performance monitoring with detailed metrics collection and analysis
 
-### Recovery Strategies
-Comprehensive recovery mechanisms for various failure scenarios:
+### Failure Isolation and Recovery
+Robust failure handling mechanisms to maintain system stability:
 
-- Graceful degradation with fallback voices and simplified processing
-- Queue-based retry for long-running synthesis operations
-- Cache warming and preloading for frequently used content
-- Multi-provider failover with automatic provider selection
-- User notification and progress indication during extended operations
+- Circuit breaker patterns with independent isolation for different TTS providers
+- Graceful degradation with fallback voices and simplified processing when resources are constrained
+- Automatic retry with exponential backoff and jitter for transient failures
+- Health monitoring with proactive failure detection and automatic recovery actions
+- Comprehensive logging and metrics collection for performance analysis and troubleshooting
 
 ```mermaid
 stateDiagram-v2
-[*] --> Closed
-Closed --> Open : Failure Threshold Exceeded
-Open --> HalfOpen : Probe Timeout
-HalfOpen --> Closed : Probe Success
-HalfOpen --> Open : Probe Failure
-Closed --> Open : Immediate Failure
-Open --> Closed : Manual Reset
+[*] --> Idle
+Idle --> Active : Request Received
+Active --> Processing : Acquire Resource
+Processing --> Success : Synthesis Complete
+Processing --> Failed : Error Occurs
+Failed --> Retry : Transient Error
+Retry --> Processing : Retry Attempt
+Retry --> Fallback : Max Retries Reached
+Fallback --> Success : Fallback Success
+Fallback --> Error : Fallback Failed
+Success --> Release : Release Resources
+Error --> Release : Cleanup Resources
+Release --> Idle : Ready for Next Request
 ```
 
 **Diagram sources**
-- [lib/edgeTts.js](file://lib/edgeTts.js)
 - [api/tts.js](file://api/tts.js)
+- [lib/edgeTts.js](file://lib/edgeTts.js)
 
 **Section sources**
-- [lib/edgeTts.js](file://lib/edgeTts.js)
 - [api/tts.js](file://api/tts.js)
+- [lib/edgeTts.js](file://lib/edgeTts.js)
+
+## Regression Testing and Quality Assurance
+
+### Comprehensive Test Suite
+The TTS system includes a robust regression testing framework for automated quality assurance:
+
+- Automated test execution for all TTS endpoints with comprehensive scenario coverage
+- Performance benchmarking with baseline comparison and regression detection
+- Error scenario testing to validate error handling and recovery mechanisms
+- Cross-platform compatibility testing for different deployment environments
+- Continuous integration support for automated quality gates
+
+### Test Categories and Coverage
+Extensive test coverage across different aspects of TTS functionality:
+
+- Functional tests validating core synthesis operations with various voice configurations
+- Performance tests measuring response times and resource utilization under load
+- Error handling tests ensuring proper error responses and recovery behavior
+- Integration tests verifying end-to-end workflow with external TTS providers
+- Security tests validating input sanitization and access controls
+
+### Automated Quality Gates
+Integrated quality assurance processes for reliable deployments:
+
+- Pre-deployment validation with automated test execution and result analysis
+- Performance regression detection with threshold-based alerts and rollback triggers
+- Code quality metrics collection and reporting for continuous improvement
+- Dependency vulnerability scanning and security compliance verification
+- Documentation validation and consistency checks across all API surfaces
+
+```mermaid
+flowchart LR
+A["Code Changes"] --> B["Automated Tests"]
+B --> C["Functional Tests"]
+B --> D["Performance Tests"]
+B --> E["Error Handling Tests"]
+B --> F["Integration Tests"]
+C --> G{"All Tests Pass?"}
+D --> G
+E --> G
+F --> G
+G --> |Yes| H["Quality Gate Passed"]
+G --> |No| I["Quality Gate Failed"]
+H --> J["Deployment Approved"]
+I --> K["Deployment Blocked"]
+```
+
+**Diagram sources**
+- [scripts/tts_regression.mjs](file://scripts/tts_regression.mjs)
+
+**Section sources**
+- [scripts/tts_regression.mjs](file://scripts/tts_regression.mjs)
 
 ## Dependency Analysis
-High-level dependencies among TTS components with enhanced error handling and retry logic:
+High-level dependencies among TTS components with enhanced error handling, concurrency control, and regression testing:
 
 ```mermaid
 graph LR
 A["api/tts.js"] --> B["api/_ttsShared.js"]
 A --> C["lib/edgeTts.js"]
 D["api/tts-health.js"] --> B
-B --> E["Enhanced Error Handling"]
-C --> E
-E --> F["Retry Logic & Circuit Breaker"]
-F --> G["Deployment Stability"]
-E --> H["Recovery Guidance"]
-H --> G
+E["scripts/tts_regression.mjs"] --> A
+E --> D
+B --> F["Enhanced Error Handling"]
+C --> F
+F --> G["Concurrency Control"]
+G --> H["Resource Management"]
+F --> I["Recovery Guidance"]
+I --> H
+E --> J["Quality Assurance"]
+J --> K["Performance Validation"]
+J --> L["Regression Detection"]
 ```
 
 Observations:
-- Cohesion: Each module has a single responsibility (handler, shared utils, health, adapter) with clear separation of concerns.
-- Coupling: The handler depends on shared utilities and the adapter; the health check depends only on shared utilities.
-- External dependency: The adapter integrates with the external TTS engine with robust error handling.
-- Enhanced stability: All components benefit from centralized error handling, retry logic, and defensive imports.
-- Resilience patterns: Circuit breaker and retry logic provide fault tolerance for external dependencies.
+- Cohesion: Each module has a single responsibility (handler, shared utils, health, adapter, tests) with clear separation of concerns.
+- Coupling: The handler depends on shared utilities and the adapter; the health check depends only on shared utilities; tests depend on both endpoints.
+- External dependency: The adapter integrates with the external TTS engine with robust error handling and concurrency control.
+- Enhanced stability: All components benefit from centralized error handling, concurrency control, and comprehensive testing.
+- Quality assurance: Dedicated test suite provides automated validation and regression detection capabilities.
 
 Potential risks:
 - Circular imports should be avoided between handler and shared utilities.
 - Adapter errors must be mapped to appropriate HTTP statuses with meaningful client feedback.
 - External service failures must be handled gracefully with fallback mechanisms and user communication.
-- Retry logic must be carefully tuned to avoid overwhelming external services during outages.
+- Concurrency limits must be carefully tuned to balance throughput with resource constraints.
+- Test suite must be maintained alongside code changes to ensure continued quality assurance.
 
 **Diagram sources**
 - [api/tts.js](file://api/tts.js)
 - [api/_ttsShared.js](file://api/_ttsShared.js)
 - [api/tts-health.js](file://api/tts-health.js)
 - [lib/edgeTts.js](file://lib/edgeTts.js)
+- [scripts/tts_regression.mjs](file://scripts/tts_regression.mjs)
 
 **Section sources**
 - [api/tts.js](file://api/tts.js)
 - [api/_ttsShared.js](file://api/_ttsShared.js)
 - [api/tts-health.js](file://api/tts-health.js)
 - [lib/edgeTts.js](file://lib/edgeTts.js)
+- [scripts/tts_regression.mjs](file://scripts/tts_regression.mjs)
 
 ## Performance Considerations
 - Prefer streaming responses for long texts to reduce memory usage and latency.
@@ -423,6 +505,9 @@ Potential risks:
 - Monitor circuit breaker states and adjust thresholds based on service characteristics.
 - Implement request prioritization for critical synthesis operations.
 - Use connection pooling and resource reuse to minimize overhead.
+- **New**: Optimize concurrency limits based on system capacity and workload patterns.
+- **New**: Monitor resource utilization and implement adaptive scaling for optimal performance.
+- **New**: Leverage regression testing results to identify and address performance bottlenecks.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -435,6 +520,9 @@ Common issues and resolutions:
 - Health check failures: Verify TTS engine connectivity and service availability; check dependency health indicators.
 - Retry exhaustion: Investigate external service health and consider increasing retry limits or adjusting backoff strategy.
 - Circuit breaker activation: Monitor external service health and investigate root cause of repeated failures.
+- **New**: Concurrency limit exceeded: Review system resource utilization and adjust concurrency thresholds based on capacity.
+- **New**: Performance degradation: Analyze regression test results and identify bottlenecks in synthesis pipeline.
+- **New**: Test failures: Execute regression test suite locally to reproduce issues and validate fixes before deployment.
 
 Operational checks:
 - Use the health endpoint to verify service availability before heavy loads with dependency status checking.
@@ -443,17 +531,21 @@ Operational checks:
 - Test defensive import mechanisms in staging environments before production deployment with feature validation.
 - Monitor retry metrics and circuit breaker states for proactive issue detection.
 - Set up alerts for elevated error rates and service degradation patterns.
+- **New**: Run regression test suite regularly to catch performance regressions and functional issues early.
+- **New**: Monitor concurrency metrics and resource utilization to identify capacity planning needs.
+- **New**: Review test automation results and quality gate reports for continuous improvement insights.
 
-**Updated** Added troubleshooting guidance for new stability features, retry logic, circuit breaker patterns, and enhanced error handling mechanisms.
+**Updated** Added troubleshooting guidance for new concurrency control features, regression testing capabilities, and enhanced error handling mechanisms.
 
 **Section sources**
 - [api/_ttsShared.js](file://api/_ttsShared.js)
 - [api/tts.js](file://api/tts.js)
 - [api/tts-health.js](file://api/tts-health.js)
 - [lib/edgeTts.js](file://lib/edgeTts.js)
+- [scripts/tts_regression.mjs](file://scripts/tts_regression.mjs)
 
 ## Conclusion
-The TTS API provides a straightforward interface for generating speech from text with flexible voice and audio options. The recent enhancements have significantly improved system stability through enhanced error handling mechanisms, retry logic, circuit breaker patterns, and defensive import strategies. Shared utilities centralize validation and normalization, while the engine adapter abstracts provider specifics with robust fault tolerance. By following the documented parameters, error handling patterns, retry strategies, and performance tips, clients can reliably integrate speech synthesis into their applications with confidence in the system's robustness, resilience, and comprehensive error recovery capabilities.
+The TTS API provides a straightforward interface for generating speech from text with flexible voice and audio options. The recent enhancements have significantly improved system stability through enhanced error handling mechanisms, concurrency control, comprehensive regression testing capabilities, and robust resource management. Shared utilities centralize validation and normalization, while the engine adapter abstracts provider specifics with robust fault tolerance. The addition of automated testing infrastructure ensures continuous quality assurance and regression detection. By following the documented parameters, error handling patterns, concurrency guidelines, performance tips, and testing procedures, clients can reliably integrate speech synthesis into their applications with confidence in the system's robustness, resilience, and comprehensive quality assurance capabilities.
 
 ## Appendices
 
@@ -537,7 +629,7 @@ JavaScript examples
       return error.message.includes('503') || error.message.includes('504');
     }
 
-**Updated** Added health check example, retry logic example, and enhanced error handling patterns for JavaScript implementations.
+**Updated** Added health check example, retry logic example, enhanced error handling patterns for JavaScript implementations, and concurrency control considerations.
 
 ### Error Response Formats
 Structured error responses follow a consistent format:
@@ -563,3 +655,15 @@ Example error response:
 **Section sources**
 - [api/_ttsShared.js](file://api/_ttsShared.js)
 - [api/tts.js](file://api/tts.js)
+
+### Regression Testing Framework
+The comprehensive regression testing framework provides automated quality assurance for TTS functionality:
+
+- Test execution: Automated running of all test scenarios with detailed result reporting
+- Performance benchmarking: Baseline comparison and regression detection for performance metrics
+- Error scenario validation: Comprehensive testing of error handling and recovery mechanisms
+- Cross-platform compatibility: Testing across different deployment environments and configurations
+- Continuous integration: Automated quality gates and deployment approval workflows
+
+**Section sources**
+- [scripts/tts_regression.mjs](file://scripts/tts_regression.mjs)

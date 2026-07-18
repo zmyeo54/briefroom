@@ -1,1 +1,0 @@
-A single-page interview-prep web app that generates questions from uploaded documents, renders them as a mindmap, and provides text-to-speech via an edge TTS server.

@@ -1,1 +1,0 @@
-React 19 + Vite 8 + Tailwind CSS v4 (`@tailwindcss/vite`), Framer Motion for route transitions, react-router-dom v7 for SPA routing, `msedge-tts` for client-side synthesis, `pdfjs-dist` + `mammoth` + `tesseract.js` for document ingestion, Playwright/Puppeteer for regression tests, and a Python TTS microservice (`scripts/tts_server.py`) proxied through Vercel functions.

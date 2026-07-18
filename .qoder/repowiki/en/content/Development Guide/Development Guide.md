@@ -9,11 +9,19 @@
 - [src/App.jsx](file://src/App.jsx)
 - [scripts/dev-api-server.mjs](file://scripts/dev-api-server.mjs)
 - [scripts/tts_regression.mjs](file://scripts/tts_regression.mjs)
+- [scripts/build_batches_check.mjs](file://scripts/build_batches_check.mjs)
 - [scripts/job_fetch.py](file://scripts/job_fetch.py)
 - [scripts/tts_server.py](file://scripts/tts_server.py)
 - [.oxlintrc.json](file://.oxlintrc.json)
 - [vercel.json](file://vercel.json)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Added documentation for new build batches validation script (build_batches_check.mjs)
+- Enhanced TTS regression testing framework documentation with tts_regression.mjs details
+- Updated development API server section to reflect improved logging capabilities
+- Added comprehensive coverage of new development tools and automation scripts
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -36,7 +44,7 @@
 
 LineCheck is a modern web application built with React and Vite, designed to provide intelligent document processing and interview preparation capabilities. This development guide serves as a comprehensive resource for contributors and developers working on the LineCheck project, covering everything from local setup to production deployment.
 
-The project follows modern JavaScript development practices with a focus on developer experience, performance optimization, and maintainable code architecture. It utilizes React for the frontend framework, Vite for fast build tooling, and includes comprehensive testing and automation scripts.
+The project follows modern JavaScript development practices with a focus on developer experience, performance optimization, and maintainable code architecture. It utilizes React for the frontend framework, Vite for fast build tooling, and includes comprehensive testing and automation scripts including advanced build validation and TTS regression testing frameworks.
 
 ## Project Structure
 
@@ -62,11 +70,12 @@ M[fetch-url.js] --> N[tts-health.js]
 end
 subgraph "Scripts (scripts/)"
 O[dev-api-server.mjs] --> P[tts_regression.mjs]
-Q[job_fetch.py] --> R[tts_server.py]
+Q[build_batches_check.mjs] --> R[job_fetch.py]
+S[tts_server.py] --> O
 end
 subgraph "Public Assets (public/)"
-S[manifest.json] --> T[sw.js]
-U[brand/] --> V[sitemap.xml]
+T[manifest.json] --> U[sw.js]
+V[brand/] --> W[sitemap.xml]
 end
 E --> K
 E --> L
@@ -78,12 +87,15 @@ O --> L
 - [src/main.jsx:1-50](file://src/main.jsx#L1-L50)
 - [src/App.jsx:1-100](file://src/App.jsx#L1-L100)
 - [vite.config.js:1-100](file://vite.config.js#L1-L100)
+- [scripts/dev-api-server.mjs:1-200](file://scripts/dev-api-server.mjs#L1-L200)
+- [scripts/tts_regression.mjs:1-200](file://scripts/tts_regression.mjs#L1-L200)
+- [scripts/build_batches_check.mjs:1-200](file://scripts/build_batches_check.mjs#L1-L200)
 
 ### Core Directory Organization
 
 - **`src/`**: Main application source code containing React components, pages, and utilities
 - **`api/`**: Backend API endpoints for chat functionality and text-to-speech services
-- **`scripts/`**: Development utilities, regression testing, and automation tasks
+- **`scripts/`**: Development utilities, regression testing, build validation, and automation tasks
 - **`public/`**: Static assets including service worker, manifest, and brand materials
 - **`lib/`**: Shared libraries and external integrations
 
@@ -134,6 +146,7 @@ The project uses modern development tooling including:
 - **React**: UI framework with JSX support
 - **ESLint/Oxlint**: Code linting and quality assurance
 - **Playwright**: End-to-end testing framework
+- **Custom Scripts**: Build validation and regression testing utilities
 
 **Section sources**
 - [package.json:1-100](file://package.json#L1-L100)
@@ -178,7 +191,7 @@ E --> Q[Asset Optimization]
 
 ### Custom Build Scripts
 
-The project includes specialized build scripts for different environments and deployment targets.
+The project includes specialized build scripts for different environments and deployment targets, including enhanced build validation and batch processing capabilities.
 
 **Section sources**
 - [vite.config.js:1-200](file://vite.config.js#L1-L200)
@@ -232,19 +245,21 @@ The development environment includes comprehensive debugging support:
 
 ### Local API Server
 
-The project includes a comprehensive local API server setup for development and testing:
+The project includes a comprehensive local API server setup for development and testing with enhanced logging capabilities:
 
 ```mermaid
 graph LR
-A[Frontend App] --> B[Dev API Server]
+A[Frontend App] --> B[Enhanced Dev API Server]
 B --> C[Chat API]
 B --> D[TTS Service]
 B --> E[URL Fetcher]
 B --> F[Health Check]
-C --> G[Mock Data]
-D --> H[Edge TTS]
-E --> I[External URLs]
-F --> J[System Status]
+B --> G[Enhanced Logging]
+C --> H[Mock Data]
+D --> I[Edge TTS]
+E --> J[External URLs]
+F --> K[System Status]
+G --> L[Debug Information]
 ```
 
 **Diagram sources**
@@ -262,6 +277,15 @@ The development server provides mock implementations of all API endpoints:
 | `/api/tts` | POST | Text-to-speech conversion | Generates audio from text |
 | `/api/fetch-url` | GET | URL content fetching | Simulates web scraping |
 | `/api/tts-health` | GET | TTS service health check | Returns service status |
+
+### Enhanced Logging Capabilities
+
+The development API server now includes improved logging capabilities for better debugging and monitoring:
+
+- **Request Logging**: Detailed request/response logging with timestamps
+- **Error Tracking**: Comprehensive error reporting and stack traces
+- **Performance Metrics**: Request timing and performance monitoring
+- **Debug Information**: Structured debug output for troubleshooting
 
 ### Backend Service Management
 
@@ -322,7 +346,7 @@ Automated code quality checks run before commits to maintain code standards.
 
 ### Test Framework Architecture
 
-The project implements a comprehensive testing strategy using multiple frameworks:
+The project implements a comprehensive testing strategy using multiple frameworks including advanced regression testing:
 
 ```mermaid
 graph TB
@@ -337,23 +361,30 @@ E --> G[User Flow Tests]
 E --> H[Cross-browser Tests]
 end
 subgraph "Regression Tests"
-I[TTS Regression] --> J[Audio Quality]
+I[TTS Regression Framework] --> J[Audio Quality Validation]
 I --> K[Performance Benchmarks]
 I --> L[Compatibility Checks]
+M[Build Batches Validation] --> N[Batch Processing Tests]
+M --> O[Build Integrity Checks]
+M --> P[Dependency Validation]
 end
-B --> M[Test Results]
-C --> M
-D --> M
-F --> M
-G --> M
-H --> M
-J --> M
-K --> M
-L --> M
+B --> Q[Test Results]
+C --> Q
+D --> Q
+F --> Q
+G --> Q
+H --> Q
+J --> Q
+K --> Q
+L --> Q
+N --> Q
+O --> Q
+P --> Q
 ```
 
 **Diagram sources**
 - [scripts/tts_regression.mjs:1-200](file://scripts/tts_regression.mjs#L1-L200)
+- [scripts/build_batches_check.mjs:1-200](file://scripts/build_batches_check.mjs#L1-L200)
 - [package.json:1-150](file://package.json#L1-L150)
 
 ### Unit Testing
@@ -370,16 +401,25 @@ L --> M
 - **Performance Testing**: Load time and responsiveness validation
 - **Accessibility Testing**: WCAG compliance verification
 
-### Regression Testing
+### Advanced Regression Testing
 
-Specialized regression tests ensure critical functionality remains stable:
+The project now includes sophisticated regression testing frameworks for critical functionality:
 
-- **Text-to-Speech Quality**: Audio output consistency checks
-- **Document Processing**: OCR accuracy validation
-- **API Response Formats**: Interface contract verification
+#### TTS Regression Testing Framework
+- **Audio Quality Validation**: Automated text-to-speech output quality checks
+- **Performance Benchmarks**: TTS processing speed and efficiency monitoring
+- **Compatibility Checks**: Cross-platform TTS functionality validation
+- **Quality Assurance**: Consistent audio output across different inputs
+
+#### Build Batches Validation Script
+- **Batch Processing Validation**: Ensures build batch integrity and consistency
+- **Dependency Validation**: Verifies package dependencies and versions
+- **Build Integrity Checks**: Validates build artifacts and output files
+- **Automation Integration**: Seamless integration with CI/CD pipelines
 
 **Section sources**
 - [scripts/tts_regression.mjs:1-200](file://scripts/tts_regression.mjs#L1-L200)
+- [scripts/build_batches_check.mjs:1-200](file://scripts/build_batches_check.mjs#L1-L200)
 - [package.json:1-200](file://package.json#L1-L200)
 
 ## Debugging Techniques
@@ -395,10 +435,12 @@ participant Browser as "Browser DevTools"
 participant React as "React DevTools"
 participant Network as "Network Panel"
 participant Console as "Console"
+participant Logs as "Enhanced API Logs"
 Dev->>Browser : Open DevTools
 Dev->>React : Inspect Components
 Dev->>Network : Monitor API Calls
 Dev->>Console : View Logs & Errors
+Dev->>Logs : Check API Server Logs
 Dev->>Dev : Set Breakpoints
 Dev->>Dev : Step Through Code
 ```
@@ -406,6 +448,7 @@ Dev->>Dev : Step Through Code
 **Diagram sources**
 - [src/main.jsx:1-100](file://src/main.jsx#L1-L100)
 - [vite.config.js:1-100](file://vite.config.js#L1-L100)
+- [scripts/dev-api-server.mjs:1-200](file://scripts/dev-api-server.mjs#L1-L200)
 
 ### Common Debugging Scenarios
 
@@ -413,6 +456,7 @@ Dev->>Dev : Step Through Code
 - **API Communication Problems**: Network panel inspection for request/response debugging
 - **Performance Bottlenecks**: Performance tab analysis for optimization opportunities
 - **Memory Leaks**: Memory profiling and heap snapshot analysis
+- **Build Issues**: Enhanced logging for build process debugging
 
 ### Error Handling and Logging
 
@@ -422,10 +466,12 @@ Comprehensive error handling and logging throughout the application:
 - **API Error Handling**: Graceful error responses and user feedback
 - **Logging Strategy**: Structured logging with appropriate severity levels
 - **Error Tracking**: Integration with error monitoring services
+- **Enhanced API Logging**: Detailed request/response logging for development
 
 **Section sources**
 - [src/main.jsx:1-100](file://src/main.jsx#L1-L100)
 - [src/App.jsx:1-100](file://src/App.jsx#L1-L100)
+- [scripts/dev-api-server.mjs:1-200](file://scripts/dev-api-server.mjs#L1-L200)
 
 ## Performance Optimization
 
@@ -641,12 +687,20 @@ Use conventional commit messages:
 - **Syntax Errors**: Check for JavaScript/JSX syntax issues
 - **Missing Dependencies**: Run `npm install` to ensure all packages are installed
 - **Configuration Errors**: Validate Vite configuration syntax
+- **Build Batch Issues**: Use build validation scripts to diagnose batch processing problems
 
 #### Testing Issues
 
 - **Test Environment**: Ensure proper test environment setup
 - **Mock Configuration**: Verify API mocking configuration
 - **Browser Compatibility**: Check browser target configuration
+- **Regression Tests**: Validate TTS regression framework configuration
+
+#### Enhanced Logging and Debugging
+
+- **API Server Logs**: Check enhanced logging output for detailed request/response information
+- **Build Validation**: Use build batches validation script for build integrity checks
+- **TTS Testing**: Utilize TTS regression framework for audio quality validation
 
 ### Performance Issues
 
@@ -660,11 +714,17 @@ Use conventional commit messages:
 2. **Verify network requests** in browser dev tools
 3. **Inspect component state** with React DevTools
 4. **Review build output** for warnings and errors
-5. **Test in incognito mode** to rule out cache issues
+5. **Check enhanced API logs** for detailed debugging information
+6. **Run build validation** scripts for build integrity
+7. **Execute regression tests** for critical functionality validation
+8. **Test in incognito mode** to rule out cache issues
 
 **Section sources**
 - [vite.config.js:1-200](file://vite.config.js#L1-L200)
 - [package.json:1-150](file://package.json#L1-L150)
+- [scripts/dev-api-server.mjs:1-200](file://scripts/dev-api-server.mjs#L1-L200)
+- [scripts/build_batches_check.mjs:1-200](file://scripts/build_batches_check.mjs#L1-L200)
+- [scripts/tts_regression.mjs:1-200](file://scripts/tts_regression.mjs#L1-L200)
 
 ## Conclusion
 
@@ -673,10 +733,13 @@ This development guide provides comprehensive coverage of the LineCheck project'
 Key highlights include:
 
 - **Modern Development Stack**: Vite, React, and contemporary JavaScript tooling
-- **Comprehensive Testing**: Multi-layered testing strategy ensuring code quality
+- **Comprehensive Testing**: Multi-layered testing strategy including advanced regression testing frameworks
+- **Enhanced Development Tools**: Improved API server logging, build validation, and automation scripts
 - **Performance Focus**: Built-in optimizations and bundle analysis capabilities
 - **Flexible Deployment**: Support for multiple deployment targets
 - **Developer Experience**: Hot reloading, debugging tools, and clear contribution guidelines
+
+The recent enhancements include sophisticated build batches validation, comprehensive TTS regression testing framework, and improved development API server with enhanced logging capabilities, making it even easier to develop, test, and deploy high-quality applications.
 
 Contributors should follow the established workflows and coding standards to maintain code quality and ensure smooth collaboration. The extensive automation and tooling make it easy to contribute effectively while maintaining high standards.
 

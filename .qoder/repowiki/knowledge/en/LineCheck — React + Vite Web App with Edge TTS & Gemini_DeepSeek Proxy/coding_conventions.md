@@ -1,6 +1,0 @@
-- API handlers follow the Vercel pattern: a default async `(req, res)` function plus an exported `config` object declaring `maxDuration` and `bodyParser.sizeLimit`.
-- Provider selection is header-driven using the `x-linecheck-ai-*` prefix (`region`, `provider`, `enabled`) with case-insensitive parsing and a fallback to geo (`x-vercel-ip-country`) when no explicit header is set.
-- API key rotation is implemented by collecting comma/space-separated values from `GEMINI_API_KEY[_N]` / `VITE_GEMINI_API_KEY` / `DEEPSEEK_API_KEY` env vars into deduplicated arrays, then retrying per-key before switching providers.
-- Error-based retry uses two predicates — `shouldTryNextKey` (per-key failures like 429/401/403 or quota messages) and `shouldTryOtherProvider` (cross-provider failures like 402/5xx/not found) — both matching against `data.error.message` strings.
-- The same provider-selection and key-collection logic is duplicated verbatim between `api/chat.js` and `scripts/dev-api-server.mjs` so the local dev server mirrors production behavior without importing the Vercel module.
-- Client utilities in `src/lib/` are plain ES modules (no framework coupling) and are imported directly by components; i18n state is provided via a React Context (`I18nContext.jsx`) wrapped around the router.
