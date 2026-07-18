@@ -831,12 +831,14 @@ export default function HomePage() {
         voiceQ: latest.voiceQ,
         voiceA: latest.voiceA,
         lang: latest.lang,
-        onPrepareProgress: ({ percent, clip, clips }) => {
+        onPrepareProgress: ({ percent, clip, clips, cached }) => {
           if (playSessionRef.current !== session) return;
           setPreparePct(percent);
           setPrepareClip({ clip, clips });
           setAudioNote({
-            text: t("home.preparingAudioClip", { n: percent, clip, clips }),
+            text: cached
+              ? t("home.preparingAudioCached")
+              : t("home.preparingAudioClip", { n: percent, clip, clips }),
             kind: "",
           });
         },
@@ -1494,11 +1496,14 @@ export default function HomePage() {
                 <>
                   <SpinnerGap size={16} className="animate-spin" />
                   {preparePct > 0
-                    ? t("home.preparingAudioClip", {
-                        n: preparePct,
-                        clip: prepareClip.clip || 1,
-                        clips: prepareClip.clips || 1,
-                      })
+                    ? preparePct >= 100 &&
+                      prepareClip.clip === prepareClip.clips
+                      ? t("home.preparingAudioCached")
+                      : t("home.preparingAudioClip", {
+                          n: preparePct,
+                          clip: prepareClip.clip || 1,
+                          clips: prepareClip.clips || 1,
+                        })
                     : t("home.preparingAudio")}
                 </>
               ) : audioPaused ? (

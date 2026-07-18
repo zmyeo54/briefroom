@@ -7,7 +7,10 @@ let playToken = 0;
 /** In-memory MP3 cache — replay / re-export skips Edge round-trips. */
 const audioCache = new Map();
 const CACHE_MAX = 100;
-const FETCH_CONCURRENCY = 3;
+/** Persist clips across refresh so replay doesn't re-hit Vercel TTS. */
+const IDB_NAME = "linecheck-tts-v1";
+const IDB_STORE = "clips";
+const IDB_MAX = 120;
 /**
  * Max simultaneous Edge TTS turns. Clips are all queued in parallel; this
  * pool is what actually hits the network. >3 historically dropped mid-line.
@@ -18,6 +21,76 @@ const TTS_FETCH_ATTEMPTS = 6;
 let ttsInflight = 0;
 const ttsWaiters = [];
 const activeFetchControllers = new Set();
+
+function openTtsIdb() {
+  if (typeof indexedDB === "undefined") return Promise.resolve(null);
+  return new Promise((resolve) => {
+    try {
+      const req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(IDB_STORE)) {
+          db.createObjectStore(IDB_STORE, { keyPath: "key" });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+async function idbGetClip(key) {
+  const db = await openTtsIdb();
+  if (!db) return null;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(IDB_STORE, "readonly");
+      const req = tx.objectStore(IDB_STORE).get(key);
+      req.onsuccess = () => {
+        const row = req.result;
+        resolve(row?.blob instanceof Blob ? row.blob : null);
+      };
+      req.onerror = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+async function idbSetClip(key, blob) {
+  const db = await openTtsIdb();
+  if (!db || !(blob instanceof Blob)) return;
+  try {
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, "readwrite");
+      const store = tx.objectStore(IDB_STORE);
+      store.put({ key, blob, at: Date.now() });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    // ponytail: trim oldest when over cap
+    const keys = await new Promise((resolve) => {
+      const tx = db.transaction(IDB_STORE, "readonly");
+      const req = tx.objectStore(IDB_STORE).getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve([]);
+    });
+    if (keys.length <= IDB_MAX) return;
+    keys.sort((a, b) => (a.at || 0) - (b.at || 0));
+    const drop = keys.slice(0, keys.length - IDB_MAX);
+    await new Promise((resolve) => {
+      const tx = db.transaction(IDB_STORE, "readwrite");
+      const store = tx.objectStore(IDB_STORE);
+      for (const row of drop) store.delete(row.key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
 
 function withTtsSlot(fn) {
   return new Promise((resolve, reject) => {
@@ -314,6 +387,7 @@ function rememberBlob(key, blob) {
   while (audioCache.size > CACHE_MAX) {
     audioCache.delete(audioCache.keys().next().value);
   }
+  void idbSetClip(key, blob);
 }
 
 /** Run async work over items with a fixed worker pool (order preserved). */
@@ -341,6 +415,13 @@ async function fetchAudio(text, voice, rate) {
   const key = cacheKey(clean, voice, rate);
   const hit = audioCache.get(key);
   if (hit) return hit;
+
+  // Disk cache (survives refresh) — no Vercel TTS bandwidth.
+  const disk = await idbGetClip(key);
+  if (disk) {
+    audioCache.set(key, disk);
+    return disk;
+  }
 
   const payload = {
     text: clean,
@@ -781,13 +862,52 @@ export async function speakQaSequence(entries, options = {}) {
 
   warmupAudio(token);
 
-  const partCount = (entry) =>
+  const entryParts = (entry) =>
     buildSpeakParts(entry.q, entry.a, {
       voiceQ,
       voiceA,
       preface: entry.preface || "",
       lang,
-    }).length;
+    });
+
+  // Hydrate memory from IndexedDB so refresh replay skips Vercel TTS.
+  const diskKeys = [];
+  for (const entry of list) {
+    for (const part of entryParts(entry)) {
+      const clean = sanitizeSpeakText(part.text);
+      if (!clean) continue;
+      const key = cacheKey(clean, part.voice, rate);
+      if (!audioCache.has(key)) diskKeys.push(key);
+    }
+  }
+  if (diskKeys.length) {
+    await Promise.all(
+      diskKeys.map(async (key) => {
+        const blob = await idbGetClip(key);
+        if (blob) audioCache.set(key, blob);
+      })
+    );
+  }
+
+  const partCached = (entry) =>
+    entryParts(entry).every((part) => {
+      const clean = sanitizeSpeakText(part.text);
+      if (!clean) return true;
+      return audioCache.has(cacheKey(clean, part.voice, rate));
+    });
+  const allWarm = list.every(partCached);
+  if (allWarm) {
+    onPrepareProgress?.({
+      done: 1,
+      total: 1,
+      percent: 100,
+      clip: list.length,
+      clips: list.length,
+      cached: true,
+    });
+  }
+
+  const partCount = (entry) => Math.max(1, entryParts(entry).length);
 
   const totalParts = list.reduce((n, e) => n + Math.max(1, partCount(e)), 0);
   let doneParts = 0;
