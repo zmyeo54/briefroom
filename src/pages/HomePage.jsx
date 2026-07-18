@@ -155,6 +155,7 @@ export default function HomePage() {
   const [genMeta, setGenMeta] = useState(() => loadJson("genMeta", null));
   const [showGenSecret, setShowGenSecret] = useState(false);
   const practiceSetTaps = useRef({ n: 0, timer: null });
+  const playSessionRef = useRef(0);
 
   const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
@@ -168,7 +169,23 @@ export default function HomePage() {
     );
   };
 
+  const beginPlaySession = () => {
+    playSessionRef.current += 1;
+    return playSessionRef.current;
+  };
+
+  const finishPlaySession = (session, err) => {
+    if (playSessionRef.current !== session) return;
+    const msg = String(err?.message || err || "");
+    // Superseded by Stop / Restart — not a real failure to show.
+    if (msg && msg !== "Playback cancelled") {
+      flash(msg, "error");
+    }
+    endPlayback();
+  };
+
   const haltPlayback = () => {
+    playSessionRef.current += 1;
     stopSpeech();
     endPlayback();
   };
@@ -234,8 +251,8 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!status.text) return undefined;
-    if (status.kind === "error") return undefined;
-    const ms = status.kind === "ok" ? 2800 : 4200;
+    const ms =
+      status.kind === "error" ? 5200 : status.kind === "ok" ? 2800 : 4200;
     const id = setTimeout(() => setStatus({ text: "", kind: "" }), ms);
     return () => clearTimeout(id);
   }, [status]);
@@ -755,6 +772,7 @@ export default function HomePage() {
   const playOne = useCallback(
     async (i) => {
       const latest = readSettings();
+      const session = beginPlaySession();
       stopSpeech();
       setSpeaking(true);
       setAudioPaused(false);
@@ -768,15 +786,15 @@ export default function HomePage() {
           voiceA: latest.voiceA,
           lang: latest.lang,
           onStart: () => {
+            if (playSessionRef.current !== session) return;
             setPlayingIndex(i);
             setAudioReady(true);
             setAudioNote({ text: "", kind: "" });
           },
         });
+        finishPlaySession(session);
       } catch (e) {
-        flash(e.message || "TTS failed.", "error");
-      } finally {
-        endPlayback();
+        finishPlaySession(session, e);
       }
     },
     [qa, t]
@@ -791,6 +809,7 @@ export default function HomePage() {
       return;
     }
     const latest = readSettings();
+    const session = beginPlaySession();
     stopSpeech();
     setSpeaking(true);
     setAudioPaused(false);
@@ -812,16 +831,19 @@ export default function HomePage() {
         voiceQ: latest.voiceQ,
         voiceA: latest.voiceA,
         lang: latest.lang,
-        onProgress: (j) => setPlayingIndex(j >= 0 ? indices[j] : -1),
+        onProgress: (j) => {
+          if (playSessionRef.current !== session) return;
+          setPlayingIndex(j >= 0 ? indices[j] : -1);
+        },
         onStart: () => {
+          if (playSessionRef.current !== session) return;
           setAudioReady(true);
           setAudioNote({ text: "", kind: "" });
         },
       });
+      finishPlaySession(session);
     } catch (e) {
-      flash(e.message || "TTS failed.", "error");
-    } finally {
-      endPlayback();
+      finishPlaySession(session, e);
     }
   };
 

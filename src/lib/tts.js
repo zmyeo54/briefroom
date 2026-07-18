@@ -8,8 +8,11 @@ let playToken = 0;
 const audioCache = new Map();
 const CACHE_MAX = 100;
 const FETCH_CONCURRENCY = 3;
+/** Play-all prefetches item-by-item — parallel items × Mix parts flooded Edge. */
+const SPEAK_ITEM_CONCURRENCY = 1;
 /** Edge drops WS mid-synthesis when many turns run at once (no turn.end). */
 const TTS_INFLIGHT_LIMIT = 2;
+const TTS_FETCH_TIMEOUT_MS = 30000;
 let ttsInflight = 0;
 const ttsWaiters = [];
 const activeFetchControllers = new Set();
@@ -364,7 +367,7 @@ async function fetchAudio(text, voice, rate) {
           } catch {
             /* ignore */
           }
-        }, 15000);
+        }, TTS_FETCH_TIMEOUT_MS);
         try {
           const res = await fetch("/api/tts", {
             method: "POST",
@@ -705,7 +708,9 @@ export async function speakQaSequence(entries, options = {}) {
   // Prefetch only — do not call onProgress here. HomePage maps onProgress →
   // playingIndex → "Now reading"; firing it during prepare made rows pulse/hop
   // while the FAB stayed on "Preparing voice…".
-  const blobs = await mapPool(list, FETCH_CONCURRENCY, async (e) => {
+  // One item at a time: Mix mode is already 4–6 parts per item behind the
+  // inflight cap; parallel items were what tripped "Voice cut out mid-line".
+  const blobs = await mapPool(list, SPEAK_ITEM_CONCURRENCY, async (e) => {
     if (token !== playToken) return null;
     return synthesizeQaAudio(e.q, e.a, {
       rate,
