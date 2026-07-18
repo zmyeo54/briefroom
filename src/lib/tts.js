@@ -12,6 +12,7 @@ const FETCH_CONCURRENCY = 3;
 const TTS_INFLIGHT_LIMIT = 2;
 let ttsInflight = 0;
 const ttsWaiters = [];
+const activeFetchControllers = new Set();
 
 function withTtsSlot(fn) {
   return new Promise((resolve, reject) => {
@@ -21,7 +22,9 @@ function withTtsSlot(fn) {
         .then(fn)
         .then(resolve, reject)
         .finally(() => {
-          ttsInflight -= 1;
+          if (ttsInflight > 0) {
+            ttsInflight -= 1;
+          }
           ttsWaiters.shift()?.();
         });
     };
@@ -340,47 +343,77 @@ async function fetchAudio(text, voice, rate) {
     rate: rateForRequest(rate),
   };
 
+  const startToken = playToken;
   let lastMsg = "TTS failed";
   for (let attempt = 0; attempt < 4; attempt++) {
-    const res = await withTtsSlot(() =>
-      fetch("/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
-    );
+    const controller = new AbortController();
+    activeFetchControllers.add(controller);
 
-    if (res.ok) {
-      const blob = await res.blob();
-      rememberBlob(key, blob);
-      return blob;
-    }
+    const timeoutId = setTimeout(() => {
+      try {
+        controller.abort();
+      } catch {}
+    }, 15000); // 15-second client-side timeout
 
-    let msg = `TTS failed (${res.status})`;
     try {
-      const data = await res.json();
-      if (data?.error) msg = data.error;
-    } catch {
-      /* ignore */
+      const res = await withTtsSlot(() =>
+        fetch("/api/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        })
+      );
+
+      if (res.ok) {
+        const blob = await res.blob();
+        rememberBlob(key, blob);
+        return blob;
+      }
+
+      let msg = `TTS failed (${res.status})`;
+      try {
+        const data = await res.json();
+        if (data?.error) msg = data.error;
+      } catch {
+        /* ignore */
+      }
+      const transient =
+        res.status === 502 ||
+        res.status === 504 ||
+        isTransientTtsError(res.status, msg);
+      if (res.status === 502 || res.status === 504) {
+        msg = "Practice voice isn’t ready yet. Give it a moment and try again.";
+      } else if (transient) {
+        msg =
+          attempt < 3
+            ? "Voice cut out mid-line. Trying again…"
+            : "Voice cut out mid-line. Tap play once more.";
+      }
+      lastMsg = msg;
+      if (attempt < 3 && transient) {
+        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+        continue;
+      }
+      throw new Error(lastMsg);
+    } catch (err) {
+      if (err.name === "AbortError") {
+        if (playToken !== startToken) {
+          throw new Error("Playback cancelled");
+        }
+        lastMsg = "Voice request timed out. Please try again.";
+      } else {
+        lastMsg = err.message || "TTS failed";
+      }
+      if (attempt < 3 && err.name !== "AbortError") {
+        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+        continue;
+      }
+      throw new Error(lastMsg);
+    } finally {
+      clearTimeout(timeoutId);
+      activeFetchControllers.delete(controller);
     }
-    const transient =
-      res.status === 502 ||
-      res.status === 504 ||
-      isTransientTtsError(res.status, msg);
-    if (res.status === 502 || res.status === 504) {
-      msg = "Practice voice isn’t ready yet. Give it a moment and try again.";
-    } else if (transient) {
-      msg =
-        attempt < 3
-          ? "Voice cut out mid-line. Trying again…"
-          : "Voice cut out mid-line. Tap play once more.";
-    }
-    lastMsg = msg;
-    if (attempt < 3 && transient) {
-      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
-      continue;
-    }
-    throw new Error(lastMsg);
   }
   throw new Error(lastMsg);
 }
@@ -689,6 +722,21 @@ export function isSpeechPaused() {
 
 export function stopSpeech() {
   playToken += 1;
+
+  // Abort any active fetches
+  try {
+    for (const controller of activeFetchControllers) {
+      controller.abort();
+    }
+  } catch {
+    /* ignore */
+  }
+  activeFetchControllers.clear();
+
+  // Reset internal TTS concurrent queue state
+  ttsInflight = 0;
+  ttsWaiters.length = 0;
+
   cleanup();
   try {
     speechSynthesis.cancel();
