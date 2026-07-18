@@ -361,6 +361,152 @@ function rateForRequest(rate) {
   return Number.isFinite(n) ? n : 1;
 }
 
+export const TTS_ENGINES = [
+  { id: "edge", labelKey: "settings.ttsEngineEdge" },
+  { id: "browser", labelKey: "settings.ttsEngineBrowser" },
+];
+
+function browserRate(rate) {
+  const n = Number(rate);
+  return Number.isFinite(n) ? Math.min(1.4, Math.max(0.6, n)) : 1;
+}
+
+async function loadBrowserVoices() {
+  if (typeof speechSynthesis === "undefined") return [];
+  const existing = speechSynthesis.getVoices();
+  if (existing.length) return existing;
+  return new Promise((resolve) => {
+    const done = () => resolve(speechSynthesis.getVoices() || []);
+    speechSynthesis.addEventListener("voiceschanged", done, { once: true });
+    setTimeout(done, 400);
+  });
+}
+
+/** Map Edge voice id → closest device voice (lang + rough gender). */
+async function pickBrowserVoice(voiceId) {
+  const voices = await loadBrowserVoices();
+  if (!voices.length) return null;
+  const meta = TTS_VOICES.find((v) => v.id === normalizeVoiceId(voiceId));
+  const wantZh = meta?.lang === "zh";
+  const wantFemale = meta?.gender === "female";
+  const pool = voices.filter((v) =>
+    wantZh ? /zh(-|_)/i.test(v.lang) : /^en/i.test(v.lang)
+  );
+  const ranked = (pool.length ? pool : voices).slice().sort((a, b) => {
+    const score = (v) => {
+      let s = 0;
+      const name = `${v.name} ${v.lang}`.toLowerCase();
+      if (
+        wantFemale &&
+        /female|woman|zira|samantha|tingting|xiaoxiao/i.test(name)
+      )
+        s += 2;
+      if (!wantFemale && /male|man|david|guy|yunyang|kangkang/i.test(name))
+        s += 2;
+      if (wantZh && /zh-cn|chinese/i.test(name)) s += 1;
+      if (!wantZh && /en-us|en-gb/i.test(name)) s += 1;
+      return s;
+    };
+    return score(b) - score(a);
+  });
+  return ranked[0] || null;
+}
+
+function speakBrowserPart(text, voiceId, rate, token) {
+  const clean = sanitizeSpeakText(text);
+  if (!clean) return Promise.resolve();
+  if (typeof speechSynthesis === "undefined") {
+    return Promise.reject(new Error("This browser has no built-in voice."));
+  }
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      fn(value);
+    };
+    pickBrowserVoice(voiceId).then((voice) => {
+      if (token !== playToken) {
+        finish(resolve);
+        return;
+      }
+      const u = new SpeechSynthesisUtterance(clean);
+      u.rate = browserRate(rate);
+      if (voice) {
+        u.voice = voice;
+        u.lang = voice.lang;
+      }
+      u.onend = () => finish(resolve);
+      u.onerror = () => {
+        if (token !== playToken) finish(resolve);
+        else finish(reject, new Error("Browser voice failed."));
+      };
+      try {
+        speechSynthesis.speak(u);
+      } catch (e) {
+        finish(reject, e);
+      }
+    });
+  });
+}
+
+/**
+ * Instant device TTS (Web Speech API) — free, no server, lower quality.
+ */
+async function speakQaSequenceBrowser(list, options) {
+  const {
+    rate = 1,
+    voiceQ = DEFAULT_VOICE_Q,
+    voiceA = DEFAULT_VOICE_A,
+    lang = "en",
+    onProgress,
+    onStart,
+    onPrepareProgress,
+  } = options;
+  const token = playToken;
+
+  onPrepareProgress?.({
+    done: 1,
+    total: 1,
+    percent: 100,
+    clip: list.length,
+    clips: list.length,
+    cached: true,
+  });
+
+  let started = false;
+  let played = 0;
+  const markStart = (i) => {
+    if (!started) {
+      started = true;
+      onStart?.();
+    }
+    onProgress?.(i);
+  };
+
+  for (let i = 0; i < list.length; i++) {
+    if (token !== playToken) return { played, skipped: list.length - played };
+    const parts = buildSpeakParts(list[i].q, list[i].a, {
+      voiceQ,
+      voiceA,
+      preface: list[i].preface || "",
+      lang,
+    });
+    if (!parts.length) continue;
+    markStart(i);
+    for (const part of parts) {
+      if (token !== playToken) return { played, skipped: list.length - played };
+      await speakBrowserPart(part.text, part.voice, rate, token);
+    }
+    played += 1;
+  }
+
+  if (!played) {
+    throw new Error("Couldn't start browser voice. Try Edge neural instead.");
+  }
+  return { played, skipped: 0 };
+}
+
 /** Strip markdown / codes / URLs so TTS reads natural speech only. */
 export function sanitizeSpeakText(text) {
   let t = String(text || "");
@@ -970,13 +1116,17 @@ function playBlob(blob, token, { onStart, keepElement = false } = {}) {
 
 export async function speakText(
   text,
-  { rate = 1, voice = DEFAULT_VOICE_A } = {}
+  { rate = 1, voice = DEFAULT_VOICE_A, ttsEngine = "edge" } = {}
 ) {
   const trimmed = sanitizeSpeakText(text);
   if (!trimmed) return;
 
   stopSpeech();
   const token = playToken;
+  if (ttsEngine === "browser") {
+    await speakBrowserPart(trimmed, voice, rate, token);
+    return;
+  }
   warmupAudio(token);
   const blob = await fetchAudio(trimmed, voice, rate);
   if (token !== playToken) return;
@@ -999,6 +1149,7 @@ export async function speakQa(
     preface = "",
     lang = "en",
     onStart,
+    ttsEngine = "edge",
   } = {}
 ) {
   return speakQaSequence([{ q: question, a: answer, preface }], {
@@ -1007,6 +1158,7 @@ export async function speakQa(
     voiceA,
     lang,
     onStart,
+    ttsEngine,
   });
 }
 
@@ -1033,7 +1185,20 @@ export async function speakQaSequence(entries, options = {}) {
     onProgress,
     onStart,
     onPrepareProgress,
+    ttsEngine = "edge",
   } = options;
+
+  if (ttsEngine === "browser") {
+    return speakQaSequenceBrowser(list, {
+      rate,
+      voiceQ,
+      voiceA,
+      lang,
+      onProgress,
+      onStart,
+      onPrepareProgress,
+    });
+  }
 
   warmupAudio(token);
 

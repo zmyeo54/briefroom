@@ -241,6 +241,8 @@ export const defaultSettings = {
   voiceQ: DEFAULT_VOICE_Q,
   voiceA: DEFAULT_VOICE_A,
   rate: 1,
+  /** "edge" = neural (server); "browser" = instant device voices */
+  ttsEngine: "edge",
   answerLength: DEFAULT_ANSWER_LENGTH,
   interviewerRole: DEFAULT_INTERVIEWER_ROLE,
   focuses: [...DEFAULT_FOCUSES],
@@ -290,6 +292,9 @@ export function normalizeSettings(raw) {
   );
   merged.voiceQ = pair.voiceQ;
   merged.voiceA = pair.voiceA;
+
+  const engine = String(merged.ttsEngine || "edge").toLowerCase();
+  merged.ttsEngine = engine === "browser" ? "browser" : "edge";
 
   if (!ANSWER_LENGTHS.some((x) => x.id === merged.answerLength)) {
     merged.answerLength = DEFAULT_ANSWER_LENGTH;

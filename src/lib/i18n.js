@@ -128,6 +128,8 @@ const en = {
   "home.flash.audioSaved":
     "Exported — one MP3 with {n} Q&A is in Downloads. Replay it anywhere outside the app.",
   "home.flash.audioFailed": "Couldn’t export the audio. {detail}",
+  "home.flash.audioNeedsEdge":
+    "Audio export needs Edge neural voice. Switch the practice voice engine in Settings.",
   "home.flash.audioSkipped":
     "Played through — skipped {n} glitched line(s). Tap play again if you want another pass.",
   "home.flash.pdfSaved":
@@ -268,6 +270,14 @@ const en = {
     "Practice mode plays the interviewer first, then you — so it feels like a real room.",
   "settings.ttsOffline": "Practice voice isn’t ready yet. Hang on — we’re reconnecting.",
   "settings.ttsOnline": "Practice voice is ready.",
+  "settings.ttsEngine": "Practice voice engine",
+  "settings.ttsEngineEdge": "Edge neural (higher quality)",
+  "settings.ttsEngineBrowser": "Device voice (instant)",
+  "settings.ttsEngineEdgeHint":
+    "Uses Microsoft neural voices via the server — best quality; needs a short prepare step.",
+  "settings.ttsEngineBrowserHint":
+    "Uses your phone/computer’s built-in voice — starts instantly, quality varies by device.",
+  "settings.ttsBrowserReady": "Device voice is ready (no server needed).",
   "settings.rate": "Speaking pace {rate}",
   "settings.systemPrompt": "Coach instructions",
   "settings.unlock": "Unlock to Edit",
@@ -522,6 +532,8 @@ const zh = {
   "home.flash.audioSaved":
     "已导出——含 {n} 组问答的 MP3 在下载文件夹，可在应用外随时回放。",
   "home.flash.audioFailed": "音频导出失败。{detail}",
+  "home.flash.audioNeedsEdge":
+    "导出音频需要 Edge 神经语音。请到设置里切换练习语音引擎。",
   "home.flash.audioSkipped":
     "已播完——跳过了 {n} 段卡顿语音。想再听一遍可再点播放。",
   "home.flash.pdfSaved": "已导出——含 {n} 组问答的 PDF 在下载文件夹。",
@@ -659,6 +671,14 @@ const zh = {
   "settings.voiceHint": "练习时先听面试官提问，再听你的回答——更像真实面试。",
   "settings.ttsOffline": "练习语音还没就绪，稍等一下——我们正在重连。",
   "settings.ttsOnline": "练习语音已就绪。",
+  "settings.ttsEngine": "练习语音引擎",
+  "settings.ttsEngineEdge": "Edge 神经语音（音质更好）",
+  "settings.ttsEngineBrowser": "本机语音（即时）",
+  "settings.ttsEngineEdgeHint":
+    "通过服务器使用微软神经语音——音质更好，需要短暂准备。",
+  "settings.ttsEngineBrowserHint":
+    "使用手机/电脑自带语音——即时开始，音质因设备而异。",
+  "settings.ttsBrowserReady": "本机语音可用（无需服务器）。",
   "settings.rate": "语速 {rate}",
   "settings.systemPrompt": "教练说明",
   "settings.unlock": "解锁编辑",

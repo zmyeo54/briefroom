@@ -287,7 +287,7 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    if (!qa.length || speaking) {
+    if (!qa.length || speaking || readSettings().ttsEngine === "browser") {
       cancelPrefetch();
       return undefined;
     }
@@ -322,6 +322,7 @@ export default function HomePage() {
     settings.voiceQ,
     settings.voiceA,
     settings.rate,
+    settings.ttsEngine,
   ]);
 
   const questions = useMemo(
@@ -843,6 +844,7 @@ export default function HomePage() {
           voiceQ: latest.voiceQ,
           voiceA: latest.voiceA,
           lang: latest.lang,
+          ttsEngine: latest.ttsEngine,
           onStart: () => {
             if (playSessionRef.current !== session) return;
             setPlayingIndex(i);
@@ -883,6 +885,7 @@ export default function HomePage() {
         voiceQ: latest.voiceQ,
         voiceA: latest.voiceA,
         lang: latest.lang,
+        ttsEngine: latest.ttsEngine,
         onPrepareProgress: ({ percent, clip, clips, cached }) => {
           if (playSessionRef.current !== session) return;
           setPreparePct(percent);
@@ -998,6 +1001,10 @@ export default function HomePage() {
     }
 
     const latest = readSettings();
+    if (latest.ttsEngine === "browser") {
+      setAudioNote({ text: t("home.flash.audioNeedsEdge"), kind: "error" });
+      return;
+    }
     setExportingAudio(true);
     setAudioNote({ text: t("home.exportingAudio"), kind: "" });
     try {
