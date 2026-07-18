@@ -296,7 +296,9 @@ export default function HomePage() {
       selected.size
         ? [...selected].sort((a, b) => a - b)
         : qa.map((_, i) => i)
-    ).filter((i) => qa[i]?.a?.trim() || qa[i]?.q?.trim());
+    )
+      .filter((i) => qa[i]?.a?.trim() || qa[i]?.q?.trim())
+      .slice(0, 2);
     if (!indices.length) return undefined;
 
     const handle = setTimeout(() => {

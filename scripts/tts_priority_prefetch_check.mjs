@@ -71,8 +71,8 @@ const prio = synthesizeQaAudio("PRIORITYq?", "PRIORITY answer.", {
 await Promise.all([...normals, prio]);
 
 const prioIdx = started.findIndex((s) => s.includes("PRIORITY"));
-// First 4 normals own the slots; priority must be the next to start (index 4).
-if (prioIdx !== 4) {
+// First 2 normals own the slots; priority must be the next to start (index 2).
+if (prioIdx !== 2) {
   console.error("RED: priority did not jump queue", { started, prioIdx });
   process.exit(1);
 }

@@ -203,22 +203,15 @@ async def synthesize_parts(parts: list[dict], rate: float) -> bytes:
     if not cleaned:
         return b""
 
-    # One Edge turn with multi-voice SSML when every segment is short enough.
-    if all(len(p["text"]) <= CHUNK_CHARS for p in cleaned) and len(cleaned) <= MAX_BATCH_PARTS:
-        ssml = build_multi_voice_ssml(cleaned, rate)
-        first_voice, _ = resolve_voice(cleaned[0]["voice"])
-        last: Exception | None = None
-        for attempt in range(MAX_ATTEMPTS):
-            try:
-                return await _synthesize_ssml(ssml, first_voice)
-            except Exception as e:
-                last = e
-                await asyncio.sleep(0.35 * (attempt + 1))
-        print(f"[tts] multi-voice SSML failed, sequential fallback: {last}")
+    # Skip multi-voice SSML — Edge often rejects it; retries made batch much
+    # slower than separate POSTs. Small pool of plain synth instead.
+    sem = asyncio.Semaphore(2)
 
-    buffers: list[bytes] = []
-    for part in cleaned:
-        buffers.append(await synthesize(part["text"], part["voice"], rate))
+    async def one(part: dict) -> bytes:
+        async with sem:
+            return await synthesize(part["text"], part["voice"], rate)
+
+    buffers = await asyncio.gather(*[one(p) for p in cleaned])
     return b"".join(buffers)
 
 

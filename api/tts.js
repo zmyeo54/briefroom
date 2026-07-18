@@ -4,7 +4,6 @@ import {
   rateToEdge,
   resolveVoice,
   sanitizeSpeakText,
-  buildMultiVoiceSsml,
 } from "./_ttsShared.js";
 
 export const config = {
@@ -90,23 +89,6 @@ async function synthesizeOnce(text, edgeVoice, rate) {
   }
 }
 
-async function synthesizeRawSsml(ssml, edgeVoice) {
-  const tts = new MsEdgeTTS();
-  try {
-    await tts.setMetadata(edgeVoice, OUTPUT);
-    const { audioStream } = tts.rawToStream(ssml);
-    const audio = await collectStream(audioStream, 60000);
-    if (!audio?.length) throw new Error("empty audio");
-    return audio;
-  } finally {
-    try {
-      tts.close();
-    } catch {
-      /* ignore */
-    }
-  }
-}
-
 async function synthesizeWithRetry(text, edgeVoice, rate) {
   let last;
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
@@ -131,10 +113,18 @@ async function synthesizeText(text, voiceId, rate) {
   return Buffer.concat(buffers);
 }
 
-function canMultiVoice(parts) {
-  if (!parts.length || parts.length > MAX_BATCH_PARTS) return false;
-  // Long segments still need chunking — fall back to per-part Edge turns.
-  return parts.every((p) => sanitizeSpeakText(p?.text || "").length <= CHUNK_CHARS);
+/** Run up to `limit` async jobs at a time. */
+async function mapPool(items, limit, fn) {
+  const out = new Array(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i], i);
+    }
+  });
+  await Promise.all(workers);
+  return out;
 }
 
 async function synthesizeParts(parts, rate) {
@@ -151,28 +141,13 @@ async function synthesizeParts(parts, rate) {
   }
   if (!cleaned.length) return Buffer.alloc(0);
 
-  if (canMultiVoice(cleaned)) {
-    const ssml = buildMultiVoiceSsml(cleaned, rate);
-    const firstVoice = resolveVoice(cleaned[0].voice);
-    let last;
-    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-      try {
-        return await synthesizeRawSsml(ssml, firstVoice);
-      } catch (e) {
-        last = e;
-        await new Promise((r) =>
-          setTimeout(r, Math.min(5000, 500 * 2 ** attempt))
-        );
-      }
-    }
-    // Multi-voice SSML flaky under Edge — fall through to sequential.
-    console.warn("[tts] multi-voice SSML failed, sequential fallback:", last?.message);
-  }
-
-  const buffers = [];
-  for (const part of cleaned) {
-    buffers.push(await synthesizeText(part.text, part.voice, rate));
-  }
+  // ponytail: multi-voice SSML looked attractive but Edge rejects it often; we
+  // used to retry 5× with backoff (~10s+) then fall back — batch was 4× slower
+  // than the same parts as separate POSTs. Skip SSML; synth parts with a small
+  // pool instead. Upgrade path: one SSML attempt if Edge stabilises.
+  const buffers = await mapPool(cleaned, 2, (part) =>
+    synthesizeText(part.text, part.voice, rate)
+  );
   return Buffer.concat(buffers);
 }
 

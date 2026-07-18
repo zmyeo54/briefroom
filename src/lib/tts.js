@@ -13,11 +13,14 @@ const IDB_STORE = "clips";
 const IDB_MAX = 120;
 /**
  * Max simultaneous Edge TTS turns. Clips are all queued in parallel; this
- * pool is what actually hits the network. >3 historically dropped mid-line.
+ * pool is what actually hits the network. Mix batches are heavy — 4 saturated
+ * Edge and made play-all feel stuck; 2 keeps headroom for clip #1 priority.
  */
-const TTS_INFLIGHT_LIMIT = 4;
+const TTS_INFLIGHT_LIMIT = 2;
 const TTS_FETCH_TIMEOUT_MS = 45000;
 const TTS_FETCH_ATTEMPTS = 6;
+/** Idle prefetch only warms the first N clips (play starts ASAP from cache). */
+const PREFETCH_CLIP_LIMIT = 2;
 let ttsInflight = 0;
 const ttsWaiters = [];
 const ttsPriorityWaiters = [];
@@ -1293,19 +1296,22 @@ export async function prefetchQaSequence(entries, options = {}) {
   }
   if (gen !== prefetchGen) return;
 
-  // First clip priority so the usual play-all start is ready first.
-  await synthesizeQaAudio(list[0].q, list[0].a, {
+  // Only warm the first few clips — prefetching a full Mix playlist saturates
+  // Edge and often gets cancelled when the user hits Play.
+  const warm = list.slice(0, PREFETCH_CLIP_LIMIT);
+
+  await synthesizeQaAudio(warm[0].q, warm[0].a, {
     rate,
     voiceQ,
     voiceA,
-    preface: list[0].preface || "",
+    preface: warm[0].preface || "",
     lang,
     priority: true,
   }).catch(() => {});
   if (gen !== prefetchGen) return;
 
   await Promise.all(
-    list.slice(1).map((entry) =>
+    warm.slice(1).map((entry) =>
       synthesizeQaAudio(entry.q, entry.a, {
         rate,
         voiceQ,
