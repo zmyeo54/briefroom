@@ -683,9 +683,11 @@ export async function speakQaSequence(entries, options = {}) {
   // Safari / WeChat doesn't show its own media player overlay.
   warmupAudio(token);
 
-  const blobs = await mapPool(list, FETCH_CONCURRENCY, async (e, i) => {
+  // Prefetch only — do not call onProgress here. HomePage maps onProgress →
+  // playingIndex → "Now reading"; firing it during prepare made rows pulse/hop
+  // while the FAB stayed on "Preparing voice…".
+  const blobs = await mapPool(list, FETCH_CONCURRENCY, async (e) => {
     if (token !== playToken) return null;
-    onProgress?.(i);
     return synthesizeQaAudio(e.q, e.a, {
       rate,
       voiceQ,
@@ -696,8 +698,12 @@ export async function speakQaSequence(entries, options = {}) {
   });
   if (token !== playToken) return;
   if (blobs.some((b) => !b)) return;
-  onProgress?.(-1);
-  await playBlob(new Blob(blobs, { type: "audio/mpeg" }), token, { onStart });
+  await playBlob(new Blob(blobs, { type: "audio/mpeg" }), token, {
+    onStart: () => {
+      onStart?.();
+      onProgress?.(0);
+    },
+  });
 }
 
 /** Pause current practice audio without cancelling the session. */

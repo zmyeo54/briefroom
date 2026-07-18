@@ -111,8 +111,10 @@ export const DEFAULT_MODEL = PINNED_GEMINI_MODEL;
 export const AI_PROVIDERS = [
   { id: "gemini" },
   { id: "deepseek" },
+  { id: "antigravity" },
 ];
 export const DEFAULT_AI_PROVIDER = "gemini";
+export const AI_PROVIDER_IDS = AI_PROVIDERS.map((p) => p.id);
 
 /** @deprecated region was a proxy for provider — kept for stored settings / headers */
 export const AI_REGIONS = [
@@ -144,6 +146,7 @@ export function normalizeAiRegion(raw) {
 export function normalizeAiProvider(raw) {
   const id = String(raw || "").toLowerCase();
   if (id === "deepseek") return "deepseek";
+  if (id === "antigravity") return "antigravity";
   if (id === "gemini") return "gemini";
   return normalizeAiRegion(raw) === "greater-china" ? "deepseek" : "gemini";
 }
@@ -154,12 +157,18 @@ export function providerToRegion(provider) {
     : "global";
 }
 
+/** i18n key for a provider display name. */
+export function aiProviderLabelKey(provider) {
+  return `settings.aiProvider.${normalizeAiProvider(provider)}`;
+}
+
 /** Enabled providers in preference order (preferred first). */
 export function enabledAiProviders(settings = {}) {
   const preferred = normalizeAiProvider(settings.aiProvider);
   const on = [];
   if (settings.geminiEnabled !== false) on.push("gemini");
   if (settings.deepseekEnabled !== false) on.push("deepseek");
+  if (settings.antigravityEnabled !== false) on.push("antigravity");
   if (!on.length) return [];
   if (on.includes(preferred)) {
     return [preferred, ...on.filter((p) => p !== preferred)];
@@ -238,6 +247,7 @@ export const defaultSettings = {
   aiProviderManual: false,
   geminiEnabled: true,
   deepseekEnabled: true,
+  antigravityEnabled: true,
   // synced from aiProvider — legacy clients / geo still read these
   aiRegion: DEFAULT_AI_REGION,
   aiRegionManual: false,
@@ -295,6 +305,7 @@ export function normalizeSettings(raw) {
   );
   merged.geminiEnabled = merged.geminiEnabled !== false;
   merged.deepseekEnabled = merged.deepseekEnabled !== false;
+  merged.antigravityEnabled = merged.antigravityEnabled !== false;
   // Keep region in sync so geo / old headers stay consistent
   merged.aiRegion = providerToRegion(merged.aiProvider);
   merged.aiRegionManual = merged.aiProviderManual;

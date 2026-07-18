@@ -11,7 +11,8 @@
     "tts": ".venv/bin/python scripts/tts_server.py",
     "dev:api": "node scripts/dev-api-server.mjs",
     "dev:web": "vite --host 0.0.0.0 --port 8787",
-    "test:tts": "node scripts/tts_regression.mjs"
+    "test:tts": "node scripts/tts_regression.mjs",
+    "test:tts-ui-state": "node scripts/tts_preparing_state_check.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",

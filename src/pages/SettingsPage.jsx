@@ -436,40 +436,55 @@ export default function SettingsPage() {
                   {t("settings.aiProviders")}
                 </span>
                 <div className="flex flex-col gap-2.5 mt-1">
-                  <label className="flex items-center gap-2 text-sm ink">
-                    <input
-                      type="checkbox"
-                      className="accent-check"
-                      checked={settings.geminiEnabled !== false}
-                      onChange={(e) => {
-                        const on = e.target.checked;
-                        if (!on && settings.deepseekEnabled === false) return;
-                        const next = { geminiEnabled: on, aiProviderManual: true };
-                        if (!on && settings.aiProvider === "gemini") {
-                          next.aiProvider = "deepseek";
-                        }
-                        patch(next);
-                      }}
-                    />
-                    {t("settings.aiProvider.gemini")}
-                  </label>
-                  <label className="flex items-center gap-2 text-sm ink">
-                    <input
-                      type="checkbox"
-                      className="accent-check"
-                      checked={settings.deepseekEnabled !== false}
-                      onChange={(e) => {
-                        const on = e.target.checked;
-                        if (!on && settings.geminiEnabled === false) return;
-                        const next = { deepseekEnabled: on, aiProviderManual: true };
-                        if (!on && settings.aiProvider === "deepseek") {
-                          next.aiProvider = "gemini";
-                        }
-                        patch(next);
-                      }}
-                    />
-                    {t("settings.aiProvider.deepseek")}
-                  </label>
+                  {(
+                    [
+                      ["gemini", "geminiEnabled"],
+                      ["deepseek", "deepseekEnabled"],
+                      ["antigravity", "antigravityEnabled"],
+                    ]
+                  ).map(([id, flag]) => {
+                    const flags = {
+                      geminiEnabled: settings.geminiEnabled !== false,
+                      deepseekEnabled: settings.deepseekEnabled !== false,
+                      antigravityEnabled: settings.antigravityEnabled !== false,
+                    };
+                    const enabledCount = Object.values(flags).filter(Boolean).length;
+                    return (
+                      <label
+                        key={id}
+                        className="flex items-center gap-2 text-sm ink"
+                      >
+                        <input
+                          type="checkbox"
+                          className="accent-check"
+                          checked={flags[flag]}
+                          onChange={(e) => {
+                            const on = e.target.checked;
+                            if (!on && enabledCount <= 1) return;
+                            const next = {
+                              [flag]: on,
+                              aiProviderManual: true,
+                            };
+                            if (!on && settings.aiProvider === id) {
+                              const stillOn = [
+                                ["gemini", flag === "geminiEnabled" ? on : flags.geminiEnabled],
+                                ["deepseek", flag === "deepseekEnabled" ? on : flags.deepseekEnabled],
+                                [
+                                  "antigravity",
+                                  flag === "antigravityEnabled"
+                                    ? on
+                                    : flags.antigravityEnabled,
+                                ],
+                              ].find(([, en]) => en)?.[0];
+                              if (stillOn) next.aiProvider = stillOn;
+                            }
+                            patch(next);
+                          }}
+                        />
+                        {t(`settings.aiProvider.${id}`)}
+                      </label>
+                    );
+                  })}
                 </div>
                 <p className="settings-row-hint">{t("settings.aiProvidersHint")}</p>
               </div>
@@ -499,6 +514,12 @@ export default function SettingsPage() {
                       disabled={settings.deepseekEnabled === false}
                     >
                       {t("settings.aiProvider.deepseek")}
+                    </option>
+                    <option
+                      value="antigravity"
+                      disabled={settings.antigravityEnabled === false}
+                    >
+                      {t("settings.aiProvider.antigravity")}
                     </option>
                   </select>
                 </div>

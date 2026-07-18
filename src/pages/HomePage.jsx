@@ -54,6 +54,7 @@ import {
   shouldTryNextGeminiModel,
   voicesForInterviewLang,
   enabledAiProviders,
+  aiProviderLabelKey,
   normalizeAiProvider,
   providerToRegion,
 } from "../lib/settingsConfig";
@@ -355,11 +356,7 @@ export default function HomePage() {
 
   const genSecretLabel = useMemo(() => {
     if (!genMeta?.model) return "";
-    const provider = normalizeAiProvider(settings.aiProvider);
-    const label =
-      provider === "deepseek"
-        ? t("settings.aiProvider.deepseek")
-        : t("settings.aiProvider.gemini");
+    const label = t(aiProviderLabelKey(settings.aiProvider));
     return `${label} · ${genMeta.model}`;
   }, [genMeta, settings.aiProvider, t]);
 
@@ -527,10 +524,7 @@ export default function HomePage() {
               data: {
                 error: {
                   message: t("home.flash.timeout", {
-                    provider:
-                      provider === "deepseek"
-                        ? t("settings.aiProvider.deepseek")
-                        : t("settings.aiProvider.gemini"),
+                    provider: t(aiProviderLabelKey(provider)),
                   }),
                 },
               },
@@ -545,10 +539,7 @@ export default function HomePage() {
               data: {
                 error: {
                   message: t("home.flash.timeout", {
-                    provider:
-                      provider === "deepseek"
-                        ? t("settings.aiProvider.deepseek")
-                        : t("settings.aiProvider.gemini"),
+                    provider: t(aiProviderLabelKey(provider)),
                   }),
                 },
               },
@@ -630,10 +621,7 @@ export default function HomePage() {
               throw new Error(
                 batchData?.error?.message ||
                   t("home.flash.timeout", {
-                    provider:
-                      provider === "deepseek"
-                        ? t("settings.aiProvider.deepseek")
-                        : t("settings.aiProvider.gemini"),
+                    provider: t(aiProviderLabelKey(provider)),
                   })
               );
             }
@@ -774,7 +762,6 @@ export default function HomePage() {
       setAudioReady(false);
       setStatus({ text: "", kind: "" });
       setAudioNote({ text: t("home.preparingAudio"), kind: "" });
-      setPlayingIndex(i);
       try {
         await speakQa(qa[i].q, qa[i].a, {
           rate: latest.rate,
@@ -782,6 +769,7 @@ export default function HomePage() {
           voiceA: latest.voiceA,
           lang: latest.lang,
           onStart: () => {
+            setPlayingIndex(i);
             setAudioReady(true);
             setAudioNote({ text: "", kind: "" });
           },

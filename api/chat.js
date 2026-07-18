@@ -8,10 +8,14 @@ export const config = {
 const GEMINI_BASE =
   "https://generativelanguage.googleapis.com/v1beta/openai";
 const DEEPSEEK_BASE = "https://api.deepseek.com";
+/** Oracle Always Free Antigravity proxy (OpenAI-compatible /v1). */
+export const ANTIGRAVITY_DEFAULT_BASE = "http://138.2.161.62:8045";
+export const ANTIGRAVITY_MODEL = "gemini-3.1-flash-lite";
 export const DEEPSEEK_MODEL = "deepseek-v4-flash";
 export const AI_REGION_HEADER = "x-linecheck-ai-region";
 export const AI_PROVIDER_HEADER = "x-linecheck-ai-provider";
 export const AI_ENABLED_HEADER = "x-linecheck-ai-enabled";
+const KNOWN_PROVIDERS = new Set(["gemini", "deepseek", "antigravity"]);
 /** Soft ceiling under Vercel maxDuration:60 — return JSON 504 instead of HTML kill. */
 export const HANDLER_BUDGET_MS = 55_000;
 /** Per upstream call; leaves room to return cleanly (or try a fast failover). */
@@ -40,21 +44,21 @@ export function parseAiRegion(req) {
 /** Explicit provider header, else derive from legacy region header. */
 export function parseAiProvider(req) {
   const raw = String(req.headers?.[AI_PROVIDER_HEADER] || "").toLowerCase();
-  if (raw === "deepseek" || raw === "gemini") return raw;
+  if (KNOWN_PROVIDERS.has(raw)) return raw;
   const region = parseAiRegion(req);
   if (region === "greater-china") return "deepseek";
   if (region === "global") return "gemini";
   return "";
 }
 
-/** Comma-separated enabled providers from client. null = both allowed. */
+/** Comma-separated enabled providers from client. null = all allowed. */
 export function parseEnabledProviders(req) {
   const raw = String(req.headers?.[AI_ENABLED_HEADER] || "").trim();
   if (!raw) return null;
   const set = new Set();
   for (const part of raw.split(/[\s,]+/)) {
     const p = part.trim().toLowerCase();
-    if (p === "gemini" || p === "deepseek") set.add(p);
+    if (KNOWN_PROVIDERS.has(p)) set.add(p);
   }
   return set.size ? set : null;
 }
@@ -85,6 +89,29 @@ export function collectDeepSeekKeys(env = process.env) {
   return k ? [k] : [];
 }
 
+export function collectAntigravityKeys(env = process.env) {
+  const k = String(env.ANTIGRAVITY_API_KEY || "").trim();
+  return k ? [k] : [];
+}
+
+/** OpenAI-compatible base; accepts host with or without /v1. */
+export function resolveAntigravityBase(env = process.env) {
+  let base = String(
+    env.ANTIGRAVITY_API_BASE || ANTIGRAVITY_DEFAULT_BASE
+  )
+    .trim()
+    .replace(/\/$/, "");
+  if (!base) base = ANTIGRAVITY_DEFAULT_BASE;
+  if (!/\/v1$/i.test(base)) base = `${base}/v1`;
+  return base;
+}
+
+export function antigravityModel(env = process.env) {
+  return (
+    String(env.ANTIGRAVITY_MODEL || "").trim() || ANTIGRAVITY_MODEL
+  );
+}
+
 /** User key (request) first, then server pool — used for this call only. */
 export function keysForRequest(userKey, env = process.env) {
   const out = [];
@@ -96,7 +123,8 @@ export function keysForRequest(userKey, env = process.env) {
   return out;
 }
 
-/** DeepSeek keys are sk-…; Settings still labels the paste field as Gemini. */
+/** DeepSeek keys are sk-…; Settings still labels the paste field as Gemini.
+ *  Antigravity proxy keys are also sk-… — they use ANTIGRAVITY_API_KEY only. */
 export function keyLooksLikeDeepSeek(key) {
   return /^sk-/i.test(String(key || "").trim());
 }
@@ -104,13 +132,17 @@ export function keyLooksLikeDeepSeek(key) {
 export function keysForProvider(provider, userKey, env = process.env) {
   const out = [];
   const u = String(userKey || "").trim();
-  // Skip mismatched paste-key (Gemini key → DeepSeek = fast 401 noise).
-  if (u) {
+  // Antigravity keys collide with DeepSeek (both sk-) — never use paste there.
+  if (u && provider !== "antigravity") {
     const ds = keyLooksLikeDeepSeek(u);
     if (provider === "deepseek" ? ds : !ds) out.push(u);
   }
   const pool =
-    provider === "deepseek" ? collectDeepSeekKeys(env) : collectServerKeys(env);
+    provider === "deepseek"
+      ? collectDeepSeekKeys(env)
+      : provider === "antigravity"
+        ? collectAntigravityKeys(env)
+        : collectServerKeys(env);
   for (const k of pool) {
     if (!out.includes(k)) out.push(k);
   }
@@ -124,12 +156,17 @@ export function pickProvider(req, env = process.env) {
 }
 
 export function otherProvider(provider, env = process.env) {
-  const alt = provider === "deepseek" ? "gemini" : "deepseek";
-  const hasAlt =
-    alt === "deepseek"
-      ? collectDeepSeekKeys(env).length > 0
-      : collectServerKeys(env).length > 0;
-  return hasAlt ? alt : null;
+  for (const alt of ["gemini", "deepseek", "antigravity"]) {
+    if (alt === provider) continue;
+    const hasAlt =
+      alt === "deepseek"
+        ? collectDeepSeekKeys(env).length > 0
+        : alt === "antigravity"
+          ? collectAntigravityKeys(env).length > 0
+          : collectServerKeys(env).length > 0;
+    if (hasAlt) return alt;
+  }
+  return null;
 }
 
 /**
@@ -139,13 +176,16 @@ export function otherProvider(provider, env = process.env) {
 export function providersToTry(req, env = process.env) {
   const enabled = parseEnabledProviders(req);
   const userKey = Boolean(bearerFromReq(req));
-  // Bearer may be either provider's key — allow both routes when present.
-  const hasDeepseek = collectDeepSeekKeys(env).length > 0 || userKey;
-  const hasGemini = collectServerKeys(env).length > 0 || userKey;
+  // Bearer may be Gemini or DeepSeek — not Antigravity (sk- collision).
+  const has = {
+    gemini: collectServerKeys(env).length > 0 || userKey,
+    deepseek: collectDeepSeekKeys(env).length > 0 || userKey,
+    antigravity: collectAntigravityKeys(env).length > 0,
+  };
 
   const allow = (p) => {
     if (enabled && !enabled.has(p)) return false;
-    return p === "deepseek" ? hasDeepseek : hasGemini;
+    return Boolean(has[p]);
   };
 
   let preferred = parseAiProvider(req);
@@ -156,12 +196,13 @@ export function providersToTry(req, env = process.env) {
 
   const order = [];
   if (allow(preferred)) order.push(preferred);
-  const alt = preferred === "deepseek" ? "gemini" : "deepseek";
-  if (allow(alt)) order.push(alt);
+  for (const p of ["gemini", "deepseek", "antigravity"]) {
+    if (p !== preferred && allow(p)) order.push(p);
+  }
   return order;
 }
 
-export function bodyForProvider(body, provider) {
+export function bodyForProvider(body, provider, env = process.env) {
   if (provider === "deepseek") {
     // V4 defaults thinking=enabled; CoT eats max_tokens + wall clock →
     // truncated JSON (finish=length) and Vercel ~60s 504s on Build.
@@ -175,6 +216,12 @@ export function bodyForProvider(body, provider) {
       model: DEEPSEEK_MODEL,
       thinking: { type: "disabled" },
       max_tokens,
+    };
+  }
+  if (provider === "antigravity") {
+    return {
+      ...body,
+      model: antigravityModel(env),
     };
   }
   return body;
@@ -248,9 +295,14 @@ async function callChat(baseUrl, key, body, signal) {
   return { upstream, data };
 }
 
-async function callProvider(provider, key, body, signal) {
-  const base = provider === "deepseek" ? DEEPSEEK_BASE : GEMINI_BASE;
-  const payload = bodyForProvider(body, provider);
+async function callProvider(provider, key, body, signal, env = process.env) {
+  const base =
+    provider === "deepseek"
+      ? DEEPSEEK_BASE
+      : provider === "antigravity"
+        ? resolveAntigravityBase(env)
+        : GEMINI_BASE;
+  const payload = bodyForProvider(body, provider, env);
   let { upstream, data } = await callChat(base, key, payload, signal);
 
   if (
@@ -274,7 +326,11 @@ export default async function handler(req, res) {
 
   const geminiKeys = collectServerKeys();
   const deepseekKeys = collectDeepSeekKeys();
-  const hasKey = geminiKeys.length > 0 || deepseekKeys.length > 0;
+  const antigravityKeys = collectAntigravityKeys();
+  const hasKey =
+    geminiKeys.length > 0 ||
+    deepseekKeys.length > 0 ||
+    antigravityKeys.length > 0;
 
   if (req.method === "GET") {
     const country = String(
@@ -284,6 +340,7 @@ export default async function handler(req, res) {
       hasKey,
       hasGemini: geminiKeys.length > 0,
       hasDeepseek: deepseekKeys.length > 0,
+      hasAntigravity: antigravityKeys.length > 0,
       country: country || null,
     });
     return;
@@ -300,7 +357,7 @@ export default async function handler(req, res) {
     res.status(503).json({
       error: {
         message:
-          "No API key on the server. Set GEMINI_API_KEY and/or DEEPSEEK_API_KEY in Vercel env, or paste a key in Settings.",
+          "No API key on the server. Set GEMINI_API_KEY, DEEPSEEK_API_KEY, and/or ANTIGRAVITY_API_KEY in Vercel env, or paste a key in Settings.",
       },
     });
     return;
@@ -376,6 +433,7 @@ if (typeof process !== "undefined" && process.argv?.[1]?.endsWith("chat.js")) {
     GEMINI_API_KEY_2: "c",
     VITE_GEMINI_API_KEY: "a",
     DEEPSEEK_API_KEY: "ds",
+    ANTIGRAVITY_API_KEY: "ag",
   };
   console.assert(
     JSON.stringify(collectServerKeys(env)) === JSON.stringify(["a", "b", "c"]),
@@ -404,6 +462,11 @@ if (typeof process !== "undefined" && process.argv?.[1]?.endsWith("chat.js")) {
     pickProvider({ headers: { [AI_PROVIDER_HEADER]: "deepseek" } }, env) ===
       "deepseek",
     "explicit deepseek"
+  );
+  console.assert(
+    pickProvider({ headers: { [AI_PROVIDER_HEADER]: "antigravity" } }, env) ===
+      "antigravity",
+    "explicit antigravity"
   );
   console.assert(
     pickProvider(
@@ -439,8 +502,8 @@ if (typeof process !== "undefined" && process.argv?.[1]?.endsWith("chat.js")) {
         { headers: { [AI_PROVIDER_HEADER]: "gemini" } },
         env
       )
-    ) === JSON.stringify(["gemini", "deepseek"]),
-    "gemini first then deepseek"
+    ) === JSON.stringify(["gemini", "deepseek", "antigravity"]),
+    "gemini first then others"
   );
   console.assert(
     otherProvider("deepseek", env) === "gemini",
@@ -468,6 +531,20 @@ if (typeof process !== "undefined" && process.argv?.[1]?.endsWith("chat.js")) {
     "deepseek caps max_tokens"
   );
   console.assert(
+    bodyForProvider({ model: "x", messages: [] }, "antigravity", env).model ===
+      ANTIGRAVITY_MODEL,
+    "antigravity model swap"
+  );
+  console.assert(
+    resolveAntigravityBase({}).endsWith("/v1"),
+    "antigravity base has /v1"
+  );
+  console.assert(
+    resolveAntigravityBase({ ANTIGRAVITY_API_BASE: "http://x:8045/v1" }) ===
+      "http://x:8045/v1",
+    "antigravity base no double /v1"
+  );
+  console.assert(
     keyLooksLikeDeepSeek("sk-abc") && !keyLooksLikeDeepSeek("AIza"),
     "key fingerprint"
   );
@@ -480,6 +557,11 @@ if (typeof process !== "undefined" && process.argv?.[1]?.endsWith("chat.js")) {
     JSON.stringify(keysForProvider("gemini", "sk-deepseek", env)) ===
       JSON.stringify(["a", "b", "c"]),
     "skip deepseek paste on gemini"
+  );
+  console.assert(
+    JSON.stringify(keysForProvider("antigravity", "sk-paste", env)) ===
+      JSON.stringify(["ag"]),
+    "antigravity ignores paste (sk- collision)"
   );
   console.assert(isAbortError({ name: "TimeoutError" }), "timeout is abort");
   console.assert(

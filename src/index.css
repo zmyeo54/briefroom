@@ -1939,7 +1939,6 @@ html[lang="zh-CN"] .app-dialog-body {
     rgba(74, 127, 248, 0.1) 0%,
     rgba(74, 127, 248, 0.04) 100%
   );
-  animation: qa-playing-pulse 2.4s ease-in-out infinite;
 }
 
 .qa-row-playing .qa-number {
@@ -1958,11 +1957,6 @@ html[lang="zh-CN"] .app-dialog-body {
   opacity: 0.8;
   letter-spacing: 0.01em;
   white-space: nowrap;
-}
-
-@keyframes qa-playing-pulse {
-  0%, 100% { background: linear-gradient(90deg, rgba(74, 127, 248, 0.1) 0%, rgba(74, 127, 248, 0.04) 100%); }
-  50% { background: linear-gradient(90deg, rgba(74, 127, 248, 0.14) 0%, rgba(74, 127, 248, 0.06) 100%); }
 }
 
 .qa-row-selected { background: rgba(74, 127, 248, 0.06); }
