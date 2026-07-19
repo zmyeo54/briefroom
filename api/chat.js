@@ -94,7 +94,9 @@ export function collectDeepSeekKeys(env = process.env) {
 
 export function collectAntigravityKeys(env = process.env) {
   const k = String(env.ANTIGRAVITY_API_KEY || "").trim();
-  return k ? [k] : [];
+  if (k) return [k];
+  const cline = String(env.ANTIGRAVITY_CLINE_API_KEY || "").trim();
+  return cline ? [cline] : [];
 }
 
 /** OpenAI-compatible base; accepts host with or without /v1. */

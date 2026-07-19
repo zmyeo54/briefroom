@@ -537,11 +537,6 @@ export async function exportMergedQaAudio(items, options = {}) {
   return list.length;
 }
 
-/** @deprecated use exportMergedQaAudio — kept for single-item saves */
-export async function exportQaAudioFiles(items, options = {}) {
-  return exportMergedQaAudio(items, options);
-}
-
 /** Shared hidden container for audio elements (avoids appending to <body>). */
 let audioContainer = null;
 function getAudioContainer() {

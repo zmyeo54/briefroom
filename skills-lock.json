@@ -54,6 +54,288 @@
       "sourceType": "github",
       "skillPath": "skills/writing-guidelines/SKILL.md",
       "computedHash": "25aa3a33a97bddbcb1847ce4a6169106ec25e5b19b15b99c66e75ab383866ef2"
+    },
+    "ask-matt": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/ask-matt/SKILL.md",
+      "computedHash": "b1a134ada29cbfded84bc9a7f93356ab7a3d7f800edf1f541a2a964118ad45a7"
+    },
+    "babysit": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/babysit/SKILL.md",
+      "computedHash": "b46766ed302c34e7b2b52a03b5df706ec6fcaffeed4df2e68b7607939a79d602"
+    },
+    "code-review": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/code-review/SKILL.md",
+      "computedHash": "6a65cc61114f96db07ec41e3920e67c9c5bf70dd6e0901eb9460ebcb2bdc209f"
+    },
+    "codebase-design": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/codebase-design/SKILL.md",
+      "computedHash": "a8d50abac5a4018f60e1d911d4b6f4e36454ca14d6c390c0695a578c7de65dad"
+    },
+    "create-hook": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/create-hook/SKILL.md",
+      "computedHash": "28bfa0c6cd13fa0167c72512fca0da2c6fc24b6eea67c5307bf1ef2bedca61a6"
+    },
+    "create-rule": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/create-rule/SKILL.md",
+      "computedHash": "fe8499dfe93edbf8306df70498a7ea3572e0c8b340607137cbc836051520263c"
+    },
+    "create-skill": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/create-skill/SKILL.md",
+      "computedHash": "f3df382ea9cf2119ee8f121143b2ec0cacbd8bbc6dc3a15fd981ea547cef42f8"
+    },
+    "create-subagent": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/create-subagent/SKILL.md",
+      "computedHash": "ab46a80f90cb3810c3182a55b975b13bcf72e00e7fa907cf49fb3a30a02a3922"
+    },
+    "diagnosing-bugs": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/diagnosing-bugs/SKILL.md",
+      "computedHash": "7a0779480f323a66d109404646bcc1a14bf0232b45b3e3ea93b652a035718acb"
+    },
+    "domain-modeling": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/domain-modeling/SKILL.md",
+      "computedHash": "152e2c97239affb12a60c5f4a7e74ab546a49ae169688c81f4e2ccc42dafa579"
+    },
+    "git-guardrails-claude-code": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/git-guardrails-claude-code/SKILL.md",
+      "computedHash": "03c4de7613c712aea336d64c467ea3ed14be2cbd52345925fe949c75c01c29f7"
+    },
+    "grill-me": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/grill-me/SKILL.md",
+      "computedHash": "6189dfceb7304a6e5558f75d87e68fa3bc7fcf7ba120e44f21f8a61fe01eba54"
+    },
+    "grill-with-docs": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/grill-with-docs/SKILL.md",
+      "computedHash": "610d091047bcfb9db0f75c057d15538481a721111579fc5ec7f83ad9131a2165"
+    },
+    "grilling": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/grilling/SKILL.md",
+      "computedHash": "44331dda57f461db4fec3f2efb6ddabe7aaaa0a57ae0f88a883bc61aed8a0587"
+    },
+    "handoff": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/handoff/SKILL.md",
+      "computedHash": "57c9f1f392d7352cdc85b1e39ca49eddc70ce1dc278bd9653fb4f23dfc2560fc"
+    },
+    "implement": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/implement/SKILL.md",
+      "computedHash": "6d3fd9e83b8f36e5213854779db49b256a457a7ebb4a503e53fa7dcff696adc3"
+    },
+    "improve-codebase-architecture": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/improve-codebase-architecture/SKILL.md",
+      "computedHash": "4b4cb798c3863d5b6f5c0b4604af1ecb5beb6df82553c972898a91ba38bcf289"
+    },
+    "interaction-design": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/interaction-design/SKILL.md",
+      "computedHash": "87f2765ed1deeef3f1c06f9e4338ff103c391c6c4adcdffc885f3516b7c34ff2"
+    },
+    "interview-coach": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/interview-coach/SKILL.md",
+      "computedHash": "b4c975aed2316d66aba9368d3ba5013a042b5aaf3f50ea983dfea6bb3656a9fb"
+    },
+    "migrate-to-shoehorn": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/migrate-to-shoehorn/SKILL.md",
+      "computedHash": "de4da4c11d924fac79c924b2ee3d2db4a5cb98386eb490a599119463d036ae72"
+    },
+    "migrate-to-skills": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/migrate-to-skills/SKILL.md",
+      "computedHash": "78c0483cc96ea3dc833f344ed928d425aff0c64cfcb02759fe5efe4a913a5b6b"
+    },
+    "mobile-responsiveness": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/mobile-responsiveness/SKILL.md",
+      "computedHash": "4e228c19deefc357ad97d75239a8ac967c26855f6e0421e9be20a2c09ad323c0"
+    },
+    "ponytail": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/ponytail/SKILL.md",
+      "computedHash": "1316a2f3f95741d2300b116fe0c2d81ce4a9568656ed0a62643f54aaf09957f2"
+    },
+    "ponytail-audit": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/ponytail-audit/SKILL.md",
+      "computedHash": "5560b8e383dbe2ddfddc873a1e2bf2e586e23e0cd7d995537482b2315331f6d1"
+    },
+    "ponytail-debt": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/ponytail-debt/SKILL.md",
+      "computedHash": "c84fba75f0ca12bfe83f9a78ea02fd125c5dd3f1fbb18124105a489937f284e6"
+    },
+    "ponytail-gain": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/ponytail-gain/SKILL.md",
+      "computedHash": "24e01d1c9715cb136ba1c4f1e52a95940c0193558b876828e537736480d6408b"
+    },
+    "ponytail-help": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/ponytail-help/SKILL.md",
+      "computedHash": "2264d1615117b02b0fd5a69ec84cd2757006471a78e4d6c22eed6d581c1d37a4"
+    },
+    "ponytail-review": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/ponytail-review/SKILL.md",
+      "computedHash": "40df33b58fc6ef889b93585733feb9566b76e9586efa7f376785c1e995197ac0"
+    },
+    "prototype": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/prototype/SKILL.md",
+      "computedHash": "03074862d4b6e4eaf472aa75146e1d193dd9e3bba0e4303a9b2425562d1d44cc"
+    },
+    "research": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/research/SKILL.md",
+      "computedHash": "af378829f015775a3bcd65ff466826722e99359017ae6bae227ca4c9bd14049c"
+    },
+    "resolving-merge-conflicts": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/resolving-merge-conflicts/SKILL.md",
+      "computedHash": "c7c9ba81362a786aac05d2223123bf1bd2f8a99c3243a72882ede9c68bedfb24"
+    },
+    "scaffold-exercises": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/scaffold-exercises/SKILL.md",
+      "computedHash": "75f5c9d771606fb9762f16522efc954df11c324f87148d8ff069bce166257de9"
+    },
+    "sdk": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/sdk/SKILL.md",
+      "computedHash": "0db41158a6b4fd16983ee178649204e98c2f57d182cdec30941a22d866e27435"
+    },
+    "setup-matt-pocock-skills": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/setup-matt-pocock-skills/SKILL.md",
+      "computedHash": "def265a8b15ffb8afc3f335d69e175ba9a7fe3991218984b0e49e8345cde3b20"
+    },
+    "setup-pre-commit": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/setup-pre-commit/SKILL.md",
+      "computedHash": "872f4037cb7e6e0e340d4175c086550072959925dffc87b160d1a30dc9f63bbd"
+    },
+    "shell": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/shell/SKILL.md",
+      "computedHash": "b354ce28c70af1d5c05bb6bf070a1823fadd470530993ab271a1cfcbe57ad4fe"
+    },
+    "split-to-prs": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/split-to-prs/SKILL.md",
+      "computedHash": "61e3b94b54457e0f8a850cccf64936a0f5a686f6ad22016d17d30958d2f2b328"
+    },
+    "statusline": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/statusline/SKILL.md",
+      "computedHash": "9ce07cefc16faf737ad58fb8f09ac6d34ff457382daf90ff6a06d402f4688d73"
+    },
+    "tdd": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/tdd/SKILL.md",
+      "computedHash": "5363bb2775679fe9311fbb67947f95359169c6e7f1fac77c0f25e190bca6cf2f"
+    },
+    "teach": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/teach/SKILL.md",
+      "computedHash": "6d2dbe5e03084cf26fef66b535127b36cd1bcbe9478e26b0626029cd51dc2259"
+    },
+    "to-spec": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/to-spec/SKILL.md",
+      "computedHash": "267638edd513b5918de626ad5605d261952abb7428cb308869c663ca924e93e7"
+    },
+    "to-tickets": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/to-tickets/SKILL.md",
+      "computedHash": "1846d215e24ec1219b199a708329ca915db93138d4f3675af29db4d32ee41391"
+    },
+    "triage": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/triage/SKILL.md",
+      "computedHash": "d45827c299c021f77b0f146fefa3ee679b13f99e9a2ffdf48e8de2347adeefe1"
+    },
+    "update-cli-config": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/update-cli-config/SKILL.md",
+      "computedHash": "89f94fc910e97caf7d48755114ca778f0cf79905416f8198fe419d7bc2e19954"
+    },
+    "update-cursor-settings": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/update-cursor-settings/SKILL.md",
+      "computedHash": "8b5ee1a74dc964f5c240a18e0b7402051e0d1f688e7db3037048207213a0e78d"
+    },
+    "wayfinder": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/wayfinder/SKILL.md",
+      "computedHash": "257e40665b28ae959ffdcb97d7a72b074360f4a3d201bd84786505308546e434"
+    },
+    "writing-great-skills": {
+      "source": "cursor-skills",
+      "sourceType": "local",
+      "skillPath": ".cursor/skills/writing-great-skills/SKILL.md",
+      "computedHash": "4d6ccbc3760b1bd4107c495a79872286ea69494003f3b0a719fc95b147457061"
     }
   }
 }
