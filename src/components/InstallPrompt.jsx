@@ -93,6 +93,17 @@ export default function InstallPrompt() {
     []
   );
 
+  useEffect(() => {
+    if (hidden || !ready) return undefined;
+    const onKey = (e) => {
+      if (e.key === "Escape") dismiss();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // dismiss closes the sheet; recreating the listener each render is unnecessary
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hidden, ready]);
+
   const finalizeDismiss = () => {
     setHidden(true);
     setDeferred(null);
@@ -148,7 +159,7 @@ export default function InstallPrompt() {
         onClick={dismiss}
         aria-label={t("install.dismiss")}
       >
-        <X size={14} weight="bold" />
+        <X size={14} weight="bold" aria-hidden />
       </button>
 
       <div className="install-sheet-visual" aria-hidden>

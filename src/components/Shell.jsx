@@ -98,7 +98,7 @@ export default function Shell({ children }) {
                   aria-label={t("nav.home")}
                   title={t("nav.home")}
                 >
-                  <House size={18} weight={pathname === "/" ? "fill" : "bold"} />
+                  <House size={18} weight={pathname === "/" ? "fill" : "bold"} aria-hidden />
                   <span className="nav-chip-label">{t("nav.home")}</span>
                 </Link>
                 <Link
@@ -111,10 +111,11 @@ export default function Shell({ children }) {
                   <GearSix
                     size={18}
                     weight={pathname === "/settings" ? "fill" : "bold"}
+                    aria-hidden
                   />
                   <span className="nav-chip-label">{t("nav.settings")}</span>
                   {!hasKey ? (
-                    <span className="pin-badge toolbar-key-badge ml-0.5 normal-case tracking-wide">
+                    <span className="pin-badge toolbar-key-badge ml-0.5 normal-case">
                       {t("nav.keyNeeded")}
                     </span>
                   ) : null}

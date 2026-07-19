@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 
 const BUBBLE_META = [
@@ -21,9 +22,29 @@ export default function FocusBubbles({
 }) {
   const reduce = useReducedMotion();
   const selected = selectedIds || [];
+  const rootRef = useRef(null);
+  const [inView, setInView] = useState(true);
+
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return undefined;
+    const io = new IntersectionObserver(
+      ([entry]) => setInView(entry.isIntersecting),
+      { rootMargin: "40px", threshold: 0 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  const live = !reduce && inView;
 
   return (
-    <div className="focus-bubbles" role="group" aria-label={label}>
+    <div
+      ref={rootRef}
+      className="focus-bubbles"
+      role="group"
+      aria-label={label}
+    >
       {items.map((opt, i) => {
         const on = selected.includes(opt.id);
         const meta = BUBBLE_META[i % BUBBLE_META.length];
@@ -33,9 +54,9 @@ export default function FocusBubbles({
           <span
             key={opt.id}
             className={
-              reduce
-                ? "focus-bubble-float"
-                : "focus-bubble-float focus-bubble-float--live"
+              live
+                ? "focus-bubble-float focus-bubble-float--live"
+                : "focus-bubble-float"
             }
             style={{
               "--float-delay": `${meta.delay}s`,

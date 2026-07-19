@@ -73,10 +73,13 @@ export default function QaList({
   if (!items.length) {
     return (
       <div className="rounded-3xl border border-dashed border-[#e6e4df] bg-[#f7f6f3] px-4 py-8 text-center md:px-6 md:py-10">
-        <p className="display text-lg title md:text-xl">{t("qa.emptyTitle")}</p>
-        <p className="mute mx-auto mt-2 max-w-[40ch] text-xs leading-relaxed md:text-sm">
+        <p className="display text-lg title text-balance md:text-xl">{t("qa.emptyTitle")}</p>
+        <p className="mute mx-auto mt-2 max-w-[40ch] text-xs leading-relaxed text-pretty md:text-sm">
           {t("qa.emptyHint")}
         </p>
+        <a href="#build-questions" className="btn btn-primary mt-4 inline-flex">
+          {t("qa.emptyCta")}
+        </a>
       </div>
     );
   }
@@ -86,14 +89,14 @@ export default function QaList({
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <button type="button" className="btn text-xs" onClick={onToggleAll}>
           {allSelected ? (
-            <CheckSquare size={16} weight="fill" className="text-[#4a7ff8]" />
+            <CheckSquare size={16} weight="fill" className="text-[#4a7ff8]" aria-hidden />
           ) : (
-            <Square size={16} />
+            <Square size={16} aria-hidden />
           )}
           {allSelected ? t("qa.deselectAll") : t("qa.selectAll")}
         </button>
         <span className="focus-count inline-flex">
-          <span className="focus-count-n">
+          <span className="focus-count-n tabular-nums">
             {selected.size}
             <span className="focus-count-den">/{items.length}</span>
           </span>
@@ -122,7 +125,7 @@ export default function QaList({
             return (
               <motion.li
                 key={`${item.mandatoryId || i}-${item.q.slice(0, 24)}`}
-                layout={!reduce}
+                layout={false}
                 initial={reduce ? false : { opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={
@@ -130,9 +133,8 @@ export default function QaList({
                     ? { duration: 0 }
                     : {
                         delay: Math.min(i * 0.03, 0.24),
-                        type: "spring",
-                        stiffness: 140,
-                        damping: 18,
+                        duration: 0.18,
+                        ease: "easeOut",
                       }
                 }
                 className={`qa-row group relative px-3 py-2.5 transition md:px-4 md:py-3 ${
@@ -153,13 +155,17 @@ export default function QaList({
                     type="button"
                     className="shrink-0 text-[#8b939e] transition hover:text-[#4a7ff8]"
                     onClick={() => onToggle(i)}
-                    aria-label={on ? "Deselect" : "Select"}
+                    aria-label={
+                      on
+                        ? t("qa.deselectOne", { n: i + 1 })
+                        : t("qa.selectOne", { n: i + 1 })
+                    }
                     aria-pressed={on}
                   >
                     {on ? (
-                      <CheckSquare size={24} weight="fill" className="text-[#4a7ff8]" />
+                      <CheckSquare size={24} weight="fill" className="text-[#4a7ff8]" aria-hidden />
                     ) : (
-                      <Square size={24} weight="bold" />
+                      <Square size={24} weight="bold" aria-hidden />
                     )}
                   </button>
 
@@ -169,14 +175,17 @@ export default function QaList({
                       className="flex w-full items-center gap-2 text-left"
                       onClick={() => toggleOpen(i)}
                       aria-expanded={expanded}
+                      aria-controls={`qa-panel-${i}`}
+                      id={`qa-trigger-${i}`}
+                      aria-label={t("qa.expandQuestion", { n: i + 1 })}
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           {playing ? (
-                            <span className="speaking-indicator" aria-label="Playing" role="status">
-                              <span className="speaking-bar speaking-bar--1" />
-                              <span className="speaking-bar speaking-bar--2" />
-                              <span className="speaking-bar speaking-bar--3" />
+                            <span className="speaking-indicator" aria-label={t("qa.playing")} role="status">
+                              <span className="speaking-bar speaking-bar--1" aria-hidden />
+                              <span className="speaking-bar speaking-bar--2" aria-hidden />
+                              <span className="speaking-bar speaking-bar--3" aria-hidden />
                             </span>
                           ) : (
                             <span className="qa-number faint font-mono text-xs font-medium tabular-nums">
@@ -198,18 +207,19 @@ export default function QaList({
                           ) : null}
                           {pinned ? (
                             <span className="pin-badge">
-                              <PushPin size={10} weight="fill" />
+                              <PushPin size={10} weight="fill" aria-hidden />
                               {item.pinKind === "target" ? t("qa.addon") : t("qa.mustAsk")}
                             </span>
                           ) : null}
                         </div>
-                        <p className="title mt-1 text-sm font-semibold tracking-tight">
+                        <p className="title mt-1 text-sm font-semibold text-pretty">
                           {item.q}
                         </p>
                       </div>
                       <CaretDown
                         size={18}
                         weight="bold"
+                        aria-hidden
                         className={`shrink-0 text-[#8b939e] transition ${
                           expanded ? "rotate-180" : ""
                         }`}
@@ -220,11 +230,13 @@ export default function QaList({
                       {expanded ? (
                         <motion.div
                           key="body"
-                          initial={reduce ? false : { height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={reduce ? undefined : { height: 0, opacity: 0 }}
-                          transition={{ duration: reduce ? 0 : 0.2 }}
-                          className="overflow-hidden"
+                          id={`qa-panel-${i}`}
+                          role="region"
+                          aria-labelledby={`qa-trigger-${i}`}
+                          initial={reduce ? false : { opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={reduce ? undefined : { opacity: 0 }}
+                          transition={{ duration: reduce ? 0 : 0.18, ease: "easeOut" }}
                         >
                           {/* Tab switcher */}
                           <div className="mt-3 flex items-center gap-1.5">
@@ -240,7 +252,7 @@ export default function QaList({
                               className={`mindmap-tab ${getTab(i) === "mindmap" ? "mindmap-tab--active" : ""}`}
                               onClick={() => setTab(i, "mindmap")}
                             >
-                              <Brain size={13} weight="bold" />
+                              <Brain size={13} weight="bold" aria-hidden />
                               {t("qa.mindmapTab")}
                             </button>
                           </div>
@@ -249,7 +261,7 @@ export default function QaList({
                           {getTab(i) === "answer" ? (
                             <>
                               {item.a?.trim() ? (
-                                <p className="ink mt-3 max-w-[70ch] whitespace-pre-wrap text-sm leading-relaxed">
+                                <p className="ink mt-3 max-w-[70ch] whitespace-pre-wrap text-sm leading-relaxed text-pretty">
                                   {item.a}
                                 </p>
                               ) : (
@@ -271,7 +283,7 @@ export default function QaList({
                               disabled={!item.a?.trim()}
                               onClick={() => onPlayOne(i)}
                             >
-                              <SpeakerHigh size={15} weight="bold" />
+                              <SpeakerHigh size={15} weight="bold" aria-hidden />
                               {t("qa.speak")}
                             </button>
                             <button
@@ -284,7 +296,7 @@ export default function QaList({
                               }
                               onClick={() => onSaveAudio?.(i)}
                             >
-                              <DownloadSimple size={15} weight="bold" />
+                              <DownloadSimple size={15} weight="bold" aria-hidden />
                               {t("qa.saveAudio")}
                             </button>
                             <button
@@ -293,7 +305,7 @@ export default function QaList({
                               disabled={!item.a?.trim()}
                               onClick={() => handleCopy(i)}
                             >
-                              <Copy size={15} weight="bold" />
+                              <Copy size={15} weight="bold" aria-hidden />
                               {copiedIdx === i ? t("qa.copied") : t("qa.copy")}
                             </button>
                             <AnimatePresence>

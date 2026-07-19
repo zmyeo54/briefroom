@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   X,
@@ -15,7 +15,6 @@ import {
   Link,
   UploadSimple,
   ClipboardText,
-  DownloadSimple,
 } from "@phosphor-icons/react";
 import { useI18n } from "../lib/I18nContext";
 import BrandLogo from "./BrandLogo";
@@ -30,6 +29,9 @@ export default function OnboardingTour({ onFinish }) {
   const { t, uiLang, setUiLang } = useI18n();
   const reduce = useReducedMotion();
   const [step, setStep] = useState(0);
+  const sheetRef = useRef(null);
+  const closeRef = useRef(null);
+  const previouslyFocused = useRef(null);
 
   const steps = [
     { kicker: t("onboard.step0Kicker"), title: t("onboard.step0Title"), body: t("onboard.step0Body"), visual: "welcome" },
@@ -52,7 +54,42 @@ export default function OnboardingTour({ onFinish }) {
   const next = () => { if (isLast) finish(); else setStep((s) => s + 1); };
   const prev = () => { if (!isFirst) setStep((s) => s - 1); };
 
-  const ease = [0.16, 1, 0.3, 1];
+  useEffect(() => {
+    previouslyFocused.current = document.activeElement;
+    closeRef.current?.focus();
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        finish();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const root = sheetRef.current;
+      if (!root) return;
+      const nodes = [
+        ...root.querySelectorAll(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        ),
+      ];
+      if (!nodes.length) return;
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      const prevEl = previouslyFocused.current;
+      if (prevEl && typeof prevEl.focus === "function") prevEl.focus();
+    };
+    // Mount-only trap; finish closes and unmounts the tour.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <motion.div
@@ -60,29 +97,38 @@ export default function OnboardingTour({ onFinish }) {
       initial={reduce ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={reduce ? undefined : { opacity: 0 }}
-      transition={{ duration: 0.25, ease }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
     >
       <motion.div
+        ref={sheetRef}
         className="onboard-sheet"
         role="dialog"
         aria-modal="true"
         aria-label={t("onboard.ariaLabel")}
-        initial={reduce ? false : { opacity: 0, y: 40, scale: 0.97 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={reduce ? undefined : { opacity: 0, y: 20, scale: 0.97 }}
-        transition={{ duration: 0.32, ease }}
+        initial={reduce ? false : { opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={reduce ? undefined : { opacity: 0, y: 12 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
       >
         {/* Close button */}
-        <button type="button" className="onboard-close" aria-label={t("onboard.skip")} title={t("onboard.skip")} onClick={finish}>
-          <X size={18} weight="bold" />
+        <button
+          type="button"
+          className="onboard-close"
+          ref={closeRef}
+          aria-label={t("onboard.skip")}
+          title={t("onboard.skip")}
+          onClick={finish}
+        >
+          <X size={18} weight="bold" aria-hidden />
         </button>
 
-        {/* Progress bar */}
-        <div className="onboard-progress-bar">
+        {/* Progress bar — scaleX (compositor) instead of width (layout) */}
+        <div className="onboard-progress-bar" aria-hidden>
           <motion.div
             className="onboard-progress-fill"
-            animate={{ width: `${((step + 1) / total) * 100}%` }}
-            transition={{ duration: 0.35, ease }}
+            initial={false}
+            animate={{ scaleX: (step + 1) / total }}
+            transition={{ duration: reduce ? 0 : 0.2, ease: "easeOut" }}
           />
         </div>
 
@@ -92,18 +138,18 @@ export default function OnboardingTour({ onFinish }) {
             <motion.div
               key={step}
               className="onboard-step"
-              initial={reduce ? false : { opacity: 0, x: 24 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={reduce ? undefined : { opacity: 0, x: -16 }}
-              transition={{ duration: 0.22, ease }}
+              initial={reduce ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={reduce ? undefined : { opacity: 0 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
             >
               <div className="onboard-visual-wrap">
                 <OnboardingVisual kind={current.visual} t={t} uiLang={uiLang} setUiLang={setUiLang} />
               </div>
               <div className="onboard-text">
                 <p className="onboard-kicker">{current.kicker}</p>
-                <h2 className="onboard-title">{current.title}</h2>
-                <p className="onboard-desc">{current.body}</p>
+                <h2 className="onboard-title text-balance">{current.title}</h2>
+                <p className="onboard-desc text-pretty">{current.body}</p>
               </div>
             </motion.div>
           </AnimatePresence>
@@ -113,15 +159,15 @@ export default function OnboardingTour({ onFinish }) {
         <div className="onboard-nav">
           {!isFirst ? (
             <button type="button" className="btn onboard-back" onClick={prev}>
-              <ArrowLeft size={16} weight="bold" />
+              <ArrowLeft size={16} weight="bold" aria-hidden />
               {t("onboard.back")}
             </button>
           ) : <span />}
           <button type="button" className="btn btn-primary onboard-next" onClick={next}>
             {isLast ? (
-              <><CheckCircle size={16} weight="bold" />{t("onboard.finish")}</>
+              <><CheckCircle size={16} weight="bold" aria-hidden />{t("onboard.finish")}</>
             ) : (
-              <>{t("onboard.next")}<ArrowRight size={16} weight="bold" /></>
+              <>{t("onboard.next")}<ArrowRight size={16} weight="bold" aria-hidden /></>
             )}
           </button>
         </div>
@@ -133,8 +179,6 @@ export default function OnboardingTour({ onFinish }) {
 }
 
 /* ─── Visual illustrations ─── */
-
-const BRANCH_COLORS = ["#c49a3c", "#4a7ff8", "#ff7648", "#c5b4e3", "#4a9ff8"];
 
 function OnboardingVisual({ kind, t, uiLang, setUiLang }) {
   const isZh = uiLang === "zh";
@@ -152,6 +196,7 @@ function OnboardingVisual({ kind, t, uiLang, setUiLang }) {
             <button
               type="button"
               className={`obv-lang-btn ${!isZh ? "obv-lang-btn--active" : ""}`}
+              aria-pressed={!isZh}
               onClick={() => setUiLang("en")}
             >
               English
@@ -159,6 +204,7 @@ function OnboardingVisual({ kind, t, uiLang, setUiLang }) {
             <button
               type="button"
               className={`obv-lang-btn ${isZh ? "obv-lang-btn--active" : ""}`}
+              aria-pressed={isZh}
               onClick={() => setUiLang("zh")}
             >
               中文

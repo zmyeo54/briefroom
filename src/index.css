@@ -1123,7 +1123,6 @@ html[lang="zh-CN"] .app-dialog-body {
   }
   .focus-bubble-float--live {
     animation: none;
-    will-change: auto;
   }
   .animate-spin {
     animation: none;
@@ -2381,7 +2380,6 @@ html[lang="zh-CN"] .app-dialog-body {
 .focus-bubble-float--live {
   animation: bubble-float var(--float-dur, 4s) ease-in-out
     var(--float-delay, 0s) infinite;
-  will-change: transform;
 }
 
 @keyframes bubble-float {
@@ -3488,9 +3486,10 @@ html[lang="zh-CN"] .app-dialog-body {
 }
 .onboard-progress-fill {
   height: 100%;
+  width: 100%;
+  transform-origin: left center;
   background: linear-gradient(90deg, #4a7ff8, #ff7648);
   border-radius: 0 2px 2px 0;
-  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Body */

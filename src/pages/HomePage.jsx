@@ -105,7 +105,9 @@ export default function HomePage() {
   );
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => !isOnboardingDone());
-
+  const resetDialogRef = useRef(null);
+  const resetCancelRef = useRef(null);
+  const resetTriggerRef = useRef(null);
   // Keep resume / JD / target questions until the user clears them
   useEffect(() => {
     const payload = {
@@ -303,11 +305,39 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!resetConfirmOpen) return;
+    const previouslyFocused = resetTriggerRef.current || document.activeElement;
+    resetCancelRef.current?.focus();
     const onKey = (e) => {
-      if (e.key === "Escape") setResetConfirmOpen(false);
+      if (e.key === "Escape") {
+        setResetConfirmOpen(false);
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const root = resetDialogRef.current;
+      if (!root) return;
+      const nodes = [
+        ...root.querySelectorAll(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        ),
+      ];
+      if (!nodes.length) return;
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      if (previouslyFocused && typeof previouslyFocused.focus === "function") {
+        previouslyFocused.focus();
+      }
+    };
   }, [resetConfirmOpen]);
 
   const flash = (text, kind = "") => setStatus({ text, kind });
@@ -962,11 +992,11 @@ export default function HomePage() {
         <div className="settings-grid-bg" aria-hidden />
         <header className="settings-hero mb-6 md:mb-10">
           <p className="settings-eyebrow">{t("home.eyebrow")}</p>
-          <h1 className="settings-title">
+          <h1 className="settings-title text-balance">
             {t("brand.name")}
             <span className="settings-title-accent">.</span>
           </h1>
-          <p className="line-responsive mt-2 max-w-[36ch] text-sm leading-relaxed mute md:mt-3 md:max-w-[48ch] md:text-base">
+          <p className="line-responsive mt-2 max-w-[36ch] text-sm leading-relaxed text-pretty mute md:mt-3 md:max-w-[48ch] md:text-base">
             {t("home.tagline")}
           </p>
         </header>
@@ -975,20 +1005,21 @@ export default function HomePage() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p className="label mb-1.5">{t("home.prepLabel")}</p>
-            <h2 className="display text-lg title md:text-2xl">
+            <h2 className="display text-lg title text-balance md:text-2xl">
               {t("home.prepTitle")}
             </h2>
-            <p className="mt-1 max-w-[54ch] text-xs leading-relaxed mute md:mt-1.5 md:text-sm">
+            <p className="mt-1 max-w-[54ch] text-xs leading-relaxed text-pretty mute md:mt-1.5 md:text-sm">
               {t("home.prepHint")}
             </p>
           </div>
           <button
             type="button"
             className="btn shrink-0"
+            ref={resetTriggerRef}
             onClick={() => setResetConfirmOpen(true)}
             title={t("home.resetAllHint")}
           >
-            <ArrowCounterClockwise size={16} weight="bold" />
+            <ArrowCounterClockwise size={16} weight="bold" aria-hidden />
             {t("home.resetAll")}
           </button>
         </div>
@@ -1112,7 +1143,7 @@ export default function HomePage() {
                   {t("home.focusSelectedPrefix")}
                 </span>
               ) : null}
-              <span className="focus-count-n">
+              <span className="focus-count-n tabular-nums">
                 {(settings.focuses || []).length}
               </span>
               <span className="focus-count-label">
@@ -1127,7 +1158,7 @@ export default function HomePage() {
 
         <div className="space-y-4">
           <div>
-            <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-[#4a7ff8]">
+            <p className="mb-2 text-[11px] font-bold uppercase text-[#4a7ff8]">
               {resume.trim() ||
               jd.trim() ||
               (settings.interviewerRole && settings.interviewerRole !== "any")
@@ -1152,7 +1183,7 @@ export default function HomePage() {
 
           {extras.length ? (
             <div>
-              <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-[#8b939e]">
+              <p className="mb-2 text-[11px] font-bold uppercase text-[#8b939e]">
                 {t("home.optionalExtras")}
               </p>
               <FocusBubbles
@@ -1251,7 +1282,7 @@ export default function HomePage() {
             </AnimatePresence>
           </div>
 
-        <div className="mt-4 flex justify-center md:mt-5">
+        <div className="mt-4 flex justify-center md:mt-5" id="build-questions">
           <button
             type="button"
             className="btn btn-primary"
@@ -1259,9 +1290,9 @@ export default function HomePage() {
             onClick={generate}
           >
             {loading ? (
-              <SpinnerGap size={16} weight="bold" className="animate-spin" />
+              <SpinnerGap size={16} weight="bold" className="animate-spin" aria-hidden />
             ) : (
-              <MagicWand size={16} weight="bold" />
+              <MagicWand size={16} weight="bold" aria-hidden />
             )}
             {loading ? t("home.generating") : t("home.generate")}
           </button>
@@ -1270,10 +1301,12 @@ export default function HomePage() {
           {status.text ? (
             <motion.p
               key={status.text}
+              role="status"
+              aria-live={status.kind === "error" ? "assertive" : "polite"}
               initial={reduce ? false : { opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
               className={`mt-3 text-sm ${
                 status.kind === "error"
                   ? "err"
@@ -1310,13 +1343,13 @@ export default function HomePage() {
                 title={t("home.clearAnswersHint")}
                 disabled={speaking || loading}
               >
-                <Trash size={16} weight="bold" />
+                <Trash size={16} weight="bold" aria-hidden />
                 {t("home.clearAnswers")}
               </button>
             ) : null}
             {showGenSecret && genSecretLabel ? (
               <span
-                className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 font-mono text-[10px] leading-none tracking-tight text-[#c5cad1] sm:text-[11px]"
+                className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 font-mono text-[10px] leading-none text-[#c5cad1] sm:text-[11px]"
                 title={genSecretLabel}
               >
                 {genSecretLabel}
@@ -1358,13 +1391,13 @@ export default function HomePage() {
           >
             {speaking ? (
               <>
-                <ArrowCounterClockwise size={16} weight="bold" />
-                <span className="action-dock-badge">{selected.size}</span>
+                <ArrowCounterClockwise size={16} weight="bold" aria-hidden />
+                <span className="action-dock-badge tabular-nums">{selected.size}</span>
               </>
             ) : (
               <>
-                <Play size={18} weight="bold" />
-                <span className="action-dock-badge">{selected.size}</span>
+                <Play size={18} weight="bold" aria-hidden />
+                <span className="action-dock-badge tabular-nums">{selected.size}</span>
               </>
             )}
           </button>
@@ -1373,6 +1406,7 @@ export default function HomePage() {
             className="action-dock-save"
             disabled={!qa.length || exportingAudio || exportingPdf || speaking}
             onClick={() => exportAudio()}
+            aria-label={t("home.saveAudio", { n: selected.size || qa.length })}
             title={t("home.saveAudioHint")}
           >
             {exportingAudio ? (
@@ -1380,13 +1414,13 @@ export default function HomePage() {
             ) : (
               <>
                 <span className="action-dock-export-body">
-                  <SpeakerHigh size={16} weight="bold" />
+                  <SpeakerHigh size={16} weight="bold" aria-hidden />
                   <span className="action-dock-export-label">
                     <span>{t("home.exportLine1")}</span>
                     <span>{t("home.exportAudioLabel")}</span>
                   </span>
                 </span>
-                <span className="action-dock-badge">
+                <span className="action-dock-badge tabular-nums">
                   {selected.size || qa.length}
                 </span>
               </>
@@ -1397,6 +1431,7 @@ export default function HomePage() {
             className="action-dock-pdf"
             disabled={!qa.length || exportingAudio || exportingPdf || speaking}
             onClick={() => exportPdf()}
+            aria-label={t("home.savePdf", { n: selected.size || qa.length })}
             title={t("home.savePdfHint")}
           >
             {exportingPdf ? (
@@ -1404,13 +1439,13 @@ export default function HomePage() {
             ) : (
               <>
                 <span className="action-dock-export-body">
-                  <FilePdf size={16} weight="bold" />
+                  <FilePdf size={16} weight="bold" aria-hidden />
                   <span className="action-dock-export-label">
                     <span>{t("home.exportLine1")}</span>
                     <span>{t("home.exportPdfLabel")}</span>
                   </span>
                 </span>
-                <span className="action-dock-badge">
+                <span className="action-dock-badge tabular-nums">
                   {selected.size || qa.length}
                 </span>
               </>
@@ -1442,11 +1477,11 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => window.location.reload()}
-                  className="ml-3 flex items-center gap-1 rounded bg-black/10 px-2 py-1 text-xs font-semibold uppercase tracking-wider text-inherit hover:bg-black/20 focus-visible:ring active:scale-95 dark:bg-white/10 dark:hover:bg-white/20"
-                  title="Refresh page"
+                  className="ml-3 flex items-center gap-1 rounded bg-black/10 px-2 py-1 text-xs font-semibold uppercase text-inherit hover:bg-black/20 focus-visible:ring active:scale-95 dark:bg-white/10 dark:hover:bg-white/20"
+                  title={t("home.refresh")}
                 >
-                  <ArrowCounterClockwise size={14} weight="bold" />
-                  Refresh
+                  <ArrowCounterClockwise size={14} weight="bold" aria-hidden />
+                  {t("home.refresh")}
                 </button>
               )}
             </motion.div>
@@ -1526,6 +1561,7 @@ export default function HomePage() {
             onClick={() => setResetConfirmOpen(false)}
           >
             <motion.div
+              ref={resetDialogRef}
               className="app-dialog"
               role="alertdialog"
               aria-modal="true"
@@ -1534,19 +1570,20 @@ export default function HomePage() {
               initial={reduce ? false : { opacity: 0, y: 16, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={reduce ? undefined : { opacity: 0, y: 10, scale: 0.98 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 id="reset-confirm-title" className="app-dialog-title">
+              <h2 id="reset-confirm-title" className="app-dialog-title text-balance">
                 {t("home.resetAllConfirmTitle")}
               </h2>
-              <p id="reset-confirm-body" className="app-dialog-body">
+              <p id="reset-confirm-body" className="app-dialog-body text-pretty">
                 {t("home.resetAllConfirmBody")}
               </p>
               <div className="app-dialog-actions">
                 <button
                   type="button"
                   className="btn"
+                  ref={resetCancelRef}
                   onClick={() => setResetConfirmOpen(false)}
                 >
                   {t("doc.cancel")}

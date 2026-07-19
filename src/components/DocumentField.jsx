@@ -166,21 +166,20 @@ export default function DocumentField({
 
   return (
     <motion.section
-      layout={!reduce ? "position" : false}
       initial={reduce ? false : { opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={
         reduce
           ? { duration: 0 }
-          : { type: "spring", stiffness: 140, damping: 18 }
+          : { duration: 0.18, ease: "easeOut" }
       }
       className="panel doc-card"
     >
       <div className="doc-card-head">
         <div className="min-w-0 flex-1 pr-2">
-          <h2 className="display text-lg title md:text-xl">{title}</h2>
+          <h2 className="display text-lg title text-balance md:text-xl">{title}</h2>
           {hint ? (
-            <p className="mute mt-0.5 text-xs leading-relaxed md:text-sm">{hint}</p>
+            <p className="mute mt-0.5 text-xs leading-relaxed text-pretty md:text-sm">{hint}</p>
           ) : null}
         </div>
         {loaded ? (
@@ -191,7 +190,7 @@ export default function DocumentField({
             aria-label={t("doc.clear")}
             title={t("doc.clear")}
           >
-            <Trash size={15} weight="bold" />
+            <Trash size={15} weight="bold" aria-hidden />
           </button>
         ) : null}
       </div>
@@ -238,7 +237,7 @@ export default function DocumentField({
                 disabled={busy}
                 onClick={() => inputRef.current?.click()}
               >
-                <FileArrowUp size={14} weight="bold" />
+                <FileArrowUp size={14} weight="bold" aria-hidden />
                 {t("doc.changeFile")}
               </button>
               {allowUrl ? (
@@ -251,7 +250,7 @@ export default function DocumentField({
                     setUrl(sourceUrl || "");
                   }}
                 >
-                  <LinkSimple size={14} weight="bold" />
+                  <LinkSimple size={14} weight="bold" aria-hidden />
                   {t("doc.changeLink")}
                 </button>
               ) : null}
@@ -263,7 +262,7 @@ export default function DocumentField({
                   setPasteDraft("");
                 }}
               >
-                <ClipboardText size={14} weight="bold" />
+                <ClipboardText size={14} weight="bold" aria-hidden />
                 {t("doc.pasteInstead")}
               </button>
             </div>
@@ -278,6 +277,9 @@ export default function DocumentField({
                     type="url"
                     value={url}
                     disabled={busy}
+                    aria-label={t("doc.urlLabel")}
+                    aria-invalid={error ? true : undefined}
+                    aria-describedby={error ? `${title}-doc-error` : undefined}
                     onChange={(e) => setUrl(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
@@ -294,9 +296,9 @@ export default function DocumentField({
                     onClick={onFetchUrl}
                   >
                     {busy ? (
-                      <SpinnerGap size={16} className="animate-spin" />
+                      <SpinnerGap size={16} className="animate-spin" aria-hidden />
                     ) : (
-                      <LinkSimple size={16} weight="bold" />
+                      <LinkSimple size={16} weight="bold" aria-hidden />
                     )}
                     {t("doc.extract")}
                   </button>
@@ -317,9 +319,9 @@ export default function DocumentField({
               className="dropzone doc-card-drop"
             >
               {busy ? (
-                <SpinnerGap size={24} className="animate-spin text-[#4a7ff8]" />
+                <SpinnerGap size={24} className="animate-spin text-[#4a7ff8]" aria-hidden />
               ) : (
-                <FileArrowUp size={28} className="text-[#4a7ff8]" weight="duotone" />
+                <FileArrowUp size={28} className="text-[#4a7ff8]" weight="duotone" aria-hidden />
               )}
               <span className="title mt-2 text-sm font-semibold">
                 {busy ? t("doc.extracting") : t("doc.drop")}
@@ -337,7 +339,7 @@ export default function DocumentField({
                 disabled={busy}
                 onClick={() => setPasteOpen((v) => !v)}
               >
-                <ClipboardText size={14} weight="bold" />
+                <ClipboardText size={14} weight="bold" aria-hidden />
                 {pasteOpen ? t("doc.hidePaste") : t("doc.showPaste")}
               </button>
             </div>
@@ -350,6 +352,7 @@ export default function DocumentField({
           className="hidden"
           multiple
           accept=".pdf,.doc,.docx,.txt,.md,.png,.jpg,.jpeg,.webp,.gif,.bmp"
+          aria-label={t("doc.fileLabel")}
           onChange={(e) => {
             onFiles(e.target.files);
             e.target.value = "";
@@ -360,11 +363,10 @@ export default function DocumentField({
           {pasteOpen ? (
             <motion.div
               key="paste"
-              initial={reduce ? false : { height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={reduce ? undefined : { height: 0, opacity: 0 }}
-              transition={{ duration: reduce ? 0 : 0.2 }}
-              className="overflow-hidden"
+              initial={reduce ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={reduce ? undefined : { opacity: 0 }}
+              transition={{ duration: reduce ? 0 : 0.18, ease: "easeOut" }}
             >
               <div className="mt-3 space-y-2">
                 <p className="mute text-xs">{t("doc.pasteHint")}</p>
@@ -373,6 +375,9 @@ export default function DocumentField({
                   value={pasteDraft}
                   onChange={(e) => setPasteDraft(e.target.value)}
                   placeholder={placeholder}
+                  aria-label={t("doc.pasteLabel")}
+                  aria-invalid={error ? true : undefined}
+                  aria-describedby={error ? `${title}-doc-error` : undefined}
                   autoFocus
                 />
                 <div className="flex flex-wrap gap-2">
@@ -408,6 +413,9 @@ export default function DocumentField({
               disabled={busy}
               onChange={(e) => setUrl(e.target.value)}
               placeholder={t("doc.urlPlaceholder")}
+              aria-label={t("doc.urlLabel")}
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? `${title}-doc-error` : undefined}
               autoFocus
             />
             <button
@@ -429,9 +437,19 @@ export default function DocumentField({
         ) : null}
 
         {status && busy ? (
-          <p className="ok mt-3 text-xs font-semibold">{status}</p>
+          <p className="ok mt-3 text-xs font-semibold" role="status" aria-live="polite">
+            {status}
+          </p>
         ) : null}
-        {error ? <p className="err mt-3 text-xs font-semibold">{error}</p> : null}
+        {error ? (
+          <p
+            id={`${title}-doc-error`}
+            className="err mt-3 text-xs font-semibold"
+            role="alert"
+          >
+            {error}
+          </p>
+        ) : null}
       </div>
     </motion.section>
   );

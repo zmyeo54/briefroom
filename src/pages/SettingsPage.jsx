@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   UserCircle,
   Key,
@@ -34,7 +34,7 @@ import { useI18n } from "../lib/I18nContext";
 import Shell from "../components/Shell";
 import { resetOnboarding } from "../components/OnboardingTour";
 
-const SECTION_DELAY = 0.08;
+const SECTION_DELAY = 0.06;
 
 function voicePreviewLine(voiceId, role) {
   const lang = TTS_VOICES.find((v) => v.id === voiceId)?.lang;
@@ -47,18 +47,20 @@ function voicePreviewLine(voiceId, role) {
     : "I lead delivery teams across markets with clear ownership.";
 }
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 14 },
-  visible: (i) => ({
-    opacity: 1,
-    y: 0,
-    transition: {
-      delay: i * SECTION_DELAY,
-      duration: 0.45,
-      ease: [0.16, 1, 0.3, 1],
-    },
-  }),
-};
+function useFadeUp(reduce) {
+  return {
+    hidden: reduce ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 },
+    visible: (i) => ({
+      opacity: 1,
+      y: 0,
+      transition: {
+        delay: reduce ? 0 : i * SECTION_DELAY,
+        duration: reduce ? 0 : 0.2,
+        ease: "easeOut",
+      },
+    }),
+  };
+}
 
 function useBriefFlash(ms = 1600) {
   const [on, setOn] = useState(false);
@@ -121,6 +123,8 @@ function SaveAllBar({ label, savedLabel, onClick, className = "" }) {
 export default function SettingsPage() {
   const navigate = useNavigate();
   const { t } = useI18n();
+  const reduce = useReducedMotion();
+  const fadeUp = useFadeUp(reduce);
   const [settings, setSettings] = useState(() =>
     normalizeSettings(loadJson("settings", {}))
   );
@@ -361,12 +365,12 @@ export default function SettingsPage() {
         {/* Hero */}
         <motion.header
           className="settings-hero"
-          initial={{ opacity: 0, y: 10 }}
+          initial={reduce ? false : { opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: reduce ? 0 : 0.2, ease: "easeOut" }}
         >
           <p className="settings-eyebrow">{t("settings.eyebrow")}</p>
-          <h1 className="settings-title">
+          <h1 className="settings-title text-balance">
             {t("settings.title")}
             <span className="settings-title-accent">.</span>
           </h1>
@@ -405,24 +409,31 @@ export default function SettingsPage() {
               <div className="settings-row">
                 <div className="settings-field-wrap">
                   <input
+                    id="settings-name"
                     className="field"
                     type="text"
                     autoComplete="name"
                     value={settings.name}
                     onChange={(e) => patch({ name: e.target.value })}
                     placeholder={t("settings.namePlaceholder")}
+                    aria-label={t("settings.name")}
+                    aria-describedby="settings-name-hint"
                   />
                 </div>
-                <p className="settings-row-hint">{t("settings.nameHint")}</p>
+                <p id="settings-name-hint" className="settings-row-hint">
+                  {t("settings.nameHint")}
+                </p>
               </div>
               <div className="settings-row">
-                <span className="settings-row-label">
+                <label className="settings-row-label" htmlFor="settings-gender">
                   {t("settings.gender")}
-                </span>
+                </label>
                 <div className="settings-field-wrap">
                   <select
+                    id="settings-gender"
                     className="field"
                     value={settings.gender}
+                    aria-describedby="settings-gender-hint"
                     onChange={(e) => {
                       const gender = e.target.value;
                       patch({
@@ -435,7 +446,9 @@ export default function SettingsPage() {
                     <option value="female">{t("settings.gender.female")}</option>
                   </select>
                 </div>
-                <p className="settings-row-hint">{t("settings.genderHint")}</p>
+                <p id="settings-gender-hint" className="settings-row-hint">
+                  {t("settings.genderHint")}
+                </p>
               </div>
             </div>
           </div>
@@ -465,11 +478,15 @@ export default function SettingsPage() {
             </div>
             <div className="settings-card-body">
               <div className="settings-row">
-                <span className="settings-row-label">Language</span>
+                <label className="settings-row-label" htmlFor="settings-lang">
+                  {t("settings.interviewLang")}
+                </label>
                 <div className="settings-field-wrap">
                   <select
+                    id="settings-lang"
                     className="field"
                     value={settings.lang}
+                    aria-describedby="settings-lang-hint"
                     onChange={(e) => {
                       const lang = e.target.value;
                       patch({
@@ -490,16 +507,17 @@ export default function SettingsPage() {
                     ))}
                   </select>
                 </div>
-                <p className="settings-row-hint">
+                <p id="settings-lang-hint" className="settings-row-hint">
                   {t("settings.interviewLangHint")}
                 </p>
               </div>
               <div className="settings-row">
-                <span className="settings-row-label">
+                <label className="settings-row-label" htmlFor="settings-voice-q">
                   {t("settings.voiceQ")}
-                </span>
+                </label>
                 <div className="settings-field-wrap settings-voice-row">
                   <select
+                    id="settings-voice-q"
                     className="field"
                     value={settings.voiceQ}
                     onChange={(e) => patch({ voiceQ: e.target.value })}
@@ -518,19 +536,21 @@ export default function SettingsPage() {
                     title={t("settings.previewVoiceQ")}
                     onClick={() => previewVoice("q")}
                   >
-                    <Play size={16} weight="fill" />
+                    <Play size={16} weight="fill" aria-hidden />
                   </button>
                 </div>
               </div>
               <div className="settings-row">
-                <span className="settings-row-label">
+                <label className="settings-row-label" htmlFor="settings-voice-a">
                   {t("settings.voiceA")}
-                </span>
+                </label>
                 <div className="settings-field-wrap settings-voice-row">
                   <select
+                    id="settings-voice-a"
                     className="field"
                     value={settings.voiceA}
                     onChange={(e) => patch({ voiceA: e.target.value })}
+                    aria-describedby="settings-voice-hint"
                   >
                     {voicesForLang(settings.lang).map((v) => (
                       <option key={v.id} value={v.id}>
@@ -546,10 +566,12 @@ export default function SettingsPage() {
                     title={t("settings.previewVoiceA")}
                     onClick={() => previewVoice("a")}
                   >
-                    <Play size={16} weight="fill" />
+                    <Play size={16} weight="fill" aria-hidden />
                   </button>
                 </div>
-                <p className="settings-row-hint">{t("settings.voiceHint")}</p>
+                <p id="settings-voice-hint" className="settings-row-hint">
+                  {t("settings.voiceHint")}
+                </p>
               </div>
             </div>
           </div>
@@ -582,6 +604,7 @@ export default function SettingsPage() {
             <div className="settings-card-body">
               <div className="settings-row">
                 <input
+                  id="settings-rate"
                   type="range"
                   min="0.7"
                   max="1.3"
@@ -590,6 +613,9 @@ export default function SettingsPage() {
                   onChange={(e) => patch({ rate: Number(e.target.value) })}
                   className="settings-range"
                   style={{ "--range-pct": `${ratePct}%` }}
+                  aria-label={t("settings.rate", {
+                    rate: Number(settings.rate).toFixed(2),
+                  })}
                 />
               </div>
               <div className="settings-row">
@@ -631,7 +657,7 @@ export default function SettingsPage() {
                     }
                   }}
                 >
-                  <Play size={16} weight="fill" />
+                  <Play size={16} weight="fill" aria-hidden />
                   {testing ? t("settings.playing") : t("settings.testQa")}
                 </button>
               </div>
@@ -665,6 +691,7 @@ export default function SettingsPage() {
               <div className="settings-row">
                 <div className="settings-field-wrap">
                   <input
+                    id="settings-api-key"
                     ref={keyInputRef}
                     className="field"
                     type="password"
@@ -676,6 +703,7 @@ export default function SettingsPage() {
                         setStatus(t("settings.keySaved"));
                     }}
                     placeholder={t("settings.apiKeyPlaceholder")}
+                    aria-label={t("settings.apiKey")}
                   />
                 </div>
                 <div className="flex flex-wrap gap-2 mt-1">
@@ -684,7 +712,7 @@ export default function SettingsPage() {
                     className="settings-paste-btn"
                     onClick={pasteKey}
                   >
-                    <ClipboardText size={13} weight="bold" />
+                    <ClipboardText size={13} weight="bold" aria-hidden />
                     {t("settings.pasteKey")}
                   </button>
                   {userKey ? (
@@ -693,7 +721,7 @@ export default function SettingsPage() {
                       className="settings-clear-btn"
                       onClick={clearKey}
                     >
-                      <Trash size={13} weight="bold" />
+                      <Trash size={13} weight="bold" aria-hidden />
                       {t("settings.clearKey")}
                     </button>
                   ) : null}
@@ -781,13 +809,15 @@ export default function SettingsPage() {
                 <p className="settings-row-hint">{t("settings.aiProvidersHint")}</p>
               </div>
               <div className="settings-row">
-                <span className="settings-row-label">
+                <label className="settings-row-label" htmlFor="settings-ai-provider">
                   {t("settings.aiProvider")}
-                </span>
+                </label>
                 <div className="settings-field-wrap">
                   <select
+                    id="settings-ai-provider"
                     className="field"
                     value={settings.aiProvider || DEFAULT_AI_PROVIDER}
+                    aria-describedby="settings-ai-provider-hint"
                     onChange={(e) =>
                       patch({
                         aiProvider: e.target.value,
@@ -815,15 +845,18 @@ export default function SettingsPage() {
                     </option>
                   </select>
                 </div>
-                <p className="settings-row-hint">{t("settings.aiProviderHint")}</p>
+                <p id="settings-ai-provider-hint" className="settings-row-hint">
+                  {t("settings.aiProviderHint")}
+                </p>
               </div>
               <div className="settings-row">
-                <span className="settings-row-label">
+                <label className="settings-row-label" htmlFor="settings-api-test-provider">
                   {t("settings.apiTest")}
-                </span>
+                </label>
                 <div className="flex flex-wrap items-center gap-2 mt-1">
                   <div className="settings-field-wrap" style={{ flex: "1 1 10rem" }}>
                     <select
+                      id="settings-api-test-provider"
                       className="field"
                       value={testProvider}
                       onChange={(e) => {
@@ -844,7 +877,7 @@ export default function SettingsPage() {
                     disabled={apiTesting}
                     onClick={testApi}
                   >
-                    <Lightning size={13} weight="fill" />
+                    <Lightning size={13} weight="fill" aria-hidden />
                     {apiTesting
                       ? t("settings.apiTestRunning")
                       : t("settings.apiTestBtn")}
@@ -852,6 +885,8 @@ export default function SettingsPage() {
                 </div>
                 {apiTest ? (
                   <p
+                    role="status"
+                    aria-live="polite"
                     className={`settings-key-status ${
                       apiTest.ok
                         ? "settings-key-status--ok"
@@ -894,30 +929,32 @@ export default function SettingsPage() {
               <span className="settings-card-icon">
                 <SpeakerHigh size={16} weight="bold" />
               </span>
-              <span className="settings-card-label">TTS Engine</span>
+              <span className="settings-card-label">
+                {t("settings.ttsEngine")}
+              </span>
             </div>
             <div className="settings-card-body">
               <div className="settings-row">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2" role="status" aria-live="polite">
                   {ttsOk === false ? (
                     <>
-                      <span className="settings-status-dot settings-status-dot--err" />
+                      <span className="settings-status-dot settings-status-dot--err" aria-hidden />
                       <span className="settings-status-text err">
                         {t("settings.ttsOffline")}
                       </span>
                     </>
                   ) : ttsOk === true ? (
                     <>
-                      <span className="settings-status-dot settings-status-dot--ok" />
+                      <span className="settings-status-dot settings-status-dot--ok" aria-hidden />
                       <span className="settings-status-text ok">
                         {t("settings.ttsOnline")}
                       </span>
                     </>
                   ) : (
                     <>
-                      <span className="settings-status-dot settings-status-dot--idle" />
+                      <span className="settings-status-dot settings-status-dot--idle" aria-hidden />
                       <span className="settings-status-text" style={{ color: "#c49a3c" }}>
-                        Checking…
+                        {t("settings.ttsChecking")}
                       </span>
                     </>
                   )}
@@ -957,7 +994,7 @@ export default function SettingsPage() {
                     navigate("/");
                   }}
                 >
-                  <Play size={16} weight="fill" />
+                  <Play size={16} weight="fill" aria-hidden />
                   {t("settings.replayTourBtn")}
                 </button>
               </div>
@@ -974,7 +1011,7 @@ export default function SettingsPage() {
                 navigate("/");
               }}
             >
-              <FloppyDisk size={16} weight="bold" />
+              <FloppyDisk size={16} weight="bold" aria-hidden />
               {t("settings.saveBack")}
             </button>
           </div>
@@ -983,10 +1020,12 @@ export default function SettingsPage() {
             {status ? (
               <motion.p
                 className="settings-status-msg"
+                role="status"
+                aria-live="polite"
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
               >
                 {status}
               </motion.p>

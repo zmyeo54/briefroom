@@ -1,30 +1,68 @@
 import { useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { I18nProvider } from "./lib/I18nContext";
+import { I18nProvider, useI18n } from "./lib/I18nContext";
 import HomePage from "./pages/HomePage";
 import SettingsPage from "./pages/SettingsPage";
 
+const SITE_ORIGIN = "https://linecheck-ai.vercel.app";
 const INDEX_ROBOTS = "index, follow, max-image-preview:large";
 const NOINDEX_ROBOTS = "noindex, follow";
 
-function useSettingsRobots() {
+function ensureMeta(attr, key, value) {
+  let el = document.querySelector(`meta[${attr}="${key}"]`);
+  if (!el) {
+    el = document.createElement("meta");
+    el.setAttribute(attr, key);
+    document.head.appendChild(el);
+  }
+  el.setAttribute("content", value);
+}
+
+function ensureCanonical(href) {
+  let link = document.querySelector('link[rel="canonical"]');
+  if (!link) {
+    link = document.createElement("link");
+    link.rel = "canonical";
+    document.head.appendChild(link);
+  }
+  link.href = href;
+}
+
+function useRouteMeta() {
   const { pathname } = useLocation();
+  const { t, uiLang } = useI18n();
+  const isSettings = pathname === "/settings";
+
   useEffect(() => {
-    let meta = document.querySelector('meta[name="robots"]');
-    if (!meta) {
-      meta = document.createElement("meta");
-      meta.name = "robots";
-      document.head.appendChild(meta);
-    }
-    meta.content = pathname === "/settings" ? NOINDEX_ROBOTS : INDEX_ROBOTS;
-  }, [pathname]);
+    const brand = t("brand.name");
+    const homeTitle = `${brand} — ${t("brand.docTitle")}`;
+    const settingsTitle = `${t("settings.title")} — ${brand}`;
+    const title = isSettings ? settingsTitle : homeTitle;
+    const description = t("brand.metaDescription");
+    const canonical = `${SITE_ORIGIN}/`;
+    const locale = uiLang === "zh" ? "zh_CN" : "en_US";
+
+    document.title = title;
+
+    ensureMeta("name", "robots", isSettings ? NOINDEX_ROBOTS : INDEX_ROBOTS);
+    ensureMeta("name", "description", description);
+    ensureCanonical(canonical);
+
+    // Keep share cards pointed at the public home URL (settings is noindex).
+    ensureMeta("property", "og:url", canonical);
+    ensureMeta("property", "og:title", homeTitle);
+    ensureMeta("property", "og:description", description);
+    ensureMeta("property", "og:locale", locale);
+    ensureMeta("name", "twitter:title", homeTitle);
+    ensureMeta("name", "twitter:description", description);
+  }, [isSettings, t, uiLang]);
 }
 
 function AnimatedRoutes() {
   const location = useLocation();
   const reduce = useReducedMotion();
-  useSettingsRobots();
+  useRouteMeta();
 
   return (
     <AnimatePresence mode="wait">
@@ -33,7 +71,7 @@ function AnimatedRoutes() {
         initial={reduce ? false : { opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={reduce ? undefined : { opacity: 0 }}
-        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ duration: 0.18, ease: "easeOut" }}
       >
         <Routes location={location}>
           <Route path="/" element={<HomePage />} />
