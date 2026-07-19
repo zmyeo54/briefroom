@@ -410,7 +410,7 @@ async function concurrencyCap() {
         })
       )
     );
-    assert(peak <= 4, `TTS inflight peak ${peak} > 4`);
+    assert(peak <= 6, `TTS inflight peak ${peak} > 6`);
     ok("concurrency cap", `peak=${peak}`);
   } finally {
     globalThis.fetch = orig;

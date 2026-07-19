@@ -75,8 +75,8 @@ def sanitize_speak_text(text: str) -> str:
     return t
 
 
-CHUNK_CHARS = 900
-MAX_ATTEMPTS = 3
+CHUNK_CHARS = 600
+MAX_ATTEMPTS = 4
 
 
 def split_speak_chunks(text: str, max_len: int = CHUNK_CHARS) -> list[str]:

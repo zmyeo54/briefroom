@@ -12,8 +12,16 @@ export const config = {
 };
 
 /** Edge WS often drops mid-synthesis on long turns — keep each request short. */
-const CHUNK_CHARS = 900;
-const MAX_ATTEMPTS = 3;
+const CHUNK_CHARS = 600;
+const MAX_ATTEMPTS = 4;
+
+function publicTtsError(err) {
+  const msg = String(err?.message || err || "TTS failed");
+  if (/stream closed|turn\.end|truncated|websocket|timed out/i.test(msg)) {
+    return "Practice voice hiccuped mid-clip. Try again.";
+  }
+  return msg;
+}
 
 function collectStream(stream, timeoutMs = 45000) {
   return new Promise((resolve, reject) => {
@@ -83,11 +91,14 @@ async function synthesizeOnce(text, edgeVoice, rate) {
     if (!audio?.length) throw new Error("empty audio");
     return audio;
   } finally {
-    try {
-      tts.close();
-    } catch {
-      /* ignore */
-    }
+    // Defer close so turnEnded is visible to onclose (immediate close can race).
+    setTimeout(() => {
+      try {
+        tts.close();
+      } catch {
+        /* ignore */
+      }
+    }, 25);
   }
 }
 
@@ -147,6 +158,6 @@ export default async function handler(req, res) {
     res.status(200).send(audio);
   } catch (e) {
     console.error("[tts] synthesis error:", e?.message, e?.stack);
-    res.status(500).json({ error: e?.message || "TTS failed" });
+    res.status(500).json({ error: publicTtsError(e) });
   }
 }

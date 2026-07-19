@@ -13,6 +13,8 @@ const IDB_STORE = "clips";
 const IDB_MAX = 120;
 /** How many Q&A clips to prepare at once (Jul 17 “All good!” play-all). */
 const FETCH_CONCURRENCY = 3;
+/** Segments within one Q&A (Mix = 4–6). Unbounded Promise.all opened too many Edge WS. */
+const PART_CONCURRENCY = 2;
 
 function openTtsIdb() {
   if (typeof indexedDB === "undefined") return Promise.resolve(null);
@@ -344,10 +346,33 @@ function isTransientTtsError(status, msg) {
   const m = String(msg || "").toLowerCase();
   return (
     m.includes("stream closed") ||
+    m.includes("turn.end") ||
+    m.includes("truncated") ||
     m.includes("timed out") ||
     m.includes("websocket") ||
     m.includes("empty audio")
   );
+}
+
+/** Map Edge/msedge-tts internals to something a human can act on. */
+export function friendlyTtsError(msg, status = 0) {
+  const raw = String(msg || "").trim();
+  const m = raw.toLowerCase();
+  if (
+    status === 502 ||
+    status === 504 ||
+    m.includes("stream closed") ||
+    m.includes("turn.end") ||
+    m.includes("truncated") ||
+    m.includes("websocket") ||
+    m.includes("timed out")
+  ) {
+    return "Practice voice hiccuped mid-clip. Tap play again.";
+  }
+  if (!raw || /^tts failed/i.test(raw)) {
+    return "Practice voice isn’t ready. Give it a moment and try again.";
+  }
+  return raw;
 }
 
 function cacheKey(text, voice, rate) {
@@ -401,7 +426,7 @@ async function fetchAudio(text, voice, rate) {
   };
 
   let lastMsg = "TTS failed";
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     const res = await fetch("/api/tts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -421,17 +446,14 @@ async function fetchAudio(text, voice, rate) {
     } catch {
       /* ignore */
     }
-    if (res.status === 502 || res.status === 504) {
-      msg = "Practice voice isn’t ready yet. Give it a moment and try again.";
-    }
-    lastMsg = msg;
-    if (attempt === 0 && isTransientTtsError(res.status, msg)) {
-      await new Promise((r) => setTimeout(r, 500));
+    lastMsg = friendlyTtsError(msg, res.status);
+    if (attempt < 2 && isTransientTtsError(res.status, msg)) {
+      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
       continue;
     }
-    throw new Error(msg);
+    throw new Error(lastMsg);
   }
-  throw new Error(lastMsg);
+  throw new Error(friendlyTtsError(lastMsg));
 }
 
 /**
@@ -456,9 +478,9 @@ export async function synthesizeQaAudio(
   });
   if (!parts.length) throw new Error("Nothing to export");
 
-  // Parallel segment fetches — Mix mode has 4–6 parts; sequential felt like “compile time”.
-  const blobs = await Promise.all(
-    parts.map((part) => fetchAudio(part.text, part.voice, rate))
+  // Cap segment fetches — Mix mode has 4–6 parts; all-at-once opened 12–18 Edge WS.
+  const blobs = await mapPool(parts, PART_CONCURRENCY, (part) =>
+    fetchAudio(part.text, part.voice, rate)
   );
   return new Blob(blobs, { type: "audio/mpeg" });
 }
